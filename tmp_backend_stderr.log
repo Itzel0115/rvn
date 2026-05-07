@@ -1,0 +1,29 @@
+2026-05-01 13:15:17 | INFO | demo_web | request_id=web-server | domain=web | Initializing demo web application
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Loading source files
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Using inventory file: C:\Users\itzel.hsiao\Desktop\revenue-poc\data\inventory.xlsx
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Using revenue file: C:\Users\itzel.hsiao\Desktop\revenue-poc\data\revenue.xlsx
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Using mapping file: C:\Users\itzel.hsiao\Desktop\revenue-poc\data\mapping.xlsx
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Loaded raw dataframes: inventory_rows=48, revenue_rows=48, mapping_rows=6
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Parsed mapping: structured_rows=6, bridge_candidates=12, mapping_success=True
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Analysis complete: monthly_revenue=8, anomalies=9, correlations=11
+2026-05-01 13:15:17 | INFO | analysis_pipeline | request_id=web-server | domain=pipeline | Supported domains: {'sales': True, 'inventory': True, 'financial': True, 'association': True, 'chart': True}
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_tool_capability_matrix
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_tool_capability_matrix
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_data_coverage
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_data_coverage
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_mapping_summary
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_mapping_summary
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_metric_table for metric=revenue_monthly
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_metric_table for metric=revenue_monthly with rows=8
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_metric_table for metric=inventory_amount_monthly
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_metric_table for metric=inventory_amount_monthly with rows=8
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_metric_table for metric=inventory_qty_monthly
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_metric_table for metric=inventory_qty_monthly with rows=8
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_metric_table for metric=platform_monthly
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_metric_table for metric=platform_monthly with rows=6
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_anomalies
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Running tool get_metric_table for metric=anomalies
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_metric_table for metric=anomalies with rows=2
+2026-05-01 13:15:17 | INFO | analysis_tools | request_id=web-server | domain=toolbox | Completed tool get_anomalies with rows=2
+2026-05-01 13:15:17 | INFO | demo_web | request_id=web-server | domain=web | Demo web application ready
+2026-05-01 13:15:17 | INFO | demo_web | request_id=web-server | domain=web | Demo server started at http://127.0.0.1:8765
