@@ -120,6 +120,25 @@ def _assign_role(
 ) -> tuple[EvidenceRole, int, str]:
     same_month = _is_same_month(details, requested_month)
 
+    if task_family == "latest_month_platform_summary":
+        if evidence_type in {"platform_performance_snapshot", "platform_performance_row"}:
+            return EvidenceRole.PRIMARY, 1, "latest platform summary is driven by the scorecard"
+        if evidence_type in {"platform_ratio", "anomaly"}:
+            return EvidenceRole.SUPPORTING, 20, "ratio and anomaly evidence support the latest platform summary"
+        if evidence_type in {"metric_table", "platform_ranking", "group_ranking"} or "get_metric_table" in source_tool:
+            return EvidenceRole.BACKGROUND, 80, "raw metric table or ranking is not primary executive display evidence"
+        return EvidenceRole.BACKGROUND, 90, "not part of latest platform summary primary rubric"
+
+    if task_family == "period_pair_compare":
+        if evidence_type == "period_pair_metric_comparison":
+            return EvidenceRole.PRIMARY, 1, "explicit period pair comparison evidence"
+        if evidence_type in {"metric_table", "platform_ranking", "group_ranking"} or "get_metric_table" in source_tool:
+            return EvidenceRole.BACKGROUND, 80, "raw metric table is not primary for explicit period-pair comparison"
+        return EvidenceRole.BACKGROUND, 90, "not part of period pair primary rubric"
+
+    if task_family == "forecast_unsupported":
+        return EvidenceRole.BACKGROUND, 90, "forecast questions should not promote historical metric tables as primary evidence"
+
     if task_family == "cross_section_compare":
         if evidence_type in {"platform_performance_snapshot", "platform_performance_row"}:
             return EvidenceRole.PRIMARY, 1, "platform performance scorecard can drive same-month cross-section comparison"
@@ -185,6 +204,8 @@ def _assign_role(
 
 
 def _detect_evidence_type(item: dict[str, Any], domain: str | None) -> str:
+    if item.get("period_a") and item.get("period_b") and isinstance(item.get("overall"), dict):
+        return "period_pair_metric_comparison"
     if item.get("dimension") == "platform" and isinstance(item.get("rows"), list) and item.get("summary") is not None:
         return "platform_performance_snapshot"
     if item.get("platform") and item.get("health_score") is not None and item.get("performance_label"):
@@ -233,6 +254,9 @@ def _infer_source_tool(evidence_type: str, item: dict[str, Any]) -> str:
         return "get_platform_performance_snapshot"
     if evidence_type == "platform_ratio":
         return "get_platform_ratios"
+    if evidence_type == "period_pair_metric_comparison":
+        metric = item.get("metric") or "metric"
+        return f"get_period_pair_metric_comparison({metric})"
     if evidence_type == "anomaly":
         return "get_anomalies"
     if evidence_type == "platform_ranking":
@@ -285,6 +309,12 @@ def _summarize_evidence(evidence_type: str, item: dict[str, Any], domain: str | 
         return (
             f"{item.get('month')} / {item.get('platform')} health_score "
             f"{format_number(item.get('health_score'))}"
+        )
+    if evidence_type == "period_pair_metric_comparison":
+        overall = item.get("overall") or {}
+        return (
+            f"{item.get('period_b')} vs {item.get('period_a')} {item.get('metric')} "
+            f"change {format_number(overall.get('change'))}"
         )
     if evidence_type in {"platform_ranking", "group_ranking"}:
         subject = item.get("platform") or item.get(COL_GROUP_CODE) or item.get("group_code")

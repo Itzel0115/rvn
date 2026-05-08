@@ -110,7 +110,14 @@ def build_answer_contract(
         answer_plan=answer_plan,
         rubric_result=rubric_result,
     )
-    if getattr(task_profile, "task_family", None) in {"cross_section_compare", "performance_assessment", "time_compare"}:
+    if getattr(task_profile, "task_family", None) in {
+        "cross_section_compare",
+        "performance_assessment",
+        "time_compare",
+        "latest_month_platform_summary",
+        "period_pair_compare",
+        "forecast_unsupported",
+    }:
         answer = _compose_answer_from_display_blocks(display_blocks)
 
     return {
@@ -630,10 +637,13 @@ def _build_direct_answer(
 def _build_unsupported_answer(question: str, unsupported_topics: list[str]) -> str:
     joined = ", ".join(unsupported_topics)
     lowered = question.lower()
-    if "forecast" in unsupported_topics and any(token in lowered or token in question for token in ["預測", "下個月", "next month"]):
+    if "forecast" in unsupported_topics and any(
+        token in lowered or token in question
+        for token in ["預測", "下個月", "下月", "未來", "會不會改善", "會不會下降", "next month", "future"]
+    ):
         return (
-            "目前尚無法直接預測下個月營收是否改善，"
-            "因為系統尚未包含預測模型、訂單、出貨或市場需求資料。"
+            "結論：目前無法判斷下個月營收是否會改善，"
+            "因為系統尚未納入預測模型、訂單、出貨、價格或市場需求資料。"
         )
     return (
         f"目前尚無法直接回答 {joined}，因為現有資料沒有對應欄位，"
@@ -1021,6 +1031,22 @@ def _detect_unsupported_topics(question: str) -> list[str]:
     for topic, hints in UNSUPPORTED_FIELD_HINTS.items():
         if any(hint.lower() in lowered for hint in hints):
             matched.append(topic)
+    forecast_tokens = [
+        "forecast",
+        "predict",
+        "prediction",
+        "next month",
+        "future",
+        "下個月",
+        "下月",
+        "未來",
+        "預測",
+        "會不會改善",
+        "會不會下降",
+        "是否會成長",
+    ]
+    if any(token in lowered or token in question for token in forecast_tokens) and "forecast" not in matched:
+        matched.append("forecast")
     return matched
 
 

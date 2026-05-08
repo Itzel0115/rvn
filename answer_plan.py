@@ -19,6 +19,52 @@ class AnswerPlan:
 def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
     task_family = getattr(task_profile, "task_family", None)
 
+    if task_family == "latest_month_platform_summary":
+        return AnswerPlan(
+            primary_tools=["get_platform_performance_snapshot"],
+            supporting_tools=["get_platform_ratios", "get_anomalies"],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_metric_table", "get_platform_ranking(inventory_amount)"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={
+                "mode": "heuristic_display_projection",
+                "headline_source": "latest_month_platform_scorecard",
+                "must_not_use": ["metric_table_as_headline", "raw_platform_ranking_as_headline"],
+            },
+        )
+
+    if task_family == "period_pair_compare":
+        return AnswerPlan(
+            primary_tools=["get_period_pair_metric_comparison"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_metric_table(platform_monthly)", "get_platform_ranking(inventory_amount)"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={
+                "mode": "heuristic_display_projection",
+                "headline_source": "explicit_period_pair_difference",
+            },
+        )
+
+    if task_family == "forecast_unsupported":
+        return AnswerPlan(
+            primary_tools=[],
+            supporting_tools=[],
+            background_tools=[],
+            forbidden_primary_tools=["get_metric_table", "get_metric_table(revenue_trend)", "get_metric_table(inventory_amount_trend)"],
+            max_key_observations=2,
+            requires_table=False,
+            display_debug_findings=False,
+            conclusion_policy={
+                "mode": "unsupported",
+                "headline_source": "forecast_not_available",
+            },
+        )
+
     if task_family == "cross_section_compare":
         return AnswerPlan(
             primary_tools=["get_platform_performance_snapshot", "get_platform_ratios", "get_metric_table(platform_monthly)"],

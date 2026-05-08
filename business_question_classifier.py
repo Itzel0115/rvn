@@ -134,6 +134,44 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
     needs_chart = _contains_any(text, lowered, CHART_KEYWORDS)
     kpi_lenses = _detect_kpi_lenses(text, lowered)
 
+    if _is_forecast_question(text, lowered):
+        return BusinessQuestionProfile(
+            question_type="unsupported",
+            intents=["forecast", "unsupported"],
+            domains=[],
+            kpi_lenses=kpi_lenses,
+            object_dimension=object_dimension,
+            answer_strategy="unsupported",
+            warnings=["目前系統尚未納入預測模型、訂單、出貨、價格或市場需求資料，不能直接預測未來月份。"],
+        )
+
+    if _is_latest_month_platform_summary(text, lowered):
+        return BusinessQuestionProfile(
+            question_type="summary",
+            intents=["summary", "performance", "platform"],
+            domains=["financial"],
+            kpi_lenses=[
+                KPI_LENSES["revenue_scale"],
+                KPI_LENSES["inventory_efficiency"],
+                KPI_LENSES["overall_health"],
+                KPI_LENSES["risk_anomaly"],
+            ],
+            object_dimension="platform",
+            answer_strategy="latest_month_platform_summary",
+            needs_chart=needs_chart,
+        )
+
+    if _extract_period_pair(text):
+        return BusinessQuestionProfile(
+            question_type="comparison",
+            intents=["period_pair_compare", "comparison"],
+            domains=["sales"],
+            kpi_lenses=kpi_lenses or [KPI_LENSES["revenue_scale"]],
+            object_dimension=object_dimension,
+            answer_strategy="period_pair_compare",
+            needs_chart=needs_chart,
+        )
+
     if _contains_any(text, lowered, DATA_QUALITY_KEYWORDS):
         return BusinessQuestionProfile(
             question_type="data_quality",
@@ -289,6 +327,68 @@ def describe_lenses(lenses: list[KpiLens]) -> list[str]:
 
 def _contains_any(text: str, lowered: str, keywords: list[str]) -> bool:
     return any(keyword.lower() in lowered for keyword in keywords)
+
+
+def _is_forecast_question(text: str, lowered: str) -> bool:
+    tokens = [
+        "forecast",
+        "predict",
+        "prediction",
+        "next month",
+        "future",
+        "\u4e0b\u500b\u6708",
+        "\u4e0b\u6708",
+        "\u672a\u4f86",
+        "\u9810\u6e2c",
+        "\u6703\u4e0d\u6703\u6539\u5584",
+        "\u6703\u4e0d\u6703\u4e0b\u964d",
+        "\u662f\u5426\u6703\u6210\u9577",
+    ]
+    return any(token in lowered or token in text for token in tokens)
+
+
+def _is_latest_month_platform_summary(text: str, lowered: str) -> bool:
+    has_platform = any(token in lowered or token in text for token in ["platform", "\u5e73\u53f0", "\u5e73\u81fa", "\u5404\u5e73\u53f0"])
+    has_latest = any(
+        token in lowered or token in text
+        for token in ["latest month", "current month", "this month", "\u6700\u65b0\u6708\u4efd", "\u6700\u65b0\u6708", "\u672c\u6708"]
+    )
+    has_summary = any(
+        token in lowered or token in text
+        for token in ["summary", "summarize", "overview", "\u6574\u7406", "\u6458\u8981", "\u91cd\u9ede", "\u72c0\u6cc1"]
+    )
+    has_revenue_inventory = _contains_any(text, lowered, REVENUE_KEYWORDS) and _contains_any(text, lowered, INVENTORY_KEYWORDS)
+    has_operation = any(token in lowered or token in text for token in ["operation", "operational", "\u71df\u904b"])
+    return has_platform and has_latest and has_summary and (has_revenue_inventory or has_operation)
+
+
+def _extract_period_pair(text: str) -> tuple[str, str] | None:
+    months: list[str] = []
+    for match in re.finditer(r"(20\d{2})\s*[-/\u5e74]?\s*(0?[1-9]|1[0-2])\s*(?:\u6708)?", text):
+        months.append(f"{match.group(1)}-{int(match.group(2)):02d}")
+    if len(months) < 2:
+        for match in re.finditer(r"(?<!\d)(1[0-2]|0?[1-9])\s*\u6708", text):
+            months.append(f"2024-{int(match.group(1)):02d}")
+    unique_months = list(dict.fromkeys(months))
+    if len(unique_months) < 2:
+        return None
+    pair_tokens = [
+        "compare",
+        "difference",
+        "versus",
+        " vs ",
+        "\u6bd4\u8f03",
+        "\u4ee5\u53ca",
+        "\u8207",
+        "\u548c",
+        "\u8ddf",
+        "\u5340\u5225",
+        "\u5dee\u7570",
+        "\u5dee\u591a\u5c11",
+    ]
+    if any(token in text or token in text.lower() for token in pair_tokens):
+        return unique_months[0], unique_months[1]
+    return None
 
 
 def _is_comparison(text: str, lowered: str) -> bool:

@@ -1,7 +1,7 @@
 # Demo Smoke Report
 
 - mode: direct
-- cases: 8
+- cases: 10
 
 | Question | Task Family | Key Obs | Table | Headline |
 |---|---:|---:|---:|---|
@@ -12,7 +12,9 @@
 | 最近有什麼營運風險？ | risk_scan | 3 | no | 結論：目前最需優先追蹤的是 GG-02 風險訊號，異常類型為 營收/庫存金額比偏低。 |
 | 8 月相較 7 月營收變化主要由誰貢獻？ | time_compare | 2 | no | 結論：2024-08 相較 2024-07 的營收變化主要由 雲端服務 貢獻，變化 195.00。 |
 | 資料涵蓋哪些月份？ | data_quality | 2 | no | 目前資料涵蓋 8 個月份，最新月份為 2024-08。營收資料 48 筆，庫存資料 48 筆，mapping 資料 6 筆，mapping_success=True。 另外，目前有 1 筆 pipeline warnings。 |
-| 下個月營收會不會改善？ | metric_lookup | 3 | no | 結論：sales: metric_table |
+| 請整理最新月份各平台的營收與庫存重點 | latest_month_platform_summary | 3 | yes | 結論：最新月份 2024-08 各平台重點是，GG-01 營收規模較高，GG-02 庫存水位較高，GG-06 在綜合 scorecard 下需要注意。 |
+| 2024年2月以及2024年7月營收有甚麼區別？ | period_pair_compare | 1 | yes | 結論：2024-07 營收相較 2024-02 增加 925.00，變化率為 18.01%。 |
+| 下個月營收會不會改善？ | forecast_unsupported | 2 | no | 結論：目前無法判斷下個月營收是否會改善，因為系統尚未納入預測模型、訂單、出貨、價格或市場需求資料。 |
 
 ## Details
 
@@ -86,12 +88,32 @@
 - limitations: 目前資料品質報告僅反映已載入資料與 pipeline 狀態。 | 若 mapping 有 ambiguous candidates，平台層分析需搭配限制解讀。 | 目前仍有 pipeline warnings，解讀結果時需一併納入。
 - headline: 目前資料涵蓋 8 個月份，最新月份為 2024-08。營收資料 48 筆，庫存資料 48 筆，mapping 資料 6 筆，mapping_success=True。 另外，目前有 1 筆 pipeline warnings。
 
+### 請整理最新月份各平台的營收與庫存重點
+
+- task_family: `latest_month_platform_summary`
+- primary_tools: `get_platform_performance_snapshot`
+- tools_used: `get_platform_performance_snapshot, get_platform_ratios, get_anomalies`
+- key_observation_count: `3`
+- has_table: `True`
+- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
+- headline: 結論：最新月份 2024-08 各平台重點是，GG-01 營收規模較高，GG-02 庫存水位較高，GG-06 在綜合 scorecard 下需要注意。
+
+### 2024年2月以及2024年7月營收有甚麼區別？
+
+- task_family: `period_pair_compare`
+- primary_tools: `get_period_pair_metric_comparison`
+- tools_used: `get_period_pair_metric_comparison(revenue)`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
+- headline: 結論：2024-07 營收相較 2024-02 增加 925.00，變化率為 18.01%。
+
 ### 下個月營收會不會改善？
 
-- task_family: `metric_lookup`
-- primary_tools: `get_metric_table`
+- task_family: `forecast_unsupported`
+- primary_tools: ``
 - tools_used: ``
-- key_observation_count: `3`
+- key_observation_count: `2`
 - has_table: `False`
-- limitations: 目前資料無法直接支援 forecast 類問題。 | 目前尚無法直接判斷原因或預測未來變化，因為資料不包含完整因果所需欄位。
-- headline: 結論：sales: metric_table
+- limitations: 目前資料無法直接支援 forecast 類問題。 | 目前系統尚未納入預測模型、訂單、出貨、價格或市場需求資料，不能直接預測未來月份。 | 目前尚無法直接判斷原因或預測未來變化，因為資料不包含完整因果所需欄位。
+- headline: 結論：目前無法判斷下個月營收是否會改善，因為系統尚未納入預測模型、訂單、出貨、價格或市場需求資料。

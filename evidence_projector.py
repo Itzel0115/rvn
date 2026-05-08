@@ -42,6 +42,17 @@ def build_display_blocks_from_roles(
     rubric_result: Any,
     limitations: list[str],
 ) -> dict[str, Any]:
+    if getattr(task_profile, "task_family", None) == "forecast_unsupported":
+        return DisplayBlocks(
+            headline=_forecast_unsupported_headline(task_profile),
+            key_observations=[
+                "目前資料可用於觀察歷史營收與庫存變化，但不足以直接預測下個月。",
+                "若要評估改善機率，需補充訂單、出貨、價格、客戶需求或正式 forecast model。",
+            ],
+            table=None,
+            limitations=list(dict.fromkeys(limitations))[:3],
+        ).to_dict()
+
     max_items = int(getattr(answer_plan, "max_key_observations", 3) or 3)
     evidence_items = list(getattr(rubric_result, "evidence", []))
     primary = [item for item in evidence_items if getattr(item, "role", None) == "primary"]
@@ -62,10 +73,15 @@ def build_display_blocks_from_roles(
 
 
 def _build_headline(task_profile: Any | None, primary: list[Any], supporting: list[Any]) -> str:
-    if not primary:
-        return "目前沒有足夠證據形成明確結論。"
-
     task_family = getattr(task_profile, "task_family", None)
+    if task_family == "forecast_unsupported":
+        return _forecast_unsupported_headline(task_profile)
+    if not primary:
+        return "結論：目前沒有足夠的 primary evidence 可以形成管理結論。"
+    if task_family == "latest_month_platform_summary":
+        return _latest_month_platform_summary_headline(primary, supporting)
+    if task_family == "period_pair_compare":
+        return _period_pair_headline(primary)
     if task_family == "cross_section_compare":
         return _cross_section_headline(task_profile, primary)
     if task_family == "performance_assessment":
@@ -77,6 +93,55 @@ def _build_headline(task_profile: Any | None, primary: list[Any], supporting: li
     if task_family == "risk_scan":
         return _risk_headline(primary)
     return _fallback_headline(primary[0])
+
+
+def _forecast_unsupported_headline(task_profile: Any | None) -> str:
+    metrics = set(getattr(task_profile, "metrics", []) or [])
+    if metrics & {"inventory_amount", "inventory_qty"} and "revenue" not in metrics:
+        subject = "未來庫存是否會下降"
+    elif metrics & {"inventory_amount", "inventory_qty"}:
+        subject = "未來營收或庫存是否會改善"
+    else:
+        subject = "下個月營收是否會改善"
+    return f"結論：目前無法判斷{subject}，因為系統尚未納入預測模型、訂單、出貨、價格或市場需求資料。"
+
+
+def _latest_month_platform_summary_headline(primary: list[Any], supporting: list[Any]) -> str:
+    snapshot = _first_evidence(primary, "platform_performance_snapshot")
+    rows = _metric_rows([snapshot]) if snapshot else _metric_rows(primary)
+    if not rows:
+        return "結論：最新月份各平台摘要目前缺少可投影的 scorecard evidence。"
+    month = _first_value(rows, "month") or "最新月份"
+    top_revenue = _max_row(rows, "revenue")
+    top_inventory = _max_row(rows, "inventory_amount")
+    weakest = _min_row(rows, "health_score") or _max_row(rows, "risk_score")
+    parts: list[str] = []
+    if top_revenue:
+        parts.append(f"{top_revenue['platform']} 營收規模較高")
+    if top_inventory:
+        parts.append(f"{top_inventory['platform']} 庫存水位較高")
+    if weakest:
+        parts.append(f"{weakest['platform']} 在綜合 scorecard 下需要注意")
+    if not parts:
+        parts.append("各平台需要搭配營收、庫存與 scorecard 一併判讀")
+    return f"結論：最新月份 {month} 各平台重點是，" + "，".join(parts) + "。"
+
+
+def _period_pair_headline(primary: list[Any]) -> str:
+    comparison = _first_evidence(primary, "period_pair_metric_comparison")
+    if not comparison:
+        return "結論：目前缺少兩個指定月份的可比較資料。"
+    details = getattr(comparison, "details", {}) or {}
+    overall = details.get("overall") or {}
+    period_a = details.get("period_a")
+    period_b = details.get("period_b")
+    metric = _metric_name(details.get("metric"))
+    change = overall.get("change")
+    direction = overall.get("direction")
+    direction_text = "增加" if direction == "up" else ("下降" if direction == "down" else "持平")
+    pct = overall.get("change_pct")
+    pct_text = f"，變化率為 {float(pct):.2%}" if pct is not None else ""
+    return f"結論：{period_b} {metric}相較 {period_a} {direction_text} {_format_number(abs(change or 0))}{pct_text}。"
 
 
 def _cross_section_headline(task_profile: Any | None, primary: list[Any]) -> str:
@@ -295,10 +360,33 @@ def _observation_text(item: Any) -> str:
             f"{platform} 在 {details.get(COL_MONTH, details.get('month', 'N/A'))} 的營收為 "
             f"{_format_number(details.get(COL_REVENUE))}，庫存金額為 {_format_number(details.get(COL_INV_AMOUNT))}。"
         )
+    if evidence_type == "period_pair_metric_comparison":
+        overall = details.get("overall") or {}
+        period_a = details.get("period_a")
+        period_b = details.get("period_b")
+        direction = overall.get("direction")
+        direction_text = "增加" if direction == "up" else ("下降" if direction == "down" else "持平")
+        return (
+            f"{period_b} 相較 {period_a} {_metric_name(details.get('metric'))}{direction_text} "
+            f"{_format_number(abs(overall.get('change') or 0))}。"
+        )
     return str(getattr(item, "summary", "")).strip()
 
 
 def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
+    period_pair = _first_evidence(primary_items, "period_pair_metric_comparison")
+    if period_pair:
+        details = getattr(period_pair, "details", {}) or {}
+        rows = []
+        overall = details.get("overall") or {}
+        if overall:
+            rows.append({"name": "overall", **overall})
+        rows.extend(details.get("breakdown") or [])
+        return {
+            "columns": ["name", "value_a", "value_b", "change", "change_pct"],
+            "rows": rows[:6],
+        }
+
     rows = _metric_rows(primary_items)
     if not rows:
         return None

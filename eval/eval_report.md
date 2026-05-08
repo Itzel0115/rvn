@@ -1,13 +1,13 @@
 # Eval Report
 
-- router_cases: 66
-- answer_cases: 66
+- router_cases: 71
+- answer_cases: 71
 
 ## Router Metrics
 
-- question_type_accuracy: 98.48%
-- domain_accuracy: 100.00%
-- tool_accuracy: 96.97%
+- question_type_accuracy: 97.18%
+- domain_accuracy: 98.59%
+- tool_accuracy: 97.18%
 - filter_extraction_accuracy: 100.00%
 - task_family_accuracy: 100.00%
 - answer_plan_score: 100.00%
@@ -15,10 +15,10 @@
 
 ## Answer Metrics
 
-- answer_grounding_score: 98.26%
-- must_include_score: 95.45%
+- answer_grounding_score: 99.37%
+- must_include_score: 100.00%
 - must_not_score: 100.00%
-- evidence_tools_score: 98.48%
+- evidence_tools_score: 98.59%
 - limitation_score: 100.00%
 - answer_filter_accuracy: 100.00%
 - hallucination_rate: 0.00%
@@ -32,14 +32,12 @@
 - no_background_leakage_score: 100.00%
 - table_score: 100.00%
 - limitation_preservation_score: 100.00%
-- supported_task_family_count: 13
-- supported_task_families: chart_request, cross_domain, cross_section_compare, data_quality, decision, diagnosis, executive_summary, metric_lookup, performance_assessment, ranking, risk_scan, time_compare, trend_analysis
+- supported_task_family_count: 15
+- supported_task_families: chart_request, cross_section_compare, data_quality, decision, diagnosis, executive_summary, forecast_unsupported, latest_month_platform_summary, metric_lookup, performance_assessment, period_pair_compare, ranking, risk_scan, time_compare, trend_analysis
 
 ## Failed Cases Summary
 
-- answer_046: 比較 8 月各平台營收與庫存 (must_include_score)
-- answer_047: 請分析哪個平台表現較佳 (must_include_score)
-- answer_048: 請分析哪個平台表現較差 (must_include_score)
+- none
 
 ## Notes
 

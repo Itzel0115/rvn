@@ -108,10 +108,13 @@ class BaseDomainAgent:
             "diagnosis",
             "risk",
             "performance_weakness",
+            "latest_month_platform_summary",
+            "period_pair_compare",
             "chart",
             "decision",
             "data_quality",
             "metric_query",
+            "unsupported",
         }
 
     def _plan_tools_with_llm(self, question: str, routing: RoutingDecision) -> list[str]:
@@ -183,6 +186,13 @@ class BaseDomainAgent:
             return capability_matrix["tools"].get("get_inventory_turnover_proxy", {}).get("available", False)
         if tool_name == "get_root_cause_candidates":
             return capability_matrix["tools"].get("get_root_cause_candidates", {}).get("available", False)
+        if tool_name.startswith("get_period_pair_metric_comparison(") and tool_name.endswith(")"):
+            metric = tool_name[len("get_period_pair_metric_comparison("):-1]
+            return capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("available", False) and (
+                metric in capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("supported_metrics", [])
+            )
+        if tool_name == "get_period_pair_metric_comparison":
+            return capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("available", False)
         return capability_matrix["tools"].get(tool_name, {}).get("available", True)
 
     def _synthesize_with_llm(
@@ -283,6 +293,7 @@ class SalesAgent(BaseDomainAgent):
             "get_top_groups(revenue)": "Return revenue ranking by business group.",
             "get_yoy_mom_breakdown(revenue)": "Return deterministic month-over-month and year-over-year revenue breakdown.",
             "get_contribution_analysis(revenue)": "Return deterministic contribution analysis for revenue change.",
+            "get_period_pair_metric_comparison(revenue)": "Compare revenue between two explicit periods.",
             "get_root_cause_candidates": "Return deterministic candidate observations for possible drivers without claiming causal root cause.",
         }
 
@@ -292,6 +303,8 @@ class SalesAgent(BaseDomainAgent):
             token in question_lower for token in ["contribution", "contributed", "who drove", "who contributed"]
         )
         tools = ["get_metric_table(revenue_trend)"]
+        if routing.answer_strategy == "period_pair_compare":
+            return ["get_period_pair_metric_comparison(revenue)"]
         if routing.answer_strategy == "ranking":
             tools.append("get_top_groups(revenue)")
         if routing.answer_strategy in {"trend", "comparison", "diagnosis"}:
@@ -330,6 +343,36 @@ class SalesAgent(BaseDomainAgent):
                 evidence.extend(monthly.tail(3).to_dict(orient="records"))
             else:
                 warnings.append("目前沒有符合條件的營收資料可供分析。")
+
+        if "get_period_pair_metric_comparison(revenue)" in selected_tools:
+            period_a = getattr(routing, "period_a", None)
+            period_b = getattr(routing, "period_b", None)
+            period_pair = getattr(routing, "period_pair", None)
+            if isinstance(period_pair, (list, tuple)) and len(period_pair) >= 2:
+                period_a = period_a or period_pair[0]
+                period_b = period_b or period_pair[1]
+            if period_a and period_b:
+                comparison = self.toolbox.get_period_pair_metric_comparison(
+                    metric="revenue",
+                    period_a=str(period_a),
+                    period_b=str(period_b),
+                    dimension="business_group" if routing.object_dimension == "business_group" else "platform",
+                    filters=routing.filters,
+                    top_n=5,
+                )
+                overall = comparison.get("overall") or {}
+                if overall:
+                    direction = "增加" if overall.get("direction") == "up" else ("下降" if overall.get("direction") == "down" else "持平")
+                    findings.append(
+                        f"{period_b} 營收相較 {period_a} {direction} {format_number(abs(overall.get('change') or 0))}。"
+                    )
+                    if overall.get("change_pct") is not None:
+                        findings.append(f"變化率為 {float(overall['change_pct']):.2%}。")
+                else:
+                    warnings.extend(comparison.get("limitations", ["目前無法比較指定月份。"]))
+                evidence.append(comparison)
+            else:
+                warnings.append("需要兩個明確月份才能比較期間差異。")
 
         if "get_top_groups(revenue)" in selected_tools:
             group_rank = self.toolbox.get_top_groups("revenue", filters=routing.filters)
@@ -589,11 +632,11 @@ class FinancialMetricsAgent(BaseDomainAgent):
 
     def default_tools(self, routing: RoutingDecision) -> list[str]:
         tools = ["get_platform_ratios", "get_anomalies"]
-        if routing.answer_strategy in {"comparison", "performance_weakness"}:
+        if routing.answer_strategy in {"comparison", "performance_weakness", "latest_month_platform_summary"}:
             tools.insert(0, "get_platform_performance_snapshot")
         if routing.answer_strategy in {"comparison", "diagnosis"}:
             tools.append("get_contribution_analysis(revenue)")
-        if routing.answer_strategy in {"risk", "diagnosis", "comparison", "performance_weakness"}:
+        if routing.answer_strategy in {"risk", "diagnosis", "comparison", "performance_weakness", "latest_month_platform_summary"}:
             tools.append("get_inventory_turnover_proxy")
         if routing.answer_strategy in {"diagnosis", "performance_weakness"}:
             tools.append("get_root_cause_candidates")
@@ -1448,12 +1491,26 @@ class MultiAgentAssistant:
         if task_family == "cross_section_compare":
             domains.append("financial")
             planned_tools.extend(["get_platform_performance_snapshot", "get_platform_ratios", "get_anomalies"])
+        elif task_family == "latest_month_platform_summary":
+            domains.append("financial")
+            planned_tools.extend(["get_platform_performance_snapshot", "get_platform_ratios", "get_anomalies"])
         elif task_family == "performance_assessment":
             domains.append("financial")
             planned_tools.extend(["get_platform_performance_snapshot", "get_inventory_turnover_proxy", "get_platform_ratios", "get_anomalies"])
+        elif task_family == "period_pair_compare":
+            domains.append("sales")
+            planned_tools.extend(["get_period_pair_metric_comparison(revenue)"])
+            time_scope = getattr(task_profile, "time_scope", {}) or {}
+            setattr(routing, "period_a", time_scope.get("period_a"))
+            setattr(routing, "period_b", time_scope.get("period_b"))
+            setattr(routing, "period_pair", [time_scope.get("period_a"), time_scope.get("period_b")])
         elif task_family == "time_compare":
             domains.append("sales")
             planned_tools.extend(["get_yoy_mom_breakdown(revenue)", "get_contribution_analysis(revenue)"])
+        elif task_family == "forecast_unsupported":
+            domains = []
+            planned_tools = []
+            routing.requires_limitations = True
 
         routing.domains = list(dict.fromkeys(domain for domain in domains if domain))
         routing.planned_tools = list(dict.fromkeys(tool for tool in planned_tools if tool))

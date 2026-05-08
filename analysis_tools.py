@@ -264,6 +264,13 @@ class AnalysisToolbox:
                     "available": not self.context.artifacts.platform_monthly_analysis.empty,
                     "description": "Deterministic platform scorecard using revenue scale, revenue momentum, inventory-efficiency proxy, and anomaly signals.",
                 },
+                "get_period_pair_metric_comparison": {
+                    "supported_filters": ["platform", "group_code"],
+                    "supported_metrics": ["revenue", "inventory_amount", "inventory_qty"],
+                    "supported_dimensions": ["overall", "platform", "business_group"],
+                    "available": not self.context.artifacts.monthly_revenue.empty,
+                    "description": "Compare one metric between two explicit periods with optional platform or business-group breakdown.",
+                },
                 "get_root_cause_candidates": {
                     "supported_filters": ["month", "platform", "group_code"],
                     "supported_metrics": ["revenue"],
@@ -841,6 +848,131 @@ class AnalysisToolbox:
         }
         logger.info("Completed tool get_platform_performance_snapshot with rows=%s", len(rows))
         return result
+
+    def get_period_pair_metric_comparison(
+        self,
+        metric: str,
+        period_a: str,
+        period_b: str,
+        dimension: str = "overall",
+        filters: QueryFilters | None = None,
+        top_n: int = 5,
+    ) -> dict[str, Any]:
+        logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
+        logger.info(
+            "Running tool get_period_pair_metric_comparison metric=%s period_a=%s period_b=%s dimension=%s",
+            metric,
+            period_a,
+            period_b,
+            dimension,
+        )
+        filters = filters or QueryFilters()
+        metric_column = {
+            "revenue": COL_REVENUE,
+            "inventory_amount": COL_INV_AMOUNT,
+            "inventory_qty": COL_INV_QTY,
+        }.get(metric)
+        if metric_column is None:
+            return {
+                "metric": metric,
+                "period_a": period_a,
+                "period_b": period_b,
+                "dimension": dimension,
+                "overall": {},
+                "breakdown": [],
+                "limitations": [f"Unsupported metric: {metric}"],
+            }
+
+        source = self._period_pair_source(metric, dimension)
+        source = self._apply_filters(source, QueryFilters(platform=filters.platform, group_code=filters.group_code))
+        limitations: list[str] = []
+        if source.empty:
+            limitations.append("目前沒有可用資料可比較這兩個月份。")
+            return {
+                "metric": metric,
+                "period_a": period_a,
+                "period_b": period_b,
+                "dimension": dimension,
+                "overall": {},
+                "breakdown": [],
+                "limitations": limitations,
+            }
+
+        overall = self._period_pair_values(source, metric_column, period_a, period_b)
+        if not overall:
+            limitations.append("其中一個指定月份沒有可用資料，因此無法計算完整差異。")
+
+        breakdown: list[dict[str, Any]] = []
+        dimension_column = {
+            "platform": COL_PLATFORM,
+            "business_group": COL_GROUP_CODE,
+        }.get(dimension)
+        if dimension_column and dimension_column in source.columns:
+            grouped = (
+                source[source[COL_MONTH].isin([period_a, period_b])]
+                .groupby([COL_MONTH, dimension_column], dropna=False)[metric_column]
+                .sum()
+                .reset_index()
+            )
+            names = sorted(str(value) for value in grouped[dimension_column].dropna().unique().tolist())
+            for name in names:
+                subset = grouped[grouped[dimension_column].astype(str) == name]
+                values = self._period_pair_values(subset, metric_column, period_a, period_b)
+                if values:
+                    breakdown.append({"name": name, **values})
+            breakdown = sorted(breakdown, key=lambda item: abs(float(item.get("change") or 0.0)), reverse=True)[:top_n]
+
+        result = {
+            "metric": metric,
+            "period_a": period_a,
+            "period_b": period_b,
+            "dimension": dimension,
+            "overall": overall,
+            "breakdown": breakdown,
+            "limitations": limitations,
+        }
+        logger.info("Completed tool get_period_pair_metric_comparison with rows=%s", len(breakdown))
+        return result
+
+    def _period_pair_source(self, metric: str, dimension: str) -> pd.DataFrame:
+        if dimension == "platform":
+            return self.context.artifacts.platform_monthly_analysis.copy()
+        if dimension == "business_group":
+            if metric == "revenue":
+                return self.context.artifacts.revenue_enriched.copy()
+            return self.context.artifacts.inventory_enriched.copy()
+        if metric == "revenue":
+            return self.context.artifacts.monthly_revenue.copy()
+        if metric == "inventory_amount":
+            return self.context.artifacts.monthly_inventory_amount.copy()
+        if metric == "inventory_qty":
+            return self.context.artifacts.monthly_inventory_qty.copy()
+        return pd.DataFrame()
+
+    @staticmethod
+    def _period_pair_values(df: pd.DataFrame, metric_column: str, period_a: str, period_b: str) -> dict[str, Any]:
+        if df.empty or COL_MONTH not in df.columns or metric_column not in df.columns:
+            return {}
+        by_month = df.groupby(COL_MONTH)[metric_column].sum()
+        if period_a not in by_month.index or period_b not in by_month.index:
+            return {}
+        value_a = float(by_month.loc[period_a])
+        value_b = float(by_month.loc[period_b])
+        change = value_b - value_a
+        change_pct = change / value_a if value_a else None
+        if change > 0:
+            direction = "up"
+        elif change < 0:
+            direction = "down"
+        else:
+            direction = "flat"
+        return {
+            "value_a": round(value_a, 2),
+            "value_b": round(value_b, 2),
+            "change": round(change, 2),
+            "change_pct": change_pct,
+            "direction": direction,
+        }
 
     def get_root_cause_candidates(
         self,

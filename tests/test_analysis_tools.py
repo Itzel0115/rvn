@@ -144,6 +144,23 @@ class AnalysisToolboxTest(unittest.TestCase):
             or "偏弱" in weakest_row["primary_risk"]
         )
 
+    def test_get_period_pair_metric_comparison_returns_overall_and_breakdown(self) -> None:
+        payload = self.toolbox.get_period_pair_metric_comparison(
+            metric="revenue",
+            period_a="2024-02",
+            period_b="2024-07",
+            dimension="platform",
+        )
+
+        self.assertEqual(payload["metric"], "revenue")
+        self.assertEqual(payload["period_a"], "2024-02")
+        self.assertEqual(payload["period_b"], "2024-07")
+        self.assertEqual(payload["overall"]["value_a"], 5135.0)
+        self.assertEqual(payload["overall"]["value_b"], 6060.0)
+        self.assertEqual(payload["overall"]["change"], 925.0)
+        self.assertEqual(payload["overall"]["direction"], "up")
+        self.assertTrue(payload["breakdown"])
+
 
     def test_get_root_cause_candidates_returns_dict(self) -> None:
         payload = self.toolbox.get_root_cause_candidates(metric="revenue", top_n=4)

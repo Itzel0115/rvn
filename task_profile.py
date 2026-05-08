@@ -29,6 +29,22 @@ CHANGE_TOKENS = ["change", "mom", "monthly", "\u8b8a\u5316", "\u6708\u589e", "\u
 PERFORMANCE_TOKENS = ["performance", "performing", "health", "healthy", "stable", "\u8868\u73fe", "\u7e3e\u6548", "\u5065\u5eb7", "\u7a69", "\u512a\u5148\u6ce8\u610f"]
 BEST_TOKENS = ["best", "better", "stronger", "highest", "healthiest", "stable", "\u8f03\u4f73", "\u6700\u4f73", "\u8f03\u597d", "\u6700\u597d", "\u6700\u5065\u5eb7", "\u6700\u7a69", "\u6bd4\u8f03\u7a69"]
 WORST_TOKENS = ["worst", "weaker", "weakest", "poor", "lowest", "attention", "\u8f03\u5dee", "\u6700\u5dee", "\u8f03\u5f31", "\u9700\u8981\u512a\u5148\u6ce8\u610f", "\u512a\u5148\u6ce8\u610f"]
+SUMMARY_TOKENS = ["summary", "summarize", "overview", "\u6574\u7406", "\u6458\u8981", "\u91cd\u9ede", "\u72c0\u6cc1"]
+LATEST_TOKENS = ["latest month", "current month", "this month", "\u6700\u65b0\u6708\u4efd", "\u6700\u65b0\u6708", "\u672c\u6708", "\u7576\u6708"]
+FORECAST_TOKENS = [
+    "forecast",
+    "predict",
+    "prediction",
+    "next month",
+    "future",
+    "\u4e0b\u500b\u6708",
+    "\u4e0b\u6708",
+    "\u672a\u4f86",
+    "\u9810\u6e2c",
+    "\u6703\u4e0d\u6703\u6539\u5584",
+    "\u6703\u4e0d\u6703\u4e0b\u964d",
+    "\u662f\u5426\u6703\u6210\u9577",
+]
 
 
 def build_task_profile(question: str, routing: Any) -> TaskProfile:
@@ -39,6 +55,78 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
     routed_answer_strategy = getattr(routing, "answer_strategy", None) or routed_question_type
     target_dimension = getattr(routing, "object_dimension", None) or _infer_target_dimension(text, lowered)
     month = getattr(filters, "month", None) or _extract_month(text)
+
+    if _is_forecast_unsupported(text, lowered):
+        metric_list = _fallback_metrics(text, lowered, routed_answer_strategy)
+        return TaskProfile(
+            task_family="forecast_unsupported",
+            business_intent="forecast_unsupported",
+            target_entity={"dimension": target_dimension, "ids": [], "scope": "all"},
+            metrics=metric_list,
+            time_scope={
+                "mode": "future_period",
+                "month": None,
+                "baseline": month,
+                "requires_previous_period": False,
+            },
+            comparison_axis={"axis": "none", "dimension": None, "baseline": None},
+            polarity=_infer_polarity(text, lowered),
+            analysis_depth="basic",
+            answer_style="unsupported_with_limitations",
+            requires_table=False,
+            requires_limitations=True,
+        )
+
+    period_pair = _extract_period_pair(text)
+    if period_pair:
+        metric_list = _fallback_metrics(text, lowered, routed_answer_strategy)
+        return TaskProfile(
+            task_family="period_pair_compare",
+            business_intent="period_pair_compare",
+            target_entity={"dimension": target_dimension or "overall", "ids": [], "scope": "all"},
+            metrics=metric_list,
+            time_scope={
+                "mode": "explicit_period_pair",
+                "period_a": period_pair[0],
+                "period_b": period_pair[1],
+                "month": period_pair[1],
+                "baseline": period_pair[0],
+                "requires_previous_period": False,
+            },
+            comparison_axis={"axis": "time", "dimension": "month", "baseline": "explicit_period_pair"},
+            polarity=None,
+            analysis_depth="standard",
+            answer_style="period_difference_summary",
+            requires_table=True,
+            requires_limitations=True,
+        )
+
+    if _is_latest_month_platform_summary(text, lowered, routed_answer_strategy):
+        return TaskProfile(
+            task_family="latest_month_platform_summary",
+            business_intent="latest_month_platform_summary",
+            target_entity={"dimension": "platform", "ids": [], "scope": "all"},
+            metrics=[
+                "revenue",
+                "inventory_amount",
+                "inventory_qty",
+                "revenue_inventory_ratio",
+                "health_score",
+                "risk_score",
+            ],
+            time_scope={
+                "mode": "latest_month",
+                "month": month,
+                "baseline": None,
+                "requires_previous_period": False,
+            },
+            comparison_axis={"axis": "entity", "dimension": "platform", "baseline": "latest_month_peers"},
+            polarity=None,
+            analysis_depth="standard",
+            answer_style="executive_summary_with_table",
+            requires_table=True,
+            requires_limitations=True,
+        )
 
     if _is_time_compare(text, lowered):
         return TaskProfile(
@@ -128,6 +216,19 @@ def _is_cross_section_compare(text: str, lowered: str, answer_strategy: str) -> 
     return has_compare and has_platform and has_revenue_inventory and not _is_time_compare(text, lowered)
 
 
+def _is_latest_month_platform_summary(text: str, lowered: str, answer_strategy: str) -> bool:
+    has_platform = _has_any(text, lowered, PLATFORM_TOKENS)
+    has_latest = _has_any(text, lowered, LATEST_TOKENS)
+    has_summary = _has_any(text, lowered, SUMMARY_TOKENS) or answer_strategy in {"overview", "metric_query", "query"}
+    has_revenue_inventory = _has_any(text, lowered, REVENUE_TOKENS) and _has_any(text, lowered, INVENTORY_TOKENS)
+    has_operations = any(token in lowered or token in text for token in ["operation", "operational", "\u71df\u904b"])
+    return has_platform and has_latest and has_summary and (has_revenue_inventory or has_operations)
+
+
+def _is_forecast_unsupported(text: str, lowered: str) -> bool:
+    return _has_any(text, lowered, FORECAST_TOKENS)
+
+
 def _is_performance_assessment(text: str, lowered: str, answer_strategy: str) -> bool:
     has_platform = _has_any(text, lowered, PLATFORM_TOKENS)
     has_performance = _has_any(text, lowered, PERFORMANCE_TOKENS)
@@ -136,6 +237,8 @@ def _is_performance_assessment(text: str, lowered: str, answer_strategy: str) ->
 
 
 def _is_time_compare(text: str, lowered: str) -> bool:
+    if _extract_period_pair(text):
+        return False
     explicit_two_months = len(re.findall(r"(?<!\d)(1[0-2]|0?[1-9])\s*\u6708", text)) >= 2
     has_change = _has_any(text, lowered, CHANGE_TOKENS)
     asks_contribution = _has_any(text, lowered, CONTRIBUTION_TOKENS)
@@ -232,6 +335,38 @@ def _extract_month(text: str) -> str | None:
         if token in text:
             return month
     return None
+
+
+def _extract_period_pair(text: str) -> tuple[str, str] | None:
+    months: list[str] = []
+    for match in re.finditer(r"(20\d{2})\s*[-/\u5e74]?\s*(0?[1-9]|1[0-2])\s*(?:\u6708)?", text):
+        months.append(f"{match.group(1)}-{int(match.group(2)):02d}")
+    if len(months) < 2:
+        for match in re.finditer(r"(?<!\d)(1[0-2]|0?[1-9])\s*\u6708", text):
+            months.append(f"2024-{int(match.group(1)):02d}")
+    unique_months = list(dict.fromkeys(months))
+    if len(unique_months) >= 2 and _looks_like_period_pair_question(text):
+        return unique_months[0], unique_months[1]
+    return None
+
+
+def _looks_like_period_pair_question(text: str) -> bool:
+    lowered = text.lower()
+    pair_tokens = [
+        "compare",
+        " vs ",
+        "versus",
+        "difference",
+        "\u6bd4\u8f03",
+        "\u4ee5\u53ca",
+        "\u8207",
+        "\u548c",
+        "\u8ddf",
+        "\u5dee\u591a\u5c11",
+        "\u5dee\u7570",
+        "\u5340\u5225",
+    ]
+    return any(token in lowered or token in text for token in pair_tokens)
 
 
 def _extract_baseline_month(text: str, current_month: str | None) -> str | None:

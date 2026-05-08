@@ -142,6 +142,47 @@ class AnswerContractTest(unittest.TestCase):
         self.assertIn(contract["display_blocks"]["headline"], contract["answer"])
         self.assertIn("\u91cd\u9ede\u89c0\u6e2c", contract["answer"])
 
+    def test_latest_month_platform_summary_uses_scorecard_table(self) -> None:
+        response = self.assistant.answer("\u8acb\u6574\u7406\u6700\u65b0\u6708\u4efd\u5404\u5e73\u53f0\u7684\u71df\u6536\u8207\u5eab\u5b58\u91cd\u9ede")
+        contract = response["answer_contract"]
+        headline = contract["display_blocks"]["headline"]
+
+        self.assertEqual(response["task_profile"]["task_family"], "latest_month_platform_summary")
+        self.assertIn("get_platform_performance_snapshot", contract["tools_used"])
+        self.assertIsNotNone(contract["display_blocks"]["table"])
+        self.assertIn("最新月份", headline)
+        self.assertNotIn("metric_table", headline)
+        self.assertNotIn("sales: metric_table", headline)
+        self.assertNotIn("inventory: metric_table", headline)
+
+    def test_period_pair_compare_uses_explicit_period_tool(self) -> None:
+        response = self.assistant.answer("2024\u5e742\u6708\u4ee5\u53ca2024\u5e747\u6708\u71df\u6536\u6709\u751a\u9ebc\u5340\u5225\uff1f")
+        contract = response["answer_contract"]
+        headline = contract["display_blocks"]["headline"]
+
+        self.assertEqual(response["task_profile"]["task_family"], "period_pair_compare")
+        self.assertEqual(response["task_profile"]["time_scope"]["period_a"], "2024-02")
+        self.assertEqual(response["task_profile"]["time_scope"]["period_b"], "2024-07")
+        self.assertIn("get_period_pair_metric_comparison(revenue)", contract["tools_used"])
+        self.assertIsNotNone(contract["display_blocks"]["table"])
+        self.assertIn("2024-02", headline)
+        self.assertIn("2024-07", headline)
+        self.assertIn("925.00", headline)
+
+    def test_forecast_unsupported_does_not_use_metric_table(self) -> None:
+        response = self.assistant.answer("\u4e0b\u500b\u6708\u71df\u6536\u6703\u4e0d\u6703\u6539\u5584\uff1f")
+        contract = response["answer_contract"]
+        headline = contract["display_blocks"]["headline"]
+
+        self.assertEqual(response["task_profile"]["task_family"], "forecast_unsupported")
+        self.assertEqual(contract["answer_type"], "unsupported")
+        self.assertEqual(contract["tools_used"], [])
+        self.assertNotIn("get_metric_table", " ".join(contract["tools_used"]))
+        self.assertIn("無法判斷", headline)
+        self.assertNotIn("sales: metric_table", headline)
+        self.assertNotIn("inventory: metric_table", headline)
+        self.assertNotIn("會改善", headline.replace("是否會改善", ""))
+
 
 if __name__ == "__main__":
     unittest.main()
