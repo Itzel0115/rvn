@@ -10,6 +10,7 @@ class TaskProfile:
     task_family: str
     business_intent: str | None = None
     target_entity: dict[str, Any] = field(default_factory=dict)
+    parent_entity: dict[str, Any] = field(default_factory=dict)
     metrics: list[str] = field(default_factory=list)
     time_scope: dict[str, Any] = field(default_factory=dict)
     comparison_axis: dict[str, Any] = field(default_factory=dict)
@@ -21,14 +22,16 @@ class TaskProfile:
 
 
 PLATFORM_TOKENS = ["platform", "\u5e73\u53f0", "\u5e73\u81fa"]
+BUSINESS_GROUP_TOKENS = ["business group", "\u65b0\u4e8b\u696d\u7fa4", "\u4e8b\u696d\u7fa4", "\u5404\u4e8b\u696d\u7fa4", "\u54ea\u500b\u65b0\u4e8b\u696d\u7fa4"]
+PRODUCT_LINE_TOKENS = ["product line", "product_line", "\u4e94\u5927\u7522\u54c1\u7dda", "\u7522\u54c1\u7dda", "\u54ea\u500b\u7522\u54c1\u7dda"]
 REVENUE_TOKENS = ["revenue", "sales", "\u71df\u6536", "\u92b7\u552e"]
 INVENTORY_TOKENS = ["inventory", "stock", "qty", "\u5eab\u5b58", "\u5b58\u8ca8", "\u91d1\u984d"]
 COMPARE_TOKENS = ["compare", "comparison", "versus", " vs ", "\u6bd4\u8f03", "\u5c0d\u6bd4", "\u76f8\u8f03"]
 CONTRIBUTION_TOKENS = ["contribution", "contributed", "contribute", "\u8ca2\u737b"]
 CHANGE_TOKENS = ["change", "mom", "monthly", "\u8b8a\u5316", "\u6708\u589e", "\u76f8\u8f03"]
-PERFORMANCE_TOKENS = ["performance", "performing", "health", "healthy", "stable", "\u8868\u73fe", "\u7e3e\u6548", "\u5065\u5eb7", "\u7a69", "\u512a\u5148\u6ce8\u610f"]
-BEST_TOKENS = ["best", "better", "stronger", "highest", "healthiest", "stable", "\u8f03\u4f73", "\u6700\u4f73", "\u8f03\u597d", "\u6700\u597d", "\u6700\u5065\u5eb7", "\u6700\u7a69", "\u6bd4\u8f03\u7a69"]
-WORST_TOKENS = ["worst", "weaker", "weakest", "poor", "lowest", "attention", "\u8f03\u5dee", "\u6700\u5dee", "\u8f03\u5f31", "\u9700\u8981\u512a\u5148\u6ce8\u610f", "\u512a\u5148\u6ce8\u610f"]
+PERFORMANCE_TOKENS = ["performance", "performing", "health", "healthy", "stable", "pressure", "inventory pressure", "\u8868\u73fe", "\u7e3e\u6548", "\u5065\u5eb7", "\u7a69", "\u512a\u5148\u6ce8\u610f", "\u58d3\u529b", "\u5eab\u5b58\u58d3\u529b"]
+BEST_TOKENS = ["best", "better", "stronger", "highest", "healthiest", "stable", "\u6700\u9ad8", "\u8f03\u4f73", "\u6700\u4f73", "\u8f03\u597d", "\u6700\u597d", "\u6700\u5065\u5eb7", "\u6700\u7a69", "\u6bd4\u8f03\u7a69"]
+WORST_TOKENS = ["worst", "weaker", "weakest", "poor", "lowest", "attention", "pressure", "inventory pressure", "\u6700\u4f4e", "\u8f03\u5dee", "\u6700\u5dee", "\u8f03\u5f31", "\u9700\u8981\u512a\u5148\u6ce8\u610f", "\u512a\u5148\u6ce8\u610f", "\u58d3\u529b", "\u58d3\u529b\u8f03\u9ad8", "\u5eab\u5b58\u58d3\u529b"]
 SUMMARY_TOKENS = ["summary", "summarize", "overview", "\u6574\u7406", "\u6458\u8981", "\u91cd\u9ede", "\u72c0\u6cc1"]
 LATEST_TOKENS = ["latest month", "current month", "this month", "\u6700\u65b0\u6708\u4efd", "\u6700\u65b0\u6708", "\u672c\u6708", "\u7576\u6708"]
 FORECAST_TOKENS = [
@@ -54,6 +57,9 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
     routed_question_type = getattr(routing, "question_type", "query") or "query"
     routed_answer_strategy = getattr(routing, "answer_strategy", None) or routed_question_type
     target_dimension = getattr(routing, "object_dimension", None) or _infer_target_dimension(text, lowered)
+    if target_dimension == "platform":
+        target_dimension = "business_group"
+    parent_entity = _infer_parent_entity(text)
     month = getattr(filters, "month", None) or _extract_month(text)
 
     if _is_forecast_unsupported(text, lowered):
@@ -102,10 +108,12 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
         )
 
     if _is_latest_month_platform_summary(text, lowered, routed_answer_strategy):
+        entity_dimension = target_dimension or "business_group"
         return TaskProfile(
-            task_family="latest_month_platform_summary",
-            business_intent="latest_month_platform_summary",
-            target_entity={"dimension": "platform", "ids": [], "scope": "all"},
+            task_family="latest_month_entity_summary",
+            business_intent="latest_month_entity_summary",
+            target_entity={"dimension": entity_dimension, "ids": [], "scope": "all"},
+            parent_entity=parent_entity,
             metrics=[
                 "revenue",
                 "inventory_amount",
@@ -120,7 +128,7 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
                 "baseline": None,
                 "requires_previous_period": False,
             },
-            comparison_axis={"axis": "entity", "dimension": "platform", "baseline": "latest_month_peers"},
+            comparison_axis={"axis": "entity", "dimension": entity_dimension, "baseline": "latest_month_peers"},
             polarity=None,
             analysis_depth="standard",
             answer_style="executive_summary_with_table",
@@ -149,10 +157,12 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
         )
 
     if _is_cross_section_compare(text, lowered, routed_answer_strategy):
+        entity_dimension = target_dimension or "business_group"
         return TaskProfile(
             task_family="cross_section_compare",
-            business_intent="compare_platform_metrics_same_month",
-            target_entity={"dimension": "platform", "ids": [], "scope": "all"},
+            business_intent="compare_entity_metrics_same_month",
+            target_entity={"dimension": entity_dimension, "ids": [], "scope": "all"},
+            parent_entity=parent_entity,
             metrics=["revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio"],
             time_scope={
                 "mode": "single_month",
@@ -160,7 +170,7 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
                 "baseline": None,
                 "requires_previous_period": False,
             },
-            comparison_axis={"axis": "entity", "dimension": "platform", "baseline": "same_month_peers"},
+            comparison_axis={"axis": "entity", "dimension": entity_dimension, "baseline": "same_month_peers"},
             polarity=None,
             analysis_depth="standard",
             answer_style="table_first",
@@ -170,10 +180,12 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
 
     if _is_performance_assessment(text, lowered, routed_answer_strategy):
         polarity = _infer_polarity(text, lowered)
+        entity_dimension = target_dimension or "business_group"
         return TaskProfile(
             task_family="performance_assessment",
-            business_intent=f"assess_platform_performance_{polarity or 'neutral'}",
-            target_entity={"dimension": "platform", "ids": [], "scope": "all"},
+            business_intent=f"assess_entity_performance_{polarity or 'neutral'}",
+            target_entity={"dimension": entity_dimension, "ids": [], "scope": "all"},
+            parent_entity=parent_entity,
             metrics=["revenue", "inventory_amount", "inventory_turnover_proxy", "anomaly"],
             time_scope={
                 "mode": "single_month" if month else "latest_or_overall",
@@ -181,11 +193,33 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
                 "baseline": None,
                 "requires_previous_period": False,
             },
-            comparison_axis={"axis": "entity", "dimension": "platform", "baseline": "peer_performance"},
+            comparison_axis={"axis": "entity", "dimension": entity_dimension, "baseline": "peer_performance"},
             polarity=polarity,
             analysis_depth="standard",
             answer_style="conclusion_first",
             requires_table=False,
+            requires_limitations=True,
+        )
+
+    if routed_answer_strategy == "ranking":
+        entity_dimension = target_dimension or "business_group"
+        return TaskProfile(
+            task_family="ranking",
+            business_intent="entity_metric_ranking",
+            target_entity={"dimension": entity_dimension, "ids": [], "scope": "all"},
+            parent_entity=parent_entity,
+            metrics=[_ranking_metric(text, lowered)],
+            time_scope={
+                "mode": "latest_month" if _has_any(text, lowered, LATEST_TOKENS) or not month else "single_month",
+                "month": month,
+                "baseline": None,
+                "requires_previous_period": False,
+            },
+            comparison_axis={"axis": "entity", "dimension": entity_dimension, "baseline": "latest_month_peers"},
+            polarity=_infer_polarity(text, lowered) or "top",
+            analysis_depth="basic",
+            answer_style="conclusion_first",
+            requires_table=True,
             requires_limitations=True,
         )
 
@@ -211,13 +245,13 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
 
 def _is_cross_section_compare(text: str, lowered: str, answer_strategy: str) -> bool:
     has_compare = _has_any(text, lowered, COMPARE_TOKENS) or answer_strategy == "comparison"
-    has_platform = _has_any(text, lowered, PLATFORM_TOKENS)
+    has_platform = _has_any(text, lowered, PLATFORM_TOKENS + BUSINESS_GROUP_TOKENS + PRODUCT_LINE_TOKENS)
     has_revenue_inventory = _has_any(text, lowered, REVENUE_TOKENS) and _has_any(text, lowered, INVENTORY_TOKENS)
     return has_compare and has_platform and has_revenue_inventory and not _is_time_compare(text, lowered)
 
 
 def _is_latest_month_platform_summary(text: str, lowered: str, answer_strategy: str) -> bool:
-    has_platform = _has_any(text, lowered, PLATFORM_TOKENS)
+    has_platform = _has_any(text, lowered, PLATFORM_TOKENS + BUSINESS_GROUP_TOKENS + PRODUCT_LINE_TOKENS)
     has_latest = _has_any(text, lowered, LATEST_TOKENS)
     has_summary = _has_any(text, lowered, SUMMARY_TOKENS) or answer_strategy in {"overview", "metric_query", "query"}
     has_revenue_inventory = _has_any(text, lowered, REVENUE_TOKENS) and _has_any(text, lowered, INVENTORY_TOKENS)
@@ -230,7 +264,7 @@ def _is_forecast_unsupported(text: str, lowered: str) -> bool:
 
 
 def _is_performance_assessment(text: str, lowered: str, answer_strategy: str) -> bool:
-    has_platform = _has_any(text, lowered, PLATFORM_TOKENS)
+    has_platform = _has_any(text, lowered, PLATFORM_TOKENS + BUSINESS_GROUP_TOKENS + PRODUCT_LINE_TOKENS)
     has_performance = _has_any(text, lowered, PERFORMANCE_TOKENS)
     has_best_or_worst = _has_any(text, lowered, BEST_TOKENS + WORST_TOKENS)
     return has_platform and has_performance and (has_best_or_worst or answer_strategy == "performance_weakness")
@@ -246,13 +280,27 @@ def _is_time_compare(text: str, lowered: str) -> bool:
 
 
 def _infer_target_dimension(text: str, lowered: str) -> str | None:
+    if _has_any(text, lowered, PRODUCT_LINE_TOKENS):
+        return "product_line_5"
+    if _has_any(text, lowered, BUSINESS_GROUP_TOKENS):
+        return "business_group"
     if _has_any(text, lowered, PLATFORM_TOKENS):
-        return "platform"
-    if _has_any(text, lowered, ["business group", "group", "\u4e8b\u696d\u7fa4", "\u65b0\u4e8b\u696d\u7fa4"]):
         return "business_group"
     if _has_any(text, lowered, ["month", "\u6708\u4efd", "\u672c\u6708", "\u6700\u65b0\u6708"]):
         return "month"
     return None
+
+
+def _infer_parent_entity(text: str) -> dict[str, Any]:
+    if not any(token in text for token in ["底下", "下面", "下各", "底下各"]):
+        return {}
+    if not any(token in text for token in ["產品線", "五大產品線"]):
+        return {}
+    value = None
+    match = re.search(r"([\w\u4e00-\u9fff+\-]+?)(?:底下|下面|下各)", text)
+    if match and "某" not in match.group(1):
+        value = match.group(1)
+    return {"dimension": "business_group", "value": value}
 
 
 def _infer_polarity(text: str, lowered: str) -> str | None:
@@ -290,6 +338,20 @@ def _fallback_metrics(text: str, lowered: str, answer_strategy: str) -> list[str
     if answer_strategy in {"risk", "diagnosis", "performance_weakness"}:
         metrics.append("anomaly")
     return _unique(metrics or ["revenue"])
+
+
+def _ranking_metric(text: str, lowered: str) -> str:
+    if "health_score" in lowered or "health score" in lowered:
+        return "health_score"
+    if _has_any(text, lowered, ["效率", "週轉", "周轉", "比值", "ratio", "efficiency"]):
+        return "revenue_inventory_amount_ratio"
+    if _has_any(text, lowered, ["qty", "QTY", "數量"]):
+        return "inventory_qty"
+    if _has_any(text, lowered, INVENTORY_TOKENS) and not _has_any(text, lowered, REVENUE_TOKENS):
+        return "inventory_amount"
+    if _has_any(text, lowered, REVENUE_TOKENS):
+        return "revenue_amount"
+    return "revenue_amount"
 
 
 def _fallback_comparison_axis(answer_strategy: str, target_dimension: str | None) -> dict[str, Any]:

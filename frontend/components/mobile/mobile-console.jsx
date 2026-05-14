@@ -189,8 +189,8 @@ export function MobileConsole() {
         summary,
         {
           noData: "-",
-          topRevenuePlatformLabel: "營收最高平台",
-          topInventoryPlatformLabel: "庫存最高平台",
+          topRevenuePlatformLabel: "營收最高新事業群",
+          topInventoryPlatformLabel: "庫存最高新事業群",
         },
         { mode: "mobile" },
       ),

@@ -38,6 +38,8 @@ The planner is restricted to this allowlist:
 - `get_metric_table`
 - `get_top_groups`
 - `get_platform_ranking`
+- `get_entity_metric_ranking`
+- `get_entity_performance_snapshot`
 - `get_platform_ratios`
 - `get_anomalies`
 - `get_yoy_mom_breakdown`
@@ -79,7 +81,7 @@ Instead, the planner prompt uses a deterministic subset:
 - why / cause / diagnosis questions
   `get_yoy_mom_breakdown`, `get_contribution_analysis`, `get_inventory_turnover_proxy`, `get_root_cause_candidates`, `get_anomalies`, `get_platform_ratios`
 - ranking questions
-  `get_top_groups`, `get_platform_ranking`, `get_data_coverage`
+  `get_entity_metric_ranking`, `get_entity_performance_snapshot`, `get_data_coverage`
 - data quality questions
   `get_data_coverage`, `get_mapping_summary`, `get_tool_capability_matrix`
 - general overview questions

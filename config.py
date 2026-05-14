@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -19,9 +20,9 @@ ANALYSIS_REPORT_FILE = OUTPUT_DIR / "analysis_report.md"
 LLM_EXPLANATION_FILE = OUTPUT_DIR / "llm_explanation.md"
 QA_TRANSCRIPT_FILE = OUTPUT_DIR / "qa_transcript.md"
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_MODEL = "gemma4:e4b"
-OLLAMA_TIMEOUT_SECONDS = 90
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "90"))
 
 # ---------------------------------------------------------------------------
 # Column name contract — A and B must both import from here.

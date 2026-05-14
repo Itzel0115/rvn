@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -33,6 +33,10 @@ class AnalysisArtifacts:
     correlation_analysis: pd.DataFrame
     summary_metrics: dict[str, pd.DataFrame]
     report_context: dict
+    inventory_monthly_entity: pd.DataFrame = field(default_factory=pd.DataFrame)
+    revenue_monthly_entity: pd.DataFrame = field(default_factory=pd.DataFrame)
+    revenue_inventory_aligned: pd.DataFrame = field(default_factory=pd.DataFrame)
+    data_quality_report: dict = field(default_factory=dict)
 
 
 def analyze_data(

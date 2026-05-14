@@ -51,6 +51,7 @@ class RoutingDecision:
     planned_tools: list[str] = field(default_factory=list)
     planning_source: str | None = None
     requires_limitations: bool = False
+    parent_filter: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -109,6 +110,7 @@ class BaseDomainAgent:
             "risk",
             "performance_weakness",
             "latest_month_platform_summary",
+            "latest_month_entity_summary",
             "period_pair_compare",
             "chart",
             "decision",
@@ -191,6 +193,8 @@ class BaseDomainAgent:
             return capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("available", False) and (
                 metric in capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("supported_metrics", [])
             )
+        if tool_name.startswith("get_entity_period_pair_comparison(") and tool_name.endswith(")"):
+            return not self.toolbox.context.artifacts.revenue_inventory_aligned.empty
         if tool_name == "get_period_pair_metric_comparison":
             return capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("available", False)
         return capability_matrix["tools"].get(tool_name, {}).get("available", True)
@@ -294,6 +298,7 @@ class SalesAgent(BaseDomainAgent):
             "get_yoy_mom_breakdown(revenue)": "Return deterministic month-over-month and year-over-year revenue breakdown.",
             "get_contribution_analysis(revenue)": "Return deterministic contribution analysis for revenue change.",
             "get_period_pair_metric_comparison(revenue)": "Compare revenue between two explicit periods.",
+            "get_entity_period_pair_comparison(revenue)": "Compare revenue between two explicit periods by real data entity.",
             "get_root_cause_candidates": "Return deterministic candidate observations for possible drivers without claiming causal root cause.",
         }
 
@@ -304,7 +309,7 @@ class SalesAgent(BaseDomainAgent):
         )
         tools = ["get_metric_table(revenue_trend)"]
         if routing.answer_strategy == "period_pair_compare":
-            return ["get_period_pair_metric_comparison(revenue)"]
+            return ["get_entity_period_pair_comparison(revenue)"]
         if routing.answer_strategy == "ranking":
             tools.append("get_top_groups(revenue)")
         if routing.answer_strategy in {"trend", "comparison", "diagnosis"}:
@@ -344,7 +349,7 @@ class SalesAgent(BaseDomainAgent):
             else:
                 warnings.append("目前沒有符合條件的營收資料可供分析。")
 
-        if "get_period_pair_metric_comparison(revenue)" in selected_tools:
+        if "get_entity_period_pair_comparison(revenue)" in selected_tools or "get_period_pair_metric_comparison(revenue)" in selected_tools:
             period_a = getattr(routing, "period_a", None)
             period_b = getattr(routing, "period_b", None)
             period_pair = getattr(routing, "period_pair", None)
@@ -352,14 +357,26 @@ class SalesAgent(BaseDomainAgent):
                 period_a = period_a or period_pair[0]
                 period_b = period_b or period_pair[1]
             if period_a and period_b:
-                comparison = self.toolbox.get_period_pair_metric_comparison(
-                    metric="revenue",
-                    period_a=str(period_a),
-                    period_b=str(period_b),
-                    dimension="business_group" if routing.object_dimension == "business_group" else "platform",
-                    filters=routing.filters,
-                    top_n=5,
-                )
+                if "get_entity_period_pair_comparison(revenue)" in selected_tools:
+                    dimension = routing.object_dimension or "business_group"
+                    if dimension == "platform":
+                        dimension = "business_group"
+                    comparison = self.toolbox.get_entity_period_pair_comparison(
+                        entity_dimension=dimension,
+                        metric="revenue",
+                        period_a=str(period_a),
+                        period_b=str(period_b),
+                        parent_filter=getattr(routing, "parent_filter", None) or None,
+                    )
+                else:
+                    comparison = self.toolbox.get_period_pair_metric_comparison(
+                        metric="revenue",
+                        period_a=str(period_a),
+                        period_b=str(period_b),
+                        dimension="business_group" if routing.object_dimension == "business_group" else "platform",
+                        filters=routing.filters,
+                        top_n=5,
+                    )
                 overall = comparison.get("overall") or {}
                 if overall:
                     direction = "增加" if overall.get("direction") == "up" else ("下降" if overall.get("direction") == "down" else "持平")
@@ -549,8 +566,9 @@ class InventoryAgent(BaseDomainAgent):
             if platform_rank:
                 top_platform = platform_rank[0]
                 scope_label = f"{routing.filters.month} " if routing.filters.month else "目前累計 "
+                entity_label = "五大產品線" if routing.object_dimension == "product_line_5" else "新事業群"
                 findings.append(
-                    f"{scope_label}庫存金額最高的平台是 {top_platform['platform']}，"
+                    f"{scope_label}庫存金額最高的{entity_label}是 {top_platform['platform']}，"
                     f"數值為 {top_platform['value_text']}。"
                 )
                 evidence.extend(platform_rank[:3])
@@ -593,11 +611,18 @@ class InventoryAgent(BaseDomainAgent):
                 evidence.append(contribution)
 
         if "get_inventory_turnover_proxy" in selected_tools:
-            proxy_rows = self.toolbox.get_inventory_turnover_proxy(routing.filters, top_n=3)
+            proxy_rows = self.toolbox.get_inventory_turnover_proxy(
+                routing.filters,
+                top_n=3,
+                entity_dimension=routing.object_dimension or "business_group",
+                parent_filter=getattr(routing, "parent_filter", None) or None,
+            )
             if proxy_rows:
                 weakest = proxy_rows[0]
+                entity_label = weakest.get("entity_label") or ("五大產品線" if routing.object_dimension == "product_line_5" else "新事業群")
+                entity_value = weakest.get("entity_value") or weakest.get("platform") or weakest.get("business_group")
                 findings.append(
-                    f"庫存效率 proxy 最弱的是 {weakest['month']} / 平台 {weakest['platform']} / 新事業群 {weakest['group_code']}，"
+                    f"庫存效率 proxy 最弱的是 {weakest['month']} / {entity_label} {entity_value}，"
                     f"營收/庫存金額 ratio 為 {format_number(weakest['revenue_inventory_amount_ratio'])}。"
                 )
                 evidence.extend(proxy_rows)
@@ -622,6 +647,9 @@ class FinancialMetricsAgent(BaseDomainAgent):
 
     def supported_tools(self) -> dict[str, str]:
         return {
+            "get_entity_performance_snapshot": "Return deterministic entity performance scorecard for business_group or product_line_5.",
+            "get_entity_cross_section_comparison": "Return same-month entity comparison across revenue, inventory, proxy ratios, and health score.",
+            "get_entity_metric_ranking": "Return latest-month real-data entity ranking by a single metric.",
             "get_platform_performance_snapshot": "Return deterministic platform performance scorecard across revenue scale, momentum, inventory-efficiency proxy, and anomalies.",
             "get_platform_ratios": "Return revenue to inventory proxy ratios on platform-month level.",
             "get_anomalies": "Return anomaly records produced by the existing analyzer.",
@@ -632,11 +660,13 @@ class FinancialMetricsAgent(BaseDomainAgent):
 
     def default_tools(self, routing: RoutingDecision) -> list[str]:
         tools = ["get_platform_ratios", "get_anomalies"]
-        if routing.answer_strategy in {"comparison", "performance_weakness", "latest_month_platform_summary"}:
-            tools.insert(0, "get_platform_performance_snapshot")
+        if routing.answer_strategy == "ranking":
+            return ["get_entity_metric_ranking"]
+        if routing.answer_strategy in {"comparison", "performance_weakness", "latest_month_platform_summary", "latest_month_entity_summary"}:
+            tools.insert(0, "get_entity_performance_snapshot")
         if routing.answer_strategy in {"comparison", "diagnosis"}:
             tools.append("get_contribution_analysis(revenue)")
-        if routing.answer_strategy in {"risk", "diagnosis", "comparison", "performance_weakness", "latest_month_platform_summary"}:
+        if routing.answer_strategy in {"risk", "diagnosis", "comparison", "performance_weakness", "latest_month_platform_summary", "latest_month_entity_summary"}:
             tools.append("get_inventory_turnover_proxy")
         if routing.answer_strategy in {"diagnosis", "performance_weakness"}:
             tools.append("get_root_cause_candidates")
@@ -666,19 +696,77 @@ class FinancialMetricsAgent(BaseDomainAgent):
             effective_tools.append("get_anomalies")
 
         if ratio_question and not ratio_available:
-            unsupported_reasons.append("目前資料無法形成平台層整合分析，因此無法提供穩定的營收/庫存比值工具結果。")
+            unsupported_reasons.append("目前資料無法形成新事業群層整合分析，因此無法提供穩定的營收/庫存比值工具結果。")
+
+        if "get_entity_metric_ranking" in effective_tools:
+            dimension = routing.object_dimension or "business_group"
+            if dimension == "platform":
+                dimension = "business_group"
+            metric = self._ranking_metric_from_question(routing.question)
+            sort_direction = self._ranking_sort_direction_from_question(routing.question, metric)
+            ranking = self.toolbox.get_entity_metric_ranking(
+                entity_dimension=dimension,
+                metric=metric,
+                month=routing.filters.month,
+                top_n=5,
+                parent_filter=getattr(routing, "parent_filter", None) or None,
+                sort_direction=sort_direction,
+            )
+            if ranking.get("rows"):
+                label = ranking.get("entity_label", "新事業群")
+                top_entity = ranking.get("top_entity") or "N/A"
+                metric_label = ranking.get("metric_label", "指標")
+                findings.append(
+                    f"{ranking.get('month')} {metric_label}排名第一的{label}是 {top_entity}，"
+                    f"數值為 {format_number(ranking.get('top_value'))}。"
+                )
+                evidence.append(ranking)
+            else:
+                warnings.extend(ranking.get("limitations", ["目前沒有 entity ranking 結果。"]))
+
+        if "get_entity_performance_snapshot" in effective_tools:
+            dimension = routing.object_dimension or "business_group"
+            if dimension == "platform":
+                dimension = "business_group"
+            snapshot = self.toolbox.get_entity_performance_snapshot(
+                entity_dimension=dimension,
+                filters=routing.filters,
+                parent_filter=getattr(routing, "parent_filter", None) or None,
+            )
+            if snapshot.get("rows"):
+                summary = snapshot.get("summary", {})
+                label = snapshot.get("entity_label", "entity")
+                findings.append(
+                    f"{label} performance scorecard 顯示，目前綜合表現較佳的是 "
+                    f"{summary.get('best_entity', 'N/A')}，需優先注意的是 {summary.get('weakest_entity', 'N/A')}。"
+                )
+                evidence.append(snapshot)
+            else:
+                warnings.extend(snapshot.get("limitations", ["目前沒有 entity performance scorecard 結果。"]))
+
+        if "get_entity_cross_section_comparison" in effective_tools:
+            dimension = routing.object_dimension or "business_group"
+            if dimension == "platform":
+                dimension = "business_group"
+            comparison = self.toolbox.get_entity_cross_section_comparison(
+                entity_dimension=dimension,
+                month=routing.filters.month,
+                parent_filter=getattr(routing, "parent_filter", None) or None,
+            )
+            if comparison.get("rows"):
+                evidence.append(comparison)
 
         if "get_platform_performance_snapshot" in effective_tools:
             snapshot = self.toolbox.get_platform_performance_snapshot(routing.filters)
             if snapshot.get("rows"):
                 summary = snapshot.get("summary", {})
                 findings.append(
-                    "平台 performance scorecard 顯示，目前綜合表現較佳的平台為 "
-                    f"{summary.get('best_platform', 'N/A')}，需優先注意的平台為 {summary.get('weakest_platform', 'N/A')}。"
+                    "新事業群 performance scorecard 顯示，目前綜合表現較佳的是 "
+                    f"{summary.get('best_platform', 'N/A')}，需優先注意的新事業群為 {summary.get('weakest_platform', 'N/A')}。"
                 )
                 evidence.append(snapshot)
             else:
-                warnings.extend(snapshot.get("limitations", ["目前沒有平台 performance scorecard 結果。"]))
+                warnings.extend(snapshot.get("limitations", ["目前沒有新事業群 performance scorecard 結果。"]))
 
         if "get_platform_ratios" in effective_tools:
             if ratio_available:
@@ -686,8 +774,8 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 if ratio_records:
                     weakest = ratio_records[0]
                     findings.append(
-                        "在目前可對齊的平台資料中，營收相對庫存表現最弱的組合為 "
-                        f"{weakest.get('month')} / 平台 {weakest.get('platform')} / 新事業群 {weakest.get('group_code')}。"
+                        "在目前可對齊的新事業群資料中，營收相對庫存表現最弱的組合為 "
+                        f"{weakest.get('month')} / 新事業群 {weakest.get('business_group') or weakest.get('platform') or weakest.get('group_code')}。"
                     )
                     findings.append(
                         f"營收/庫存金額比值 {format_number(weakest.get('revenue_inventory_amount_ratio'))}，"
@@ -697,12 +785,12 @@ class FinancialMetricsAgent(BaseDomainAgent):
                         second = ratio_records[1]
                         findings.append(
                             "次弱組合為 "
-                            f"{second.get('month')} / 平台 {second.get('platform')} / 新事業群 {second.get('group_code')}，"
+                            f"{second.get('month')} / 新事業群 {second.get('business_group') or second.get('platform') or second.get('group_code')}，"
                             f"營收/庫存金額比值 {format_number(second.get('revenue_inventory_amount_ratio'))}。"
                         )
                     evidence.extend(ratio_records[:3])
                 else:
-                    warnings.append("目前沒有符合條件的平台比值結果。")
+                    warnings.append("目前沒有符合條件的新事業群比值結果。")
 
         if "get_anomalies" in effective_tools:
             anomaly_records = self.toolbox.get_anomalies(filters=routing.filters)
@@ -710,7 +798,7 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 first = anomaly_records[0]
                 findings.append(
                     f"目前偵測到 {len(anomaly_records)} 筆異常訊號；最需要注意的是 "
-                    f"{first.get(COL_MONTH, 'N/A')} / 平台 {first.get(COL_PLATFORM, 'N/A')} / 新事業群 {first.get(COL_GROUP_CODE, 'N/A')}。"
+                    f"{first.get(COL_MONTH, 'N/A')} / 新事業群 {first.get(COL_GROUP_CODE, first.get(COL_PLATFORM, 'N/A'))}。"
                 )
                 findings.append(
                     f"異常類型為 {first.get(COL_ANOMALY_TYPE, '欄位不足')}，"
@@ -738,11 +826,16 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 evidence.append(contribution)
 
         if "get_inventory_turnover_proxy" in effective_tools:
-            proxy_rows = self.toolbox.get_inventory_turnover_proxy(routing.filters, top_n=3)
+            proxy_rows = self.toolbox.get_inventory_turnover_proxy(
+                routing.filters,
+                top_n=3,
+                entity_dimension=routing.object_dimension or "business_group",
+                parent_filter=getattr(routing, "parent_filter", None) or None,
+            )
             if proxy_rows:
                 weakest = proxy_rows[0]
                 findings.append(
-                    f"庫存效率 proxy 偏弱的是 {weakest['month']} / 平台 {weakest['platform']} / 新事業群 {weakest['group_code']}，"
+                    f"庫存效率 proxy 偏弱的是 {weakest['month']} / {weakest.get('entity_label', '新事業群')} {weakest.get('entity_value') or weakest.get('platform')}，"
                     f"營收/庫存金額 ratio 為 {format_number(weakest['revenue_inventory_amount_ratio'])}。"
                 )
                 evidence.extend(proxy_rows[:2])
@@ -777,6 +870,27 @@ class FinancialMetricsAgent(BaseDomainAgent):
             confidence=confidence,
             used_tools=effective_tools,
         )
+
+    @staticmethod
+    def _ranking_metric_from_question(question: str) -> str:
+        lowered = question.lower()
+        if "health_score" in lowered or "health score" in lowered:
+            return "health_score"
+        if any(token in question for token in ["效率", "週轉", "周轉", "比值"]) or any(token in lowered for token in ["efficiency", "turnover", "ratio"]):
+            return "revenue_inventory_amount_ratio"
+        if "qty" in lowered or "QTY" in question or "數量" in question:
+            return "inventory_qty"
+        if any(token in question for token in ["庫存", "存貨"]):
+            return "inventory_amount"
+        return "revenue_amount"
+
+    @staticmethod
+    def _ranking_sort_direction_from_question(question: str, metric: str) -> str:
+        lowered = question.lower()
+        weak_tokens = ["最低", "較低", "最弱", "較弱", "偏弱", "worst", "weakest", "lowest"]
+        if metric == "revenue_inventory_amount_ratio" and any(token in question or token in lowered for token in weak_tokens):
+            return "ascending"
+        return "descending"
 
 
 class ChartAgent(BaseDomainAgent):
@@ -867,6 +981,27 @@ class ChartAgent(BaseDomainAgent):
         )
 
     @staticmethod
+    def _ranking_metric_from_question(question: str) -> str:
+        lowered = question.lower()
+        if "health_score" in lowered or "health score" in lowered:
+            return "health_score"
+        if any(token in question for token in ["效率", "週轉", "周轉", "比值"]) or any(token in lowered for token in ["efficiency", "turnover", "ratio"]):
+            return "revenue_inventory_amount_ratio"
+        if "qty" in lowered or "QTY" in question or "數量" in question:
+            return "inventory_qty"
+        if any(token in question for token in ["庫存", "存貨"]):
+            return "inventory_amount"
+        return "revenue_amount"
+
+    @staticmethod
+    def _ranking_sort_direction_from_question(question: str, metric: str) -> str:
+        lowered = question.lower()
+        weak_tokens = ["最低", "較低", "最弱", "較弱", "偏弱", "worst", "weakest", "lowest"]
+        if metric == "revenue_inventory_amount_ratio" and any(token in question or token in lowered for token in weak_tokens):
+            return "ascending"
+        return "descending"
+
+    @staticmethod
     def _chart_key_has_any(text: str, tokens: list[str]) -> bool:
         return any(token in text for token in tokens)
 
@@ -875,9 +1010,38 @@ class ChartAgent(BaseDomainAgent):
         lowered = question.lower()
         has_platform = cls._chart_key_has_any(question, ["平台", "平臺", "GG-"]) or "platform" in lowered
         has_group = cls._chart_key_has_any(question, ["事業群", "群組"]) or "group" in lowered
+        has_product_line = cls._chart_key_has_any(question, ["五大產品線", "產品線"]) or "product line" in lowered
+        has_business_group = has_group or has_platform
         asks_current_month = cls._chart_key_has_any(question, ["本月", "最新月份", "最新月", "當月"]) or any(
             token in lowered for token in ["current month", "latest month"]
         )
+
+        if has_product_line:
+            if cls._chart_key_has_any(question, ["health_score", "健康分數", "表現", "排名", "排行"]) or any(
+                token in lowered for token in ["health_score", "health score", "ranking", "rank"]
+            ):
+                return "product_line_health_score_bar"
+            if cls._chart_key_has_any(question, ["比值", "最低", "最弱", "較差", "最差", "表現差", "偏弱", "效率"]) or any(
+                token in lowered for token in ["ratio", "weakest", "lowest", "efficiency"]
+            ):
+                return "product_line_revenue_inventory_ratio_bar"
+            if cls._chart_key_has_any(question, ["庫存", "存貨", "金額"]) or "inventory" in lowered:
+                return "product_line_inventory_bar"
+            return "product_line_revenue_bar"
+
+        if has_business_group:
+            if cls._chart_key_has_any(question, ["health_score", "健康分數", "表現", "排名", "排行"]) or any(
+                token in lowered for token in ["health_score", "health score", "ranking", "rank"]
+            ):
+                return "business_group_health_score_bar"
+            if cls._chart_key_has_any(question, ["比值", "最低", "最弱", "較差", "最差", "表現差", "偏弱", "效率"]) or any(
+                token in lowered for token in ["ratio", "weakest", "lowest", "efficiency"]
+            ):
+                return "business_group_revenue_inventory_ratio_bar"
+            if cls._chart_key_has_any(question, ["庫存", "存貨", "金額"]) or "inventory" in lowered:
+                return "business_group_inventory_bar"
+            if cls._chart_key_has_any(question, ["營收", "銷售"]) or any(token in lowered for token in ["revenue", "sales"]):
+                return "business_group_revenue_bar"
 
         if cls._chart_key_has_any(question, ["異常", "風險", "警訊"]) or any(
             token in lowered for token in ["anomaly", "risk", "warning"]
@@ -1068,10 +1232,10 @@ class MultiAgentAssistant:
             "existing_capabilities": [
                 "Excel data loading and column validation",
                 "Date / numeric normalization",
-                "Mapping parsing for 事業群 / HQBU / 平台",
+                "Real-data entity parsing for 新事業群 / 五大產品線 / HQBU",
                 "Monthly trend aggregation",
                 "Group ranking aggregation",
-                "Partial revenue-inventory proxy ratio analysis when platform alignment is available",
+                "Revenue-inventory proxy ratio analysis when 新事業群 / 五大產品線 grain is aligned",
                 "Anomaly detection",
                 "Correlation analysis",
                 "Chart payload generation for frontend rendering",
@@ -1202,11 +1366,11 @@ class MultiAgentAssistant:
 
         if revenue_extremes:
             parts.append(
-                f"本月營收最高平台為 {revenue_extremes.get('max_platform')}（{format_number(revenue_extremes.get('max_value'))}），最低為 {revenue_extremes.get('min_platform')}（{format_number(revenue_extremes.get('min_value'))}）。"
+                f"本月營收最高新事業群為 {revenue_extremes.get('max_platform')}（{format_number(revenue_extremes.get('max_value'))}），最低為 {revenue_extremes.get('min_platform')}（{format_number(revenue_extremes.get('min_value'))}）。"
             )
         if inventory_extremes:
             parts.append(
-                f"本月庫存金額最高平台為 {inventory_extremes.get('max_platform')}（{format_number(inventory_extremes.get('max_value'))}），最低為 {inventory_extremes.get('min_platform')}（{format_number(inventory_extremes.get('min_value'))}）。"
+                f"本月庫存金額最高新事業群為 {inventory_extremes.get('max_platform')}（{format_number(inventory_extremes.get('max_value'))}），最低為 {inventory_extremes.get('min_platform')}（{format_number(inventory_extremes.get('min_value'))}）。"
             )
         if anomalies:
             anomaly = anomalies[0]
@@ -1305,12 +1469,12 @@ class MultiAgentAssistant:
 
         if revenue_max and revenue_min:
             parts.append(
-                f"平台營收以 {revenue_max.get('platform')} 最高，為 {format_number(revenue_max.get('value'))}；"
+                f"新事業群營收以 {revenue_max.get('platform')} 最高，為 {format_number(revenue_max.get('value'))}；"
                 f"{revenue_min.get('platform')} 最低，為 {format_number(revenue_min.get('value'))}。"
             )
         if inventory_max and inventory_min:
             parts.append(
-                f"平台庫存以 {inventory_max.get('platform')} 最高，為 {format_number(inventory_max.get('value'))}；"
+                f"新事業群庫存以 {inventory_max.get('platform')} 最高，為 {format_number(inventory_max.get('value'))}；"
                 f"{inventory_min.get('platform')} 最低，為 {format_number(inventory_min.get('value'))}。"
             )
 
@@ -1318,7 +1482,7 @@ class MultiAgentAssistant:
         if anomalies:
             lead = anomalies[0]
             parts.append(
-                f"目前最需要關注的異常出現在 {lead.get('platform') or '未標示平台'}，"
+                f"目前最需要關注的異常出現在 {lead.get('platform') or '未標示新事業群'}，"
                 f"原因為 {lead.get('reason') or lead.get('type') or '未提供'}，"
                 f"訊號值為 {format_number(lead.get('signal'))}。"
             )
@@ -1490,16 +1654,19 @@ class MultiAgentAssistant:
 
         if task_family == "cross_section_compare":
             domains.append("financial")
-            planned_tools.extend(["get_platform_performance_snapshot", "get_platform_ratios", "get_anomalies"])
-        elif task_family == "latest_month_platform_summary":
+            planned_tools.extend(["get_entity_cross_section_comparison", "get_entity_performance_snapshot", "get_anomalies"])
+        elif task_family in {"latest_month_platform_summary", "latest_month_entity_summary"}:
             domains.append("financial")
-            planned_tools.extend(["get_platform_performance_snapshot", "get_platform_ratios", "get_anomalies"])
+            planned_tools.extend(["get_entity_performance_snapshot", "get_inventory_turnover_proxy"])
         elif task_family == "performance_assessment":
             domains.append("financial")
-            planned_tools.extend(["get_platform_performance_snapshot", "get_inventory_turnover_proxy", "get_platform_ratios", "get_anomalies"])
+            planned_tools.extend(["get_entity_performance_snapshot", "get_inventory_turnover_proxy", "get_anomalies"])
+        elif task_family == "ranking":
+            domains.append("financial")
+            planned_tools.extend(["get_entity_metric_ranking"])
         elif task_family == "period_pair_compare":
             domains.append("sales")
-            planned_tools.extend(["get_period_pair_metric_comparison(revenue)"])
+            planned_tools.extend(["get_entity_period_pair_comparison(revenue)"])
             time_scope = getattr(task_profile, "time_scope", {}) or {}
             setattr(routing, "period_a", time_scope.get("period_a"))
             setattr(routing, "period_b", time_scope.get("period_b"))
@@ -1511,6 +1678,10 @@ class MultiAgentAssistant:
             domains = []
             planned_tools = []
             routing.requires_limitations = True
+
+        parent_entity = getattr(task_profile, "parent_entity", {}) or {}
+        if parent_entity.get("dimension") == "business_group" and parent_entity.get("value"):
+            routing.parent_filter = {"business_group": parent_entity["value"]}
 
         routing.domains = list(dict.fromkeys(domain for domain in domains if domain))
         routing.planned_tools = list(dict.fromkeys(tool for tool in planned_tools if tool))
@@ -1619,14 +1790,14 @@ class MultiAgentAssistant:
                 "總覽回答只整理目前已載入資料與工具能力，未逐題展開分析。",
             ],
             "suggested_followups": [
-                "請指定月份、平台或新事業群，進一步做營收或庫存分析。",
+                "請指定月份、新事業群或五大產品線，進一步做營收或庫存分析。",
                 "請直接詢問風險、趨勢或圖表需求。",
             ],
             "display_blocks": {
                 "headline": "目前可先從桌面與手機版分析工作台查看最新月份摘要、圖表與風險訊號。",
                 "key_observations": [
                     "目前支援營收、庫存、財務 proxy、異常、資料品質與圖表分析。",
-                    "如需深入分析，請指定月份、平台或新事業群。",
+                    "如需深入分析，請指定月份、新事業群或五大產品線。",
                 ],
                 "table": None,
                 "limitations": [
@@ -1840,7 +2011,7 @@ class MultiAgentAssistant:
         if filters.month:
             scope_text.append(f"月份 {filters.month}")
         if filters.platform:
-            scope_text.append(f"平台 {filters.platform}")
+            scope_text.append(f"新事業群 {filters.platform}")
         if filters.group_code:
             scope_text.append(f"新事業群 {filters.group_code}")
         scope_suffix = f"（{' / '.join(scope_text)}）" if scope_text else ""
@@ -1878,7 +2049,7 @@ class MultiAgentAssistant:
         question_type = "query"
 
         ratio_or_risk = any(token in question for token in ["比值", "異常", "風險", "診斷"]) or "ratio" in lowered
-        chart_like = any(token in question for token in ["圖", "圖表", "畫圖", "製圖", "視覺化", "折線圖", "長條圖"]) or any(
+        chart_like = any(token in question for token in ["圖", "圖表", "畫", "畫圖", "製圖", "視覺化", "折線圖", "長條圖"]) or any(
             token in lowered for token in ["chart", "plot", "graph", "visual"]
         )
         trend_or_ranking = any(
@@ -1961,7 +2132,7 @@ class MultiAgentAssistant:
         if "financial" in domains and not self.context.supported_domains.get("financial"):
             warnings.append("目前 financial 只能提供營收/庫存代理指標分析，無法直接回答完整財報問題。")
         if any(token in question for token in ["產品", "商品", "SKU"]) and not filters.platform and not filters.group_code:
-            warnings.append("目前資料沒有明確產品/SKU 維度，系統會先以現有事業群、平台與月份層級做近似分析。")
+            warnings.append("目前資料沒有明確產品/SKU 維度，系統會先以現有新事業群、五大產品線與月份層級做近似分析。")
 
         subtasks = self._build_subtasks(domains, question_type, filters)
         return RoutingDecision(
@@ -1980,7 +2151,7 @@ class MultiAgentAssistant:
         if filters.month:
             scope_text.append(f"月份 {filters.month}")
         if filters.platform:
-            scope_text.append(f"平台 {filters.platform}")
+            scope_text.append(f"新事業群 {filters.platform}")
         if filters.group_code:
             scope_text.append(f"新事業群 {filters.group_code}")
         scope_suffix = f"（{' / '.join(scope_text)}）" if scope_text else ""
@@ -1999,9 +2170,11 @@ class MultiAgentAssistant:
 
     @staticmethod
     def _infer_object_dimension(question: str, lowered: str) -> str | None:
+        if any(token in question for token in ["五大產品線", "產品線"]) or "product line" in lowered:
+            return "product_line_5"
+        if any(token in question for token in ["新事業群", "事業群"]) or "business group" in lowered or "group" in lowered:
+            return "business_group"
         if any(token in question for token in ["平台", "平臺"]) or "platform" in lowered:
-            return "platform"
-        if any(token in question for token in ["新事業群", "事業群"]) or "group" in lowered:
             return "business_group"
         if any(token in question for token in ["月份", "本月", "最新月份", "最新月"]) or "month" in lowered:
             return "month"
@@ -2210,7 +2383,7 @@ class MultiAgentAssistant:
 
     @staticmethod
     def _is_explicit_chart_request(question: str, lowered: str) -> bool:
-        chart_like = any(token in question for token in ["圖", "圖表", "畫圖", "製圖", "視覺化", "折線圖", "長條圖"])
+        chart_like = any(token in question for token in ["圖", "圖表", "畫", "畫圖", "製圖", "視覺化", "折線圖", "長條圖"])
         chart_like = chart_like or any(token in lowered for token in ["chart", "plot", "graph", "visual"])
         explanation_like = any(token in question for token in ["原因", "為什麼", "解釋", "診斷", "異常", "風險"])
         explanation_like = explanation_like or any(token in lowered for token in ["why", "explain", "diagnosis", "anomaly", "risk"])

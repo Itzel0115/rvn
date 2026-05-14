@@ -44,13 +44,13 @@ LIMITATION_RULES = [
     {
         "label": "turnover_proxy",
         "source_hints": [
-            "不等於正式庫存週轉率",
+            "非正式周轉指標",
             "not equal to formal inventory turnover",
-            "proxy，不等於正式庫存週轉率",
+            "proxy，非正式周轉指標",
         ],
         "required_hints": [
-            "不等於正式庫存週轉率",
-            "正式庫存週轉率",
+            "非正式周轉指標",
+            "proxy",
             "proxy",
             "not equal to formal inventory turnover",
         ],

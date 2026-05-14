@@ -19,10 +19,10 @@ class AnswerPlan:
 def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
     task_family = getattr(task_profile, "task_family", None)
 
-    if task_family == "latest_month_platform_summary":
+    if task_family in {"latest_month_platform_summary", "latest_month_entity_summary"}:
         return AnswerPlan(
-            primary_tools=["get_platform_performance_snapshot"],
-            supporting_tools=["get_platform_ratios", "get_anomalies"],
+            primary_tools=["get_entity_performance_snapshot"],
+            supporting_tools=["get_entity_cross_section_comparison", "get_inventory_turnover_proxy"],
             background_tools=["get_data_coverage"],
             forbidden_primary_tools=["get_metric_table", "get_platform_ranking(inventory_amount)"],
             max_key_observations=3,
@@ -30,14 +30,14 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
             display_debug_findings=False,
             conclusion_policy={
                 "mode": "heuristic_display_projection",
-                "headline_source": "latest_month_platform_scorecard",
+                "headline_source": "latest_month_entity_scorecard",
                 "must_not_use": ["metric_table_as_headline", "raw_platform_ranking_as_headline"],
             },
         )
 
     if task_family == "period_pair_compare":
         return AnswerPlan(
-            primary_tools=["get_period_pair_metric_comparison"],
+            primary_tools=["get_entity_period_pair_comparison"],
             supporting_tools=[],
             background_tools=["get_data_coverage"],
             forbidden_primary_tools=["get_metric_table(platform_monthly)", "get_platform_ranking(inventory_amount)"],
@@ -67,7 +67,7 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
 
     if task_family == "cross_section_compare":
         return AnswerPlan(
-            primary_tools=["get_platform_performance_snapshot", "get_platform_ratios", "get_metric_table(platform_monthly)"],
+            primary_tools=["get_entity_cross_section_comparison", "get_entity_performance_snapshot"],
             supporting_tools=["get_anomalies"],
             background_tools=["get_data_coverage"],
             forbidden_primary_tools=["get_contribution_analysis(revenue)"],
@@ -83,8 +83,8 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
 
     if task_family == "performance_assessment":
         return AnswerPlan(
-            primary_tools=["get_platform_performance_snapshot", "get_inventory_turnover_proxy", "get_platform_ratios"],
-            supporting_tools=["get_anomalies"],
+            primary_tools=["get_entity_performance_snapshot"],
+            supporting_tools=["get_inventory_turnover_proxy", "get_entity_cross_section_comparison", "get_anomalies"],
             background_tools=["get_data_coverage"],
             forbidden_primary_tools=["get_platform_ranking(inventory_amount)"],
             max_key_observations=3,
@@ -96,6 +96,24 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
                 "tie_policy": "state_tradeoff",
             },
         )
+
+    if task_family == "ranking":
+        target_dimension = (getattr(task_profile, "target_entity", {}) or {}).get("dimension")
+        if target_dimension in {"business_group", "product_line_5", "platform"}:
+            return AnswerPlan(
+                primary_tools=["get_entity_metric_ranking"],
+                supporting_tools=["get_entity_performance_snapshot"],
+                background_tools=["get_data_coverage"],
+                forbidden_primary_tools=["get_top_groups", "get_platform_ranking"],
+                max_key_observations=3,
+                requires_table=True,
+                display_debug_findings=False,
+                conclusion_policy={
+                    "mode": "heuristic_display_projection",
+                    "headline_source": "entity_metric_ranking",
+                    "must_not_use": ["empty_primary_evidence_fallback"],
+                },
+            )
 
     if task_family == "time_compare":
         return AnswerPlan(
@@ -127,12 +145,12 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
 
 def _default_primary_tools(answer_strategy: str) -> list[str]:
     mapping = {
-        "ranking": ["get_top_groups", "get_platform_ranking"],
+        "ranking": ["get_entity_metric_ranking"],
         "trend": ["get_yoy_mom_breakdown"],
         "risk": ["get_anomalies"],
         "diagnosis": ["get_root_cause_candidates", "get_contribution_analysis"],
-        "performance_weakness": ["get_platform_performance_snapshot", "get_inventory_turnover_proxy", "get_platform_ratios"],
-        "comparison": ["get_platform_performance_snapshot", "get_platform_ratios"],
+        "performance_weakness": ["get_entity_performance_snapshot", "get_inventory_turnover_proxy"],
+        "comparison": ["get_entity_performance_snapshot", "get_entity_cross_section_comparison"],
         "chart": ["get_chart_payload"],
         "data_quality": ["get_data_coverage", "get_mapping_summary"],
     }

@@ -18,6 +18,7 @@ from config import (
     COL_CORR_TARGET,
     COL_CORR_VALUE,
     COL_GROUP_CODE,
+    COL_GROUP_NAME,
     COL_INV_AMOUNT,
     COL_INV_QTY,
     COL_MONTH,
@@ -38,6 +39,22 @@ class QueryFilters:
     group_code: str | None = None
 
 
+ENTITY_LABELS = {
+    "business_group": "新事業群",
+    "product_line_5": "五大產品線",
+    "platform": "新事業群",
+}
+
+UNMAPPED_ENTITY_VALUES = {"", "未對應", "未分類", "unknown", "n/a", "nan", "none", "null"}
+
+
+def is_unmapped_entity(value: Any) -> bool:
+    if value is None:
+        return True
+    text = str(value).strip()
+    return text.lower() in UNMAPPED_ENTITY_VALUES
+
+
 @dataclass
 class ObservationRequest:
     row_dimension: str = "platform"
@@ -53,6 +70,172 @@ class AnalysisToolbox:
     """Tool layer that wraps the existing analysis artifacts without rewriting them."""
 
     _CHART_DEFINITIONS = {
+        "business_group_revenue_bar": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "最新月份各新事業群營收比較",
+            "x_label": "新事業群",
+            "y_label": "營收",
+            "label_column": COL_PLATFORM,
+            "value_column": COL_REVENUE,
+            "series_name": "營收",
+            "default_latest_month": True,
+        },
+        "business_group_inventory_bar": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "最新月份各新事業群庫存金額比較",
+            "x_label": "新事業群",
+            "y_label": "庫存金額",
+            "label_column": COL_PLATFORM,
+            "value_column": COL_INV_AMOUNT,
+            "series_name": "庫存金額",
+            "default_latest_month": True,
+        },
+        "business_group_health_score_bar": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "新事業群 health_score 排名",
+            "x_label": "新事業群",
+            "y_label": "health_score",
+            "label_column": "entity_value",
+            "value_column": "health_score",
+            "series_name": "health_score",
+            "entity_dimension": "business_group",
+        },
+        "business_group_revenue_inventory_ratio_bar": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "新事業群營收/庫存金額 proxy 排名",
+            "x_label": "新事業群",
+            "y_label": "營收/庫存金額 proxy",
+            "label_column": "entity_value",
+            "value_column": "revenue_inventory_amount_ratio",
+            "series_name": "營收/庫存金額 proxy",
+            "entity_dimension": "business_group",
+            "sort_ascending": True,
+        },
+        "product_line_revenue_bar": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "最新月份各五大產品線營收比較",
+            "x_label": "五大產品線",
+            "y_label": "營收",
+            "label_column": "product_line_5",
+            "value_column": COL_REVENUE,
+            "series_name": "營收",
+            "default_latest_month": True,
+        },
+        "product_line_inventory_bar": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "最新月份各五大產品線庫存金額比較",
+            "x_label": "五大產品線",
+            "y_label": "庫存金額",
+            "label_column": "product_line_5",
+            "value_column": COL_INV_AMOUNT,
+            "series_name": "庫存金額",
+            "default_latest_month": True,
+        },
+        "product_line_health_score_bar": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "五大產品線 health_score 排名",
+            "x_label": "五大產品線",
+            "y_label": "health_score",
+            "label_column": "entity_value",
+            "value_column": "health_score",
+            "series_name": "health_score",
+            "entity_dimension": "product_line_5",
+        },
+        "product_line_revenue_inventory_ratio_bar": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "五大產品線營收/庫存金額 proxy 排名",
+            "x_label": "五大產品線",
+            "y_label": "營收/庫存金額 proxy",
+            "label_column": "entity_value",
+            "value_column": "revenue_inventory_amount_ratio",
+            "series_name": "營收/庫存金額 proxy",
+            "entity_dimension": "product_line_5",
+            "sort_ascending": True,
+        },
+        "current_month_business_group_revenue_bar": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "最新月份各新事業群營收比較",
+            "x_label": "新事業群",
+            "y_label": "營收",
+            "label_column": COL_PLATFORM,
+            "value_column": COL_REVENUE,
+            "series_name": "營收",
+            "default_latest_month": True,
+        },
+        "current_month_business_group_inventory_bar": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "最新月份各新事業群庫存金額比較",
+            "x_label": "新事業群",
+            "y_label": "庫存金額",
+            "label_column": COL_PLATFORM,
+            "value_column": COL_INV_AMOUNT,
+            "series_name": "庫存金額",
+            "default_latest_month": True,
+        },
+        "business_group_ratio_rank": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "新事業群營收/庫存金額 proxy 排名（由弱到強）",
+            "x_label": "新事業群",
+            "y_label": "營收/庫存金額 proxy",
+            "label_column": "entity_value",
+            "value_column": "revenue_inventory_amount_ratio",
+            "series_name": "營收/庫存金額 proxy",
+            "entity_dimension": "business_group",
+            "sort_ascending": True,
+        },
+        "business_group_revenue_inventory": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "新事業群營收比較",
+            "x_label": "新事業群",
+            "y_label": "營收",
+            "label_column": COL_PLATFORM,
+            "value_column": COL_REVENUE,
+            "series_name": "營收",
+        },
+        "product_line_revenue_inventory": {
+            "metric": "platform_monthly",
+            "chart_type": "bar",
+            "title": "五大產品線營收比較",
+            "x_label": "五大產品線",
+            "y_label": "營收",
+            "label_column": "product_line_5",
+            "value_column": COL_REVENUE,
+            "series_name": "營收",
+        },
+        "business_group_health_score": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "新事業群 health_score 排名",
+            "x_label": "新事業群",
+            "y_label": "health_score",
+            "label_column": "entity_value",
+            "value_column": "health_score",
+            "series_name": "health_score",
+            "entity_dimension": "business_group",
+        },
+        "product_line_health_score": {
+            "metric": "entity_health_score",
+            "chart_type": "bar",
+            "title": "五大產品線 health_score 排名",
+            "x_label": "五大產品線",
+            "y_label": "health_score",
+            "label_column": "entity_value",
+            "value_column": "health_score",
+            "series_name": "health_score",
+            "entity_dimension": "product_line_5",
+        },
         "monthly_revenue_trend": {
             "metric": "revenue_monthly",
             "chart_type": "line",
@@ -103,7 +286,7 @@ class AnalysisToolbox:
         "platform_monthly_revenue": {
             "metric": "platform_monthly",
             "chart_type": "line",
-            "title": "各平台每月營收",
+            "title": "各新事業群每月營收",
             "x_label": "月份",
             "y_label": "營收",
             "label_column": COL_MONTH,
@@ -113,7 +296,7 @@ class AnalysisToolbox:
         "platform_monthly_inventory_amount": {
             "metric": "platform_monthly",
             "chart_type": "line",
-            "title": "各平台每月庫存金額",
+            "title": "各新事業群每月庫存金額",
             "x_label": "月份",
             "y_label": "庫存金額",
             "label_column": COL_MONTH,
@@ -123,7 +306,7 @@ class AnalysisToolbox:
         "platform_monthly_inventory_qty": {
             "metric": "platform_monthly",
             "chart_type": "line",
-            "title": "各平台每月庫存QTY",
+            "title": "各新事業群每月庫存QTY",
             "x_label": "月份",
             "y_label": "庫存QTY",
             "label_column": COL_MONTH,
@@ -133,8 +316,8 @@ class AnalysisToolbox:
         "platform_ratio_rank": {
             "metric": "platform_monthly",
             "chart_type": "bar",
-            "title": "平台營收/庫存金額比值排行（由弱到強）",
-            "x_label": "月份 / 平台 / 群組",
+            "title": "新事業群營收/庫存金額 proxy 排名（由弱到強）",
+            "x_label": "月份 / 新事業群",
             "y_label": "營收/庫存金額比值",
             "label_column": "chart_label",
             "value_column": COL_REVENUE_INV_AMOUNT_RATIO,
@@ -143,8 +326,8 @@ class AnalysisToolbox:
         "current_month_platform_revenue_bar": {
             "metric": "platform_monthly",
             "chart_type": "bar",
-            "title": "最新月份各平台營收比較",
-            "x_label": "平台",
+            "title": "最新月份各新事業群營收比較",
+            "x_label": "新事業群",
             "y_label": "營收",
             "label_column": COL_PLATFORM,
             "value_column": COL_REVENUE,
@@ -154,8 +337,8 @@ class AnalysisToolbox:
         "current_month_platform_inventory_bar": {
             "metric": "platform_monthly",
             "chart_type": "bar",
-            "title": "最新月份各平台庫存金額比較",
-            "x_label": "平台",
+            "title": "最新月份各新事業群庫存金額比較",
+            "x_label": "新事業群",
             "y_label": "庫存金額",
             "label_column": COL_PLATFORM,
             "value_column": COL_INV_AMOUNT,
@@ -166,7 +349,7 @@ class AnalysisToolbox:
             "metric": "anomalies",
             "chart_type": "bar",
             "title": "異常訊號排行",
-            "x_label": "月份 / 平台 / 類型",
+            "x_label": "月份 / 新事業群 / 類型",
             "y_label": "訊號強度",
             "label_column": "chart_label",
             "value_column": COL_ANOMALY_SIGNAL,
@@ -184,6 +367,7 @@ class AnalysisToolbox:
         "revenue_by_group": {"group_code"},
         "inventory_by_group": {"group_code"},
         "platform_monthly": {"month", "platform", "group_code"},
+        "entity_health_score": {"month", "platform", "group_code"},
         "anomalies": {"month", "platform", "group_code"},
         "correlations": set(),
     }
@@ -205,6 +389,7 @@ class AnalysisToolbox:
             "mapping_success": self.context.parsed_mapping.mapping_success,
             "supported_domains": self.context.supported_domains,
             "source_files": self.context.source_files,
+            "real_data_quality_report": getattr(self.context.artifacts, "data_quality_report", {}) or getattr(self.context, "real_data_quality_report", {}),
         }
         logger.info("Completed tool get_data_coverage")
         return result
@@ -237,6 +422,37 @@ class AnalysisToolbox:
                         if self.context.artifacts.platform_monthly_analysis.empty
                         else None
                     ),
+                },
+                "get_entity_performance_snapshot": {
+                    "supported_filters": ["month", "business_group", "product_line_5"],
+                    "supported_dimensions": ["business_group", "product_line_5"],
+                    "available": not self.context.artifacts.revenue_inventory_aligned.empty,
+                    "description": "Deterministic entity scorecard using real-data business_group and product_line_5 grain.",
+                },
+                "get_entity_cross_section_comparison": {
+                    "supported_filters": ["month", "business_group", "product_line_5"],
+                    "supported_dimensions": ["business_group", "product_line_5"],
+                    "available": not self.context.artifacts.revenue_inventory_aligned.empty,
+                },
+                "get_entity_metric_ranking": {
+                    "supported_filters": ["month", "business_group", "product_line_5"],
+                    "supported_metrics": [
+                        "revenue_amount",
+                        "inventory_amount",
+                        "inventory_qty",
+                        "revenue_inventory_amount_ratio",
+                        "health_score",
+                        "risk_score",
+                    ],
+                    "supported_dimensions": ["business_group", "product_line_5"],
+                    "available": not self.context.artifacts.revenue_inventory_aligned.empty,
+                    "description": "Rank real-data entities by a single metric at latest/common month grain.",
+                },
+                "get_entity_period_pair_comparison": {
+                    "supported_filters": ["business_group"],
+                    "supported_metrics": ["revenue", "inventory_amount", "inventory_qty"],
+                    "supported_dimensions": ["business_group", "product_line_5"],
+                    "available": not self.context.artifacts.revenue_inventory_aligned.empty,
                 },
                 "get_anomalies": {
                     "supported_filters": ["month", "platform", "group_code"],
@@ -392,6 +608,314 @@ class AnalysisToolbox:
         logger.info("Completed tool get_top_groups with rows=%s", len(result))
         return result
 
+    def get_entity_performance_snapshot(
+        self,
+        entity_dimension: str = "business_group",
+        month: str | None = None,
+        parent_filter: dict[str, Any] | None = None,
+        filters: QueryFilters | None = None,
+        top_n: int | None = None,
+    ) -> dict[str, Any]:
+        logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
+        logger.info(
+            "Running tool get_entity_performance_snapshot dimension=%s month=%s top_n=%s",
+            entity_dimension,
+            month,
+            top_n,
+        )
+        filters = filters or QueryFilters()
+        dimension = self._normalize_entity_dimension(entity_dimension)
+        label = ENTITY_LABELS[dimension]
+        current_month = month or filters.month or self._latest_common_month()
+        limitations = [
+            f"這是 deterministic {label} performance scorecard，使用營收規模、營收動能、營收/庫存 proxy 與資料完整性評分。",
+                "營收/庫存為 proxy 指標，非正式周轉指標。",
+            "只在 revenue 與 inventory 同時存在且分母合法時才計算 ratio。",
+        ]
+        rubric = {
+            "revenue_scale_weight": 0.30,
+            "revenue_momentum_weight": 0.20,
+            "inventory_efficiency_weight": 0.35,
+            "data_completeness_weight": 0.15,
+        }
+        if not current_month:
+            return {
+                "month": None,
+                "dimension": dimension,
+                "entity_dimension": dimension,
+                "entity_label": label,
+                "rows": [],
+                "summary": {},
+                "rubric": rubric,
+                "limitations": limitations + ["目前沒有可共同對齊的月份。"],
+            }
+
+        current_rows = self._entity_snapshot_rows(dimension, current_month, parent_filter, filters)
+        if not current_rows:
+            return {
+                "month": current_month,
+                "dimension": dimension,
+                "entity_dimension": dimension,
+                "entity_label": label,
+                "rows": [],
+                "summary": {},
+                "rubric": rubric,
+                "limitations": limitations + [f"{current_month} 沒有可用的 {label} 對齊資料。"],
+            }
+
+        previous_month = self._previous_common_month(current_month, dimension, parent_filter, filters)
+        previous_by_entity: dict[str, float] = {}
+        if previous_month:
+            previous_rows = self._entity_snapshot_rows(dimension, previous_month, parent_filter, filters)
+            previous_by_entity = {
+                str(row["entity_value"]): float(row["revenue"])
+                for row in previous_rows
+                if row.get("revenue") is not None
+            }
+        else:
+            limitations.append("缺少上一個可比較月份，營收動能不納入部分 health_score。")
+
+        for row in current_rows:
+            previous_revenue = previous_by_entity.get(str(row["entity_value"]))
+            row["previous_revenue"] = previous_revenue
+            row["revenue_mom_change"] = self._safe_ratio(
+                (row.get("revenue") or 0.0) - previous_revenue,
+                previous_revenue,
+            ) if previous_revenue is not None else None
+
+        revenue_scores = self._score_by_entity(current_rows, "revenue", higher_is_better=True)
+        momentum_scores = self._score_by_entity(current_rows, "revenue_mom_change", higher_is_better=True)
+        efficiency_scores = self._score_by_entity(current_rows, "revenue_inventory_amount_ratio", higher_is_better=True)
+        completeness_scores = self._score_by_entity(current_rows, "both_row_share", higher_is_better=True)
+        revenue_ranks = self._rank_by_entity(current_rows, "revenue", descending=True)
+        inventory_ranks = self._rank_by_entity(current_rows, "inventory_amount", descending=True)
+        efficiency_ranks = self._rank_by_entity(current_rows, "revenue_inventory_amount_ratio", descending=True)
+
+        rows: list[dict[str, Any]] = []
+        for row in current_rows:
+            entity_value = str(row["entity_value"])
+            component_scores = {
+                "revenue_scale_score": revenue_scores.get(entity_value),
+                "revenue_momentum_score": momentum_scores.get(entity_value),
+                "inventory_efficiency_score": efficiency_scores.get(entity_value),
+                "data_completeness_score": completeness_scores.get(entity_value),
+            }
+            health_score = self._entity_health_score(component_scores, rubric)
+            row.update(
+                {
+                    "revenue_amount": row.get("revenue"),
+                    "revenue_rank": revenue_ranks.get(entity_value),
+                    "inventory_rank": inventory_ranks.get(entity_value),
+                    "efficiency_rank": efficiency_ranks.get(entity_value),
+                    "anomaly_count": int(row.get("anomaly_count") or 0),
+                    "health_score": health_score,
+                    "risk_score": round(1.0 - health_score, 4) if health_score is not None else None,
+                    "performance_label": self._performance_label(health_score),
+                    "primary_strength": self._entity_primary_strength(row, label),
+                    "primary_risk": self._entity_primary_risk(row, label),
+                    **component_scores,
+                }
+            )
+            rows.append(row)
+
+        rows = sorted(rows, key=lambda item: (item.get("health_score") is None, -(item.get("health_score") or 0.0), item.get("entity_value") or ""))
+        if top_n is not None:
+            rows = rows[: max(int(top_n), 0)]
+
+        summary = self._entity_snapshot_summary(rows, dimension)
+        if any(is_unmapped_entity(row.get("entity_value")) for row in rows):
+            limitations.append("部分資料列的新事業群或五大產品線為未對應，已作為資料品質限制處理。")
+        result = {
+            "evidence_type": "entity_performance_snapshot",
+            "source_tool": "get_entity_performance_snapshot",
+            "month": current_month,
+            "dimension": dimension,
+            "entity_dimension": dimension,
+            "entity_label": label,
+            "parent_filter": parent_filter or {},
+            "rows": rows,
+            "summary": summary,
+            "rubric": rubric,
+            "limitations": list(dict.fromkeys(limitations)),
+        }
+        logger.info("Completed tool get_entity_performance_snapshot with rows=%s", len(rows))
+        return result
+
+    def get_entity_cross_section_comparison(
+        self,
+        entity_dimension: str = "business_group",
+        month: str | None = None,
+        parent_filter: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        snapshot = self.get_entity_performance_snapshot(
+            entity_dimension=entity_dimension,
+            month=month,
+            parent_filter=parent_filter,
+        )
+        return {
+            "evidence_type": "entity_cross_section_comparison",
+            "source_tool": "get_entity_cross_section_comparison",
+            "month": snapshot.get("month"),
+            "dimension": snapshot.get("dimension"),
+            "entity_dimension": snapshot.get("entity_dimension"),
+            "entity_label": snapshot.get("entity_label"),
+            "parent_filter": snapshot.get("parent_filter", {}),
+            "rows": snapshot.get("rows", []),
+            "summary": snapshot.get("summary", {}),
+            "rubric": snapshot.get("rubric", {}),
+            "limitations": snapshot.get("limitations", []),
+        }
+
+    def get_entity_metric_ranking(
+        self,
+        entity_dimension: str = "business_group",
+        metric: str = "revenue_amount",
+        month: str | None = None,
+        top_n: int = 5,
+        parent_filter: dict[str, Any] | None = None,
+        sort_direction: str | None = None,
+    ) -> dict[str, Any]:
+        logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
+        logger.info(
+            "Running tool get_entity_metric_ranking dimension=%s metric=%s month=%s top_n=%s",
+            entity_dimension,
+            metric,
+            month,
+            top_n,
+        )
+        dimension = self._normalize_entity_dimension(entity_dimension)
+        label = ENTITY_LABELS[dimension]
+        metric_key = self._normalize_entity_ranking_metric(metric)
+        metric_label = self._entity_ranking_metric_label(metric_key)
+        direction = self._entity_metric_sort_direction(metric_key, sort_direction)
+        snapshot = self.get_entity_performance_snapshot(
+            entity_dimension=dimension,
+            month=month,
+            parent_filter=parent_filter,
+        )
+        ranking_month = snapshot.get("month")
+        limitations = list(snapshot.get("limitations") or [])
+        source_rows = list(snapshot.get("rows") or [])
+        rows: list[dict[str, Any]] = []
+        for row in source_rows:
+            value = self._normalize_number(row.get(metric_key))
+            if value is None:
+                continue
+            rows.append(
+                {
+                    "month": ranking_month,
+                    "entity_dimension": dimension,
+                    "entity_label": label,
+                    "entity_value": row.get("entity_value"),
+                    "value": value,
+                    "metric": metric_key,
+                    "metric_label": metric_label,
+                    "health_score": row.get("health_score"),
+                    "risk_score": row.get("risk_score"),
+                    "data_presence": row.get("data_presence_counts"),
+                    "data_presence_flag": self._dominant_presence_flag(row.get("data_presence_counts")),
+                    "revenue_amount": row.get("revenue_amount"),
+                    "inventory_amount": row.get("inventory_amount"),
+                    "inventory_qty": row.get("inventory_qty"),
+                    "revenue_inventory_amount_ratio": row.get("revenue_inventory_amount_ratio"),
+                }
+            )
+
+        reverse = direction == "descending"
+        rows = sorted(
+            rows,
+            key=lambda row: (
+                row.get("value") is None,
+                -(float(row["value"])) if reverse else float(row["value"]),
+                is_unmapped_entity(row.get("entity_value")),
+                str(row.get("entity_value") or ""),
+            ),
+        )
+        for index, row in enumerate(rows, start=1):
+            row["rank"] = index
+
+        top_row = next((row for row in rows if not is_unmapped_entity(row.get("entity_value"))), None)
+        if top_row is None and rows:
+            top_row = rows[0]
+        if rows and any(is_unmapped_entity(row.get("entity_value")) for row in rows):
+            limitations.append(f"部分{label}為未對應，未對應資料列保留於 ranking rows，但不優先作為正式 top entity。")
+        if metric_key == "revenue_inventory_amount_ratio":
+            limitations.append("營收/庫存為 proxy 指標，非正式周轉指標；ratio 為空的 entity 已排除。")
+
+        limited_rows = rows[: max(int(top_n or 0), 0)]
+        result = {
+            "evidence_type": "entity_metric_ranking",
+            "source_tool": "get_entity_metric_ranking",
+            "month": ranking_month,
+            "dimension": dimension,
+            "entity_dimension": dimension,
+            "entity_label": label,
+            "metric": metric_key,
+            "metric_label": metric_label,
+            "sort_direction": direction,
+            "parent_filter": parent_filter or {},
+            "rows": limited_rows,
+            "top_entity": top_row.get("entity_value") if top_row else None,
+            "top_value": top_row.get("value") if top_row else None,
+            "limitations": list(dict.fromkeys(limitations)),
+        }
+        logger.info("Completed tool get_entity_metric_ranking with rows=%s", len(limited_rows))
+        return result
+
+    def get_entity_period_pair_comparison(
+        self,
+        entity_dimension: str = "business_group",
+        metric: str = "revenue",
+        period_a: str | None = None,
+        period_b: str | None = None,
+        parent_filter: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        dimension = self._normalize_entity_dimension(entity_dimension)
+        metric_column = {
+            "revenue": "revenue_amount",
+            "inventory_amount": "inventory_amount",
+            "inventory_qty": "inventory_qty",
+        }.get(metric)
+        aligned = self._entity_aligned_frame(dimension, parent_filter, QueryFilters())
+        if metric_column is None:
+            return {"metric": metric, "dimension": dimension, "overall": {}, "breakdown": [], "limitations": [f"Unsupported metric: {metric}"]}
+        months = sorted(aligned["month_key"].dropna().astype(str).unique().tolist()) if not aligned.empty else []
+        period_b = period_b or (months[-1] if months else None)
+        if period_a is None and period_b in months:
+            index = months.index(period_b)
+            period_a = months[index - 1] if index > 0 else None
+        if not period_a or not period_b:
+            return {"metric": metric, "dimension": dimension, "overall": {}, "breakdown": [], "limitations": ["缺少可比較期間。"]}
+
+        entity_column = dimension
+        grouped = (
+            aligned[aligned["month_key"].isin([period_a, period_b])]
+            .groupby(["month_key", entity_column], dropna=False)[metric_column]
+            .sum(min_count=1)
+            .reset_index()
+        )
+        overall = self._period_pair_values(grouped.rename(columns={"month_key": COL_MONTH, metric_column: COL_REVENUE}), COL_REVENUE, period_a, period_b)
+        breakdown: list[dict[str, Any]] = []
+        for entity in sorted(grouped[entity_column].dropna().astype(str).unique().tolist()):
+            subset = grouped[grouped[entity_column].astype(str) == entity].rename(columns={"month_key": COL_MONTH, metric_column: COL_REVENUE})
+            values = self._period_pair_values(subset, COL_REVENUE, period_a, period_b)
+            if values:
+                breakdown.append({"name": entity, "entity_value": entity, **values})
+        breakdown = sorted(breakdown, key=lambda item: abs(float(item.get("change") or 0.0)), reverse=True)
+        return {
+            "evidence_type": "entity_period_pair_comparison",
+            "source_tool": "get_entity_period_pair_comparison",
+            "metric": metric,
+            "period_a": period_a,
+            "period_b": period_b,
+            "dimension": dimension,
+            "entity_dimension": dimension,
+            "entity_label": ENTITY_LABELS[dimension],
+            "overall": overall,
+            "breakdown": breakdown,
+            "limitations": ["期間比較為描述性差異，不宣稱 root cause。"],
+        }
+
     def get_platform_ranking(
         self,
         metric: str,
@@ -442,6 +966,35 @@ class AnalysisToolbox:
     def get_platform_ratios(self, filters: QueryFilters | None = None, top_n: int = 5) -> list[dict[str, Any]]:
         logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
         logger.info("Running tool get_platform_ratios")
+        filters = filters or QueryFilters()
+        if not getattr(self.context.artifacts, "revenue_inventory_aligned", pd.DataFrame()).empty:
+            current_month = filters.month or self._latest_common_month()
+            snapshot = self.get_entity_performance_snapshot(
+                entity_dimension="business_group",
+                month=current_month,
+                filters=filters,
+            )
+            rows: list[dict[str, Any]] = []
+            for row in snapshot.get("rows", []):
+                if row.get("revenue_inventory_amount_ratio") is None:
+                    continue
+                rows.append(
+                    {
+                        "month": row.get("month"),
+                        "group_code": row.get("business_group") or row.get("entity_value"),
+                        "platform": row.get("business_group") or row.get("entity_value"),
+                        "business_group": row.get("business_group") or row.get("entity_value"),
+                        "entity_dimension": "business_group",
+                        "entity_value": row.get("entity_value"),
+                        "revenue": row.get("revenue"),
+                        "inventory_amount": row.get("inventory_amount"),
+                        "inventory_qty": row.get("inventory_qty"),
+                        "revenue_inventory_amount_ratio": row.get("revenue_inventory_amount_ratio"),
+                        "revenue_inventory_qty_ratio": row.get("revenue_inventory_qty_ratio"),
+                    }
+                )
+            rows = sorted(rows, key=lambda item: float(item.get("revenue_inventory_amount_ratio") or float("inf")))
+            return rows[:top_n]
         df = self.get_metric_table("platform_monthly", filters).copy()
         if df.empty:
             logger.warning(
@@ -630,10 +1183,50 @@ class AnalysisToolbox:
         self,
         filters: QueryFilters | None = None,
         top_n: int = 5,
+        entity_dimension: str = "business_group",
+        parent_filter: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
         logger.info("Running tool get_inventory_turnover_proxy top_n=%s", top_n)
         filters = filters or QueryFilters()
+        if not getattr(self.context.artifacts, "revenue_inventory_aligned", pd.DataFrame()).empty:
+            dimension = self._normalize_entity_dimension(entity_dimension)
+            snapshot = self.get_entity_performance_snapshot(
+                entity_dimension=dimension,
+                month=filters.month,
+                parent_filter=parent_filter,
+                filters=filters,
+            )
+            rows = []
+            for row in snapshot.get("rows", []):
+                rows.append(
+                    {
+                        "month": row.get("month"),
+                        "platform": row.get("platform") or row.get("business_group") or row.get("entity_value"),
+                        "group_code": row.get("group_code") or row.get("business_group"),
+                        "business_group": row.get("business_group"),
+                        "product_line_5": row.get("product_line_5"),
+                        "entity_dimension": dimension,
+                        "entity_label": snapshot.get("entity_label"),
+                        "entity_value": row.get("entity_value"),
+                        "revenue": row.get("revenue"),
+                        "inventory_amount": row.get("inventory_amount"),
+                        "inventory_qty": row.get("inventory_qty"),
+                        "revenue_inventory_amount_ratio": row.get("revenue_inventory_amount_ratio"),
+                        "revenue_inventory_qty_ratio": row.get("revenue_inventory_qty_ratio"),
+                        "efficiency_level": self._efficiency_level(row.get("revenue_inventory_amount_ratio")),
+                        "risk_label": self._inventory_proxy_risk_label(self._efficiency_level(row.get("revenue_inventory_amount_ratio"))),
+                        "limitation": "此為營收相對庫存 proxy，非正式周轉指標。",
+                    }
+                )
+            rows = sorted(
+                rows,
+                key=lambda item: (
+                    self._efficiency_sort_order(item.get("efficiency_level")),
+                    float(item.get("revenue_inventory_amount_ratio")) if item.get("revenue_inventory_amount_ratio") is not None else float("inf"),
+                ),
+            )
+            return rows[:top_n]
         current_month = filters.month or self._latest_month_for_metric("revenue", filters)
         if current_month is None:
             logger.info("Completed tool get_inventory_turnover_proxy with rows=0 due to missing month")
@@ -666,7 +1259,7 @@ class AnalysisToolbox:
                     "revenue_inventory_qty_ratio": self._normalize_number(qty_ratio),
                     "efficiency_level": efficiency_level,
                     "risk_label": self._inventory_proxy_risk_label(efficiency_level),
-                    "limitation": "此為營收與庫存資料推導的 proxy，不等於正式庫存週轉率。",
+                    "limitation": "此為營收與庫存資料推導的 proxy，非正式周轉指標。",
                 }
             )
 
@@ -690,6 +1283,13 @@ class AnalysisToolbox:
         logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
         logger.info("Running tool get_platform_performance_snapshot month=%s top_n=%s", month, top_n)
         filters = filters or QueryFilters()
+        if not getattr(self.context.artifacts, "revenue_inventory_aligned", pd.DataFrame()).empty:
+            return self.get_entity_performance_snapshot(
+                entity_dimension="business_group",
+                month=month,
+                filters=filters,
+                top_n=top_n,
+            )
         effective_filters = QueryFilters(
             month=month or filters.month,
             platform=filters.platform,
@@ -697,8 +1297,8 @@ class AnalysisToolbox:
         )
         current_month = effective_filters.month or self._latest_month_for_metric("revenue", effective_filters)
         limitations = [
-            "此為 deterministic platform performance scorecard，仍未納入毛利、訂單、出貨、價格與客戶結構。",
-            "營收/庫存效率為 proxy，不等於正式庫存週轉率。",
+            "此為 deterministic 新事業群 performance scorecard，仍未納入毛利、訂單、出貨、價格與客戶結構。",
+            "營收/庫存效率為 proxy，非正式周轉指標。",
         ]
         rubric = {
             "revenue_scale_weight": 0.30,
@@ -707,7 +1307,7 @@ class AnalysisToolbox:
             "anomaly_score_weight": 0.15,
         }
         if current_month is None:
-            limitations.append("目前沒有可用月份，無法產生平台 performance snapshot。")
+            limitations.append("目前沒有可用月份，無法產生新事業群 performance snapshot。")
             return {
                 "month": None,
                 "dimension": "platform",
@@ -724,7 +1324,7 @@ class AnalysisToolbox:
         )
         current_df = self.get_metric_table("platform_monthly", current_filters).copy()
         if current_df.empty:
-            limitations.append("指定月份沒有平台層營收與庫存對齊資料。")
+            limitations.append("指定月份沒有新事業群層營收與庫存對齊資料。")
             return {
                 "month": current_month,
                 "dimension": "platform",
@@ -789,7 +1389,7 @@ class AnalysisToolbox:
             )
 
         if not any(value is not None for value in momentum_values):
-            limitations.append("缺少可比較的前期平台營收資料，營收動能分數未納入 health_score。")
+            limitations.append("缺少可比較的前期新事業群營收資料，營收動能分數未納入 health_score。")
 
         revenue_score_map = self._score_by_platform(base_rows, "revenue", higher_is_better=True)
         momentum_score_map = self._score_by_platform(base_rows, "revenue_mom_change", higher_is_better=True)
@@ -1056,7 +1656,7 @@ class AnalysisToolbox:
                     },
                     "confidence": self._candidate_confidence(supporting_tools),
                     "direction": direction,
-                    "recommended_check": "建議進一步檢查該平台訂單、出貨、價格或客戶變化。",
+                    "recommended_check": "建議進一步檢查該新事業群的訂單、出貨、價格或客戶變化。",
                     "limitation": "目前缺少訂單、出貨、價格、客戶與市場需求資料，不能判定為根本原因。",
                     "_priority_rank": self._candidate_priority(direction),
                     "_magnitude": abs(float(top_platform.get("change") or 0.0)),
@@ -1090,7 +1690,7 @@ class AnalysisToolbox:
                     },
                     "confidence": self._candidate_confidence(supporting_tools),
                     "direction": direction,
-                    "recommended_check": "建議進一步檢查該新事業群對應平台的近期訂單、出貨或客戶結構變化。",
+                    "recommended_check": "建議進一步檢查該新事業群的近期訂單、出貨或客戶結構變化。",
                     "limitation": "目前缺少訂單、出貨、價格、客戶與市場需求資料，不能判定為根本原因。",
                     "_priority_rank": self._candidate_priority(direction),
                     "_magnitude": abs(float(top_group.get("change") or 0.0)),
@@ -1129,7 +1729,7 @@ class AnalysisToolbox:
                     },
                     "confidence": self._candidate_confidence(supporting_tools),
                     "direction": "negative",
-                    "recommended_check": "建議進一步檢查該平台或新事業群的庫存結構、出貨節奏與近期營收變化。",
+                    "recommended_check": "建議進一步檢查該新事業群的庫存結構、出貨節奏與近期營收變化。",
                     "limitation": "目前缺少訂單、出貨、價格、客戶與市場需求資料，不能判定為根本原因。",
                     "_priority_rank": self._candidate_priority("negative"),
                     "_magnitude": self._candidate_signal_magnitude(
@@ -1171,7 +1771,7 @@ class AnalysisToolbox:
                     },
                     "confidence": self._candidate_confidence(supporting_tools),
                     "direction": "negative",
-                    "recommended_check": "建議進一步檢查該平台或新事業群的近期營收、庫存與出貨節奏是否出現背離。",
+                    "recommended_check": "建議進一步檢查該新事業群的近期營收、庫存與出貨節奏是否出現背離。",
                     "limitation": "目前缺少訂單、出貨、價格、客戶與市場需求資料，不能判定為根本原因。",
                     "_priority_rank": self._candidate_priority("negative"),
                     "_magnitude": abs(float(strongest_anomaly.get(COL_ANOMALY_SIGNAL) or 0.0)),
@@ -1288,7 +1888,7 @@ class AnalysisToolbox:
         result = {
             "row_dimensions": [
                 {"value": "month", "label": "月份"},
-                {"value": "platform", "label": "平台"},
+                {"value": "platform", "label": "新事業群"},
                 {"value": "group", "label": "事業群"},
             ],
             "metrics": [
@@ -1357,6 +1957,50 @@ class AnalysisToolbox:
             return None
 
         metric = definition["metric"]
+        if definition.get("entity_dimension") and definition.get("value_column") in {
+            "health_score",
+            "revenue_inventory_amount_ratio",
+            COL_REVENUE_INV_AMOUNT_RATIO,
+        }:
+            dimension = self._normalize_entity_dimension(str(definition["entity_dimension"]))
+            snapshot = self.get_entity_performance_snapshot(
+                entity_dimension=dimension,
+                month=filters.month,
+                filters=filters,
+                top_n=top_n,
+            )
+            rows = snapshot.get("rows", [])
+            if not rows:
+                return None
+            value_column = definition["value_column"]
+            ordered = pd.DataFrame(rows)
+            ordered = ordered[ordered[value_column].notna()].copy() if value_column in ordered.columns else pd.DataFrame()
+            if ordered.empty:
+                return None
+            ordered = ordered.sort_values(value_column, ascending=bool(definition.get("sort_ascending", False))).head(top_n)
+            payload = {
+                "chart_key": chart_key,
+                "chart_type": definition["chart_type"],
+                "title": definition["title"],
+                "x_label": definition["x_label"],
+                "y_label": definition["y_label"],
+                "labels": ordered["entity_value"].astype(str).tolist(),
+                "series": [
+                    {
+                        "name": definition.get("series_name", value_column),
+                        "data": [self._normalize_number(value) for value in ordered[value_column].tolist()],
+                    }
+                ],
+                "filters": self._filters_to_dict(filters),
+                "table_preview": ordered[
+                    ["entity_value", "revenue", "inventory_amount", "revenue_inventory_amount_ratio", "health_score", "performance_label"]
+                ].to_dict(orient="records"),
+                "base_chart_type": definition["chart_type"],
+            }
+            requested_chart_type = self._normalize_chart_type(chart_type_override)
+            if requested_chart_type and requested_chart_type != payload["chart_type"]:
+                payload = self._apply_chart_type_variant(payload, requested_chart_type)
+            return payload
         effective_filters = self._normalize_chart_filters(definition, filters)
         df = self.get_metric_table(metric, effective_filters).copy()
         if df.empty:
@@ -1452,6 +2096,8 @@ class AnalysisToolbox:
                 continue
             if "月份" in df.columns:
                 months.update(df["月份"].dropna().astype(str).tolist())
+            elif "month_key" in df.columns:
+                months.update(df["month_key"].dropna().astype(str).tolist())
             elif "日期" in df.columns:
                 months.update(df["日期"].dropna().astype(str).tolist())
         return sorted(months)
@@ -1504,6 +2150,7 @@ class AnalysisToolbox:
             "revenue_by_group": self.context.artifacts.revenue_by_group,
             "inventory_by_group": self.context.artifacts.inventory_by_group,
             "platform_monthly": self.context.artifacts.platform_monthly_analysis,
+            "entity_health_score": self.context.artifacts.revenue_inventory_aligned,
             "anomalies": self.context.artifacts.anomalies,
             "correlations": self.context.artifacts.correlation_analysis,
         }
@@ -1571,6 +2218,12 @@ class AnalysisToolbox:
             return df.copy()
 
         filtered = df.copy()
+        if filters.month and "month_key" in filtered.columns:
+            filtered = filtered.loc[filtered["month_key"].astype(str) == filters.month]
+        if filters.platform and "business_group" in filtered.columns and "平台" not in filtered.columns:
+            filtered = filtered.loc[filtered["business_group"].astype(str).str.upper() == filters.platform.upper()]
+        if filters.group_code and "business_group" in filtered.columns and "新事業群" not in filtered.columns:
+            filtered = filtered.loc[filtered["business_group"].astype(str) == str(filters.group_code)]
         if filters.month:
             if "月份" in filtered.columns:
                 filtered = filtered.loc[filtered["月份"].astype(str) == filters.month]
@@ -1660,9 +2313,9 @@ class AnalysisToolbox:
     ) -> dict[str, Any]:
         label_column = definition["label_column"]
         value_column = definition["value_column"]
-        if label_column == COL_PLATFORM and value_column in df.columns and COL_PLATFORM in df.columns:
+        if label_column in df.columns and value_column in df.columns:
             ordered = (
-                df.groupby(COL_PLATFORM, as_index=False)[value_column]
+                df.groupby(label_column, dropna=False, as_index=False)[value_column]
                 .sum(min_count=1)
                 .sort_values(value_column, ascending=False)
                 .head(top_n)
@@ -1670,6 +2323,7 @@ class AnalysisToolbox:
             )
         else:
             ordered = df.sort_values(value_column, ascending=False).head(top_n).reset_index(drop=True)
+        ordered = ordered[ordered[value_column].notna()].head(top_n).reset_index(drop=True)
         return {
             "chart_key": chart_key,
             "chart_type": definition["chart_type"],
@@ -1697,9 +2351,9 @@ class AnalysisToolbox:
         filters: QueryFilters,
         top_n: int,
     ) -> dict[str, Any]:
-        ordered = df.sort_values(COL_REVENUE_INV_AMOUNT_RATIO, ascending=True).head(top_n).copy()
+        ordered = df[df[COL_REVENUE_INV_AMOUNT_RATIO].notna()].sort_values(COL_REVENUE_INV_AMOUNT_RATIO, ascending=True).head(top_n).copy()
         ordered["chart_label"] = ordered.apply(
-            lambda row: f"{row.get(COL_MONTH)} / {row.get(COL_PLATFORM)} / G{row.get(COL_GROUP_CODE)}",
+            lambda row: f"{row.get(COL_MONTH)} / {row.get(COL_PLATFORM) or '未標示新事業群'}",
             axis=1,
         )
         return {
@@ -1733,7 +2387,7 @@ class AnalysisToolbox:
         ordered["signal_abs"] = ordered[COL_ANOMALY_SIGNAL].abs()
         ordered = ordered.sort_values("signal_abs", ascending=False).head(top_n).reset_index(drop=True)
         ordered["chart_label"] = ordered.apply(
-            lambda row: f"{row.get(COL_MONTH)} / {row.get(COL_PLATFORM) or '整體'} / {row.get(COL_ANOMALY_TYPE)}",
+            lambda row: f"{row.get(COL_MONTH)} / {row.get(COL_PLATFORM) or '未標示新事業群'} / {row.get(COL_ANOMALY_TYPE)}",
             axis=1,
         )
         return {
@@ -1889,6 +2543,290 @@ class AnalysisToolbox:
             "highest_efficiency_platform": best_by("revenue_inventory_amount_ratio", reverse=True),
             "lowest_efficiency_platform": best_by("revenue_inventory_amount_ratio", reverse=False),
         }
+
+    def _entity_aligned_frame(
+        self,
+        dimension: str,
+        parent_filter: dict[str, Any] | None,
+        filters: QueryFilters,
+    ) -> pd.DataFrame:
+        df = self.context.artifacts.revenue_inventory_aligned.copy()
+        if df.empty:
+            return df
+        if filters.month and "month_key" in df.columns:
+            df = df[df["month_key"].astype(str) == filters.month]
+        if filters.platform and "business_group" in df.columns:
+            df = df[df["business_group"].astype(str).str.upper() == filters.platform.upper()]
+        if filters.group_code and "business_group" in df.columns:
+            df = df[df["business_group"].astype(str) == str(filters.group_code)]
+        if parent_filter:
+            for key, value in parent_filter.items():
+                normalized_key = "business_group" if key in {"platform", "group_code"} else key
+                if value is not None and normalized_key in df.columns:
+                    df = df[df[normalized_key].astype(str) == str(value)]
+        return df.reset_index(drop=True)
+
+    def _entity_snapshot_rows(
+        self,
+        dimension: str,
+        month: str,
+        parent_filter: dict[str, Any] | None,
+        filters: QueryFilters,
+    ) -> list[dict[str, Any]]:
+        df = self._entity_aligned_frame(dimension, parent_filter, QueryFilters(month=month, platform=filters.platform, group_code=filters.group_code))
+        if df.empty or dimension not in df.columns:
+            return []
+
+        rows: list[dict[str, Any]] = []
+        for entity_value, subset in df.groupby(dimension, dropna=False):
+            entity_text = str(entity_value) if pd.notna(entity_value) else "未標示"
+            both = subset[subset["data_presence_flag"] == "both"]
+            revenue = self._normalize_number(subset["revenue_amount"].sum(min_count=1))
+            inventory_amount = self._normalize_number(subset["inventory_amount"].sum(min_count=1))
+            inventory_qty = self._normalize_number(subset["inventory_qty"].sum(min_count=1))
+            both_revenue = both["revenue_amount"].sum(min_count=1) if not both.empty else None
+            both_inventory_amount = both["inventory_amount"].sum(min_count=1) if not both.empty else None
+            both_inventory_qty = both["inventory_qty"].sum(min_count=1) if not both.empty else None
+            amount_ratio = (
+                float(both_revenue) / float(both_inventory_amount)
+                if both_inventory_amount is not None
+                and pd.notna(both_inventory_amount)
+                and float(both_inventory_amount) != 0
+                and both_revenue is not None
+                and pd.notna(both_revenue)
+                else None
+            )
+            qty_ratio = (
+                float(both_revenue) / float(both_inventory_qty)
+                if both_inventory_qty is not None
+                and pd.notna(both_inventory_qty)
+                and float(both_inventory_qty) != 0
+                and both_revenue is not None
+                and pd.notna(both_revenue)
+                else None
+            )
+            presence_counts = subset["data_presence_flag"].value_counts().to_dict()
+            row = {
+                "month": month,
+                "entity_dimension": dimension,
+                "entity_label": ENTITY_LABELS[dimension],
+                "entity_value": entity_text,
+                "name": entity_text,
+                "business_group": entity_text if dimension == "business_group" else None,
+                "product_line_5": entity_text if dimension == "product_line_5" else None,
+                "platform": entity_text if dimension == "business_group" else None,
+                "group_code": entity_text if dimension == "business_group" else None,
+                "revenue": revenue,
+                "revenue_amount": revenue,
+                "inventory_amount": inventory_amount,
+                "inventory_qty": inventory_qty,
+                "revenue_inventory_amount_ratio": self._normalize_number(amount_ratio),
+                "revenue_inventory_qty_ratio": self._normalize_number(qty_ratio),
+                "anomaly_count": 0,
+                "data_presence_counts": {str(key): int(value) for key, value in presence_counts.items()},
+                "both_row_share": self._safe_ratio(float(presence_counts.get("both", 0)), float(len(subset))),
+                "row_count": int(len(subset)),
+                "limitation": None if presence_counts.get("both") else "此 entity 沒有 revenue/inventory 同時存在的 grain，未計算 ratio。",
+            }
+            if dimension == "product_line_5":
+                groups = sorted(subset["business_group"].dropna().astype(str).unique().tolist())
+                row["business_groups"] = groups
+                if parent_filter and parent_filter.get("business_group"):
+                    row["business_group"] = str(parent_filter["business_group"])
+                    row["parent_business_group"] = str(parent_filter["business_group"])
+            rows.append(row)
+        return rows
+
+    def _latest_common_month(self) -> str | None:
+        report = getattr(self.context.artifacts, "data_quality_report", {}) or getattr(self.context, "real_data_quality_report", {}) or {}
+        if report.get("latest_common_month"):
+            return report["latest_common_month"]
+        df = self.context.artifacts.revenue_inventory_aligned
+        if df.empty or "month_key" not in df.columns:
+            return None
+        both = df[df.get("data_presence_flag") == "both"]
+        source = both if not both.empty else df
+        months = sorted(source["month_key"].dropna().astype(str).unique().tolist())
+        return months[-1] if months else None
+
+    def _previous_common_month(
+        self,
+        current_month: str,
+        dimension: str,
+        parent_filter: dict[str, Any] | None,
+        filters: QueryFilters,
+    ) -> str | None:
+        df = self._entity_aligned_frame(dimension, parent_filter, filters)
+        if df.empty:
+            return None
+        both = df[df.get("data_presence_flag") == "both"]
+        source = both if not both.empty else df
+        months = sorted(source["month_key"].dropna().astype(str).unique().tolist())
+        if current_month not in months:
+            return None
+        index = months.index(current_month)
+        return months[index - 1] if index > 0 else None
+
+    @staticmethod
+    def _normalize_entity_dimension(entity_dimension: str) -> str:
+        if entity_dimension in {"platform", "group", "business_group"}:
+            return "business_group"
+        if entity_dimension in {"product_line", "productline_5", "product_line_5"}:
+            return "product_line_5"
+        return "business_group"
+
+    @staticmethod
+    def _normalize_entity_ranking_metric(metric: str) -> str:
+        normalized = str(metric or "").strip().lower()
+        mapping = {
+            "revenue": "revenue_amount",
+            "sales": "revenue_amount",
+            "revenue_amount": "revenue_amount",
+            "inventory": "inventory_amount",
+            "inventory_amount": "inventory_amount",
+            "inventory_qty": "inventory_qty",
+            "qty": "inventory_qty",
+            "revenue_inventory_ratio": "revenue_inventory_amount_ratio",
+            "revenue_inventory_amount_ratio": "revenue_inventory_amount_ratio",
+            "ratio": "revenue_inventory_amount_ratio",
+            "efficiency": "revenue_inventory_amount_ratio",
+            "health": "health_score",
+            "health_score": "health_score",
+            "risk": "risk_score",
+            "risk_score": "risk_score",
+        }
+        return mapping.get(normalized, "revenue_amount")
+
+    @staticmethod
+    def _entity_ranking_metric_label(metric: str) -> str:
+        return {
+            "revenue_amount": "營收",
+            "inventory_amount": "庫存金額",
+            "inventory_qty": "庫存 QTY",
+            "revenue_inventory_amount_ratio": "營收相對庫存效率 proxy",
+            "health_score": "health_score",
+            "risk_score": "risk_score",
+        }.get(metric, metric)
+
+    @staticmethod
+    def _entity_metric_sort_direction(metric: str, requested_direction: str | None = None) -> str:
+        if requested_direction in {"ascending", "descending"}:
+            return requested_direction
+        return "descending"
+
+    @staticmethod
+    def _dominant_presence_flag(counts: Any) -> str | None:
+        if not isinstance(counts, dict) or not counts:
+            return None
+        ordered = sorted(counts.items(), key=lambda item: int(item[1] or 0), reverse=True)
+        return str(ordered[0][0]) if ordered else None
+
+    @staticmethod
+    def _score_by_entity(rows: list[dict[str, Any]], value_key: str, *, higher_is_better: bool) -> dict[str, float | None]:
+        values = [float(row[value_key]) for row in rows if row.get(value_key) is not None]
+        if not values:
+            return {str(row["entity_value"]): None for row in rows}
+        min_value = min(values)
+        max_value = max(values)
+        score_map: dict[str, float | None] = {}
+        for row in rows:
+            entity = str(row["entity_value"])
+            value = row.get(value_key)
+            if value is None:
+                score_map[entity] = None
+                continue
+            if max_value == min_value:
+                score = 1.0
+            else:
+                score = (float(value) - min_value) / (max_value - min_value)
+                if not higher_is_better:
+                    score = 1.0 - score
+            score_map[entity] = round(max(0.0, min(1.0, score)), 4)
+        return score_map
+
+    @staticmethod
+    def _rank_by_entity(rows: list[dict[str, Any]], value_key: str, *, descending: bool) -> dict[str, int | None]:
+        candidates = [row for row in rows if row.get(value_key) is not None]
+        ranked = sorted(candidates, key=lambda row: float(row[value_key]), reverse=descending)
+        ranks = {str(row["entity_value"]): index + 1 for index, row in enumerate(ranked)}
+        return {str(row["entity_value"]): ranks.get(str(row["entity_value"])) for row in rows}
+
+    @staticmethod
+    def _entity_health_score(component_scores: dict[str, float | None], rubric: dict[str, float]) -> float | None:
+        mapping = {
+            "revenue_scale_score": "revenue_scale_weight",
+            "revenue_momentum_score": "revenue_momentum_weight",
+            "inventory_efficiency_score": "inventory_efficiency_weight",
+            "data_completeness_score": "data_completeness_weight",
+        }
+        weighted_sum = 0.0
+        available_weight = 0.0
+        for score_key, weight_key in mapping.items():
+            score = component_scores.get(score_key)
+            weight = float(rubric.get(weight_key, 0.0))
+            if score is None:
+                continue
+            weighted_sum += float(score) * weight
+            available_weight += weight
+        if available_weight == 0:
+            return None
+        return round(weighted_sum / available_weight, 4)
+
+    @staticmethod
+    def _entity_snapshot_summary(rows: list[dict[str, Any]], dimension: str) -> dict[str, Any]:
+        def best_by(key: str, *, reverse: bool = True, allow_unmapped: bool = True) -> str | None:
+            candidates = [row for row in rows if row.get(key) is not None]
+            if not allow_unmapped:
+                mapped_candidates = [row for row in candidates if not is_unmapped_entity(row.get("entity_value"))]
+                if mapped_candidates:
+                    candidates = mapped_candidates
+            if not candidates:
+                return None
+            return str(sorted(candidates, key=lambda row: float(row[key]), reverse=reverse)[0].get("entity_value"))
+
+        best = best_by("health_score", reverse=True, allow_unmapped=False)
+        weakest = best_by("health_score", reverse=False)
+        summary = {
+            "best_entity": best,
+            "weakest_entity": weakest,
+            "top_revenue_entity": best_by("revenue", reverse=True, allow_unmapped=False),
+            "top_inventory_entity": best_by("inventory_amount", reverse=True, allow_unmapped=False),
+            "highest_efficiency_entity": best_by("revenue_inventory_amount_ratio", reverse=True, allow_unmapped=False),
+            "lowest_efficiency_entity": best_by("revenue_inventory_amount_ratio", reverse=False),
+            "unmapped_entity_count": sum(1 for row in rows if is_unmapped_entity(row.get("entity_value"))),
+        }
+        if dimension == "business_group":
+            summary.update(
+                {
+                    "best_platform": best,
+                    "weakest_platform": weakest,
+                    "top_revenue_platform": summary["top_revenue_entity"],
+                    "top_inventory_platform": summary["top_inventory_entity"],
+                }
+            )
+        return summary
+
+    @staticmethod
+    def _entity_primary_strength(row: dict[str, Any], label: str) -> str:
+        strengths: list[str] = []
+        if row.get("revenue_rank") == 1:
+            strengths.append(f"{label}營收規模排名較高")
+        if row.get("efficiency_rank") == 1:
+            strengths.append("營收相對庫存 proxy 較佳")
+        if row.get("both_row_share") == 1:
+            strengths.append("資料對齊完整度較高")
+        return "；".join(strengths) if strengths else "綜合分數來自營收、庫存 proxy 與資料完整性。"
+
+    @staticmethod
+    def _entity_primary_risk(row: dict[str, Any], label: str) -> str:
+        risks: list[str] = []
+        if row.get("efficiency_rank") is not None and row.get("efficiency_rank") >= 3:
+            risks.append("營收相對庫存 proxy 排名偏後")
+        if row.get("both_row_share") is not None and row.get("both_row_share") < 1:
+            risks.append("存在 revenue_only 或 inventory_only grain")
+        if row.get("revenue_mom_change") is not None and row.get("revenue_mom_change") < 0:
+            risks.append(f"{label}營收較前期下降")
+        return "；".join(risks) if risks else "目前 scorecard 未顯示主要風險訊號。"
 
     @staticmethod
     def _normalize_number(value: Any) -> float | int | None:
@@ -2219,9 +3157,14 @@ class AnalysisToolbox:
     def _group_display_name(self, group_code: Any) -> str:
         mapping = self.context.parsed_mapping.business_group_mapping
         if not mapping.empty:
-            matched = mapping.loc[mapping["事業群代碼"].astype(str) == str(group_code)]
-            if not matched.empty:
-                return str(matched.iloc[0]["事業群名稱"])
+            if COL_GROUP_CODE in mapping.columns and COL_GROUP_NAME in mapping.columns:
+                matched = mapping.loc[mapping[COL_GROUP_CODE].astype(str) == str(group_code)]
+                if not matched.empty:
+                    return str(matched.iloc[0][COL_GROUP_NAME])
+            if "事業群代碼" in mapping.columns and "事業群名稱" in mapping.columns:
+                matched = mapping.loc[mapping["事業群代碼"].astype(str) == str(group_code)]
+                if not matched.empty:
+                    return str(matched.iloc[0]["事業群名稱"])
         return f"group_{group_code}"
 
     @staticmethod
@@ -2352,7 +3295,7 @@ class AnalysisToolbox:
         compare_month: str | None,
     ) -> dict[str, Any]:
         metric_config = self._metric_config(request.metric)
-        row_label = "平台" if request.row_dimension == "platform" else "事業群"
+        row_label = "新事業群" if request.row_dimension == "platform" else "事業群"
         current_df = self._build_dimension_snapshot(request, current_month)
         compare_df = self._build_dimension_snapshot(request, compare_month) if compare_month else pd.DataFrame()
 
@@ -2400,11 +3343,11 @@ class AnalysisToolbox:
             filters = QueryFilters(month=month, platform=request.platform, group_code=request.group_code)
             df = self.get_metric_table("platform_monthly", filters).copy()
             if df.empty or COL_PLATFORM not in df.columns or value_column not in df.columns:
-                return pd.DataFrame(columns=["平台", metric_config["label"]])
+                return pd.DataFrame(columns=["新事業群", metric_config["label"]])
             grouped = (
                 df.groupby(COL_PLATFORM, as_index=False)[value_column]
                 .sum(min_count=1)
-                .rename(columns={COL_PLATFORM: "平台", value_column: metric_config["label"]})
+                .rename(columns={COL_PLATFORM: "新事業群", value_column: metric_config["label"]})
                 .sort_values(metric_config["label"], ascending=False)
                 .reset_index(drop=True)
             )

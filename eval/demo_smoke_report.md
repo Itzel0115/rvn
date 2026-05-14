@@ -1,62 +1,80 @@
 # Demo Smoke Report
 
 - mode: direct
-- cases: 10
+- cases: 18
 
 | Question | Task Family | Key Obs | Table | Headline |
 |---|---:|---:|---:|---|
-| 請分析哪個平台表現較佳 | performance_assessment | 3 | no | 結論：目前綜合表現較佳的平台是 GG-01，因為其 營收規模排名較高；營收相對庫存效率 proxy 較高；目前未見同月異常訊號，health_score 為 0.97。 |
-| 請分析哪個平台表現較差 | performance_assessment | 3 | no | 結論：目前表現較弱的平台優先看 GG-06，因為其 同月異常訊號 1 筆；營收相對庫存效率 proxy 排名偏後；營收動能相對偏弱，health_score 為 0.13。 |
-| 比較 8 月各平台營收與庫存 | cross_section_compare | 3 | yes | 結論：2024-08 各平台比較下，GG-01 營收規模較高，GG-02 庫存水位較高；但 GG-02 的營收相對庫存效率較弱，需搭配庫存壓力判讀。 |
-| 哪個平台最健康？ | performance_assessment | 3 | no | 結論：目前綜合表現較佳的平台是 GG-01，因為其 營收規模排名較高；營收相對庫存效率 proxy 較高；目前未見同月異常訊號，health_score 為 0.97。 |
-| 最近有什麼營運風險？ | risk_scan | 3 | no | 結論：目前最需優先追蹤的是 GG-02 風險訊號，異常類型為 營收/庫存金額比偏低。 |
-| 8 月相較 7 月營收變化主要由誰貢獻？ | time_compare | 2 | no | 結論：2024-08 相較 2024-07 的營收變化主要由 雲端服務 貢獻，變化 195.00。 |
-| 資料涵蓋哪些月份？ | data_quality | 2 | no | 目前資料涵蓋 8 個月份，最新月份為 2024-08。營收資料 48 筆，庫存資料 48 筆，mapping 資料 6 筆，mapping_success=True。 另外，目前有 1 筆 pipeline warnings。 |
-| 請整理最新月份各平台的營收與庫存重點 | latest_month_platform_summary | 3 | yes | 結論：最新月份 2024-08 各平台重點是，GG-01 營收規模較高，GG-02 庫存水位較高，GG-06 在綜合 scorecard 下需要注意。 |
-| 2024年2月以及2024年7月營收有甚麼區別？ | period_pair_compare | 1 | yes | 結論：2024-07 營收相較 2024-02 增加 925.00，變化率為 18.01%。 |
+| 請整理最新月份各新事業群的營收與庫存重點 | latest_month_entity_summary | 3 | yes | 結論：最新月份 2026-02 各新事業群比較下，1網通+技鋼 營收規模較高，1網通+技鋼 庫存水位較高，未對應資料列在 scorecard 下需作為資料品質限制追蹤。 |
+| 請分析哪個新事業群表現較佳 | performance_assessment | 3 | no | 結論：目前綜合表現較佳的新事業群是 1網通+技鋼，因為其 綜合分數來自營收、庫存 proxy 與資料完整性。，health_score 為 0.82。 |
+| 請分析哪個新事業群表現較差 | performance_assessment | 3 | no | 結論：目前未對應資料列在新事業群 scorecard 下風險較高，建議先視為資料對應限制；已對應資料則需搭配表格中的 health_score 與 proxy 判讀。 |
+| 比較最新月份各五大產品線營收與庫存 | cross_section_compare | 3 | yes | 結論：2026-02 各五大產品線比較下，IOT 營收規模較高，Server 庫存水位較高；但 Server 的營收相對庫存效率較弱，需搭配庫存壓力判讀。 |
+| 哪個產品線庫存壓力較高？ | performance_assessment | 3 | no | 結論：目前表現較弱的五大產品線優先看 雲城，因為其 存在 revenue_only 或 inventory_only grain；五大產品線營收較前期下降，health_score 為 0.12。 |
+| 最近有什麼營運風險？ | risk_scan | 3 | no | 結論：目前最需優先追蹤的是 7製造 風險訊號，異常類型為 營收/庫存金額 proxy 偏弱。 |
+| 2026年1月以及2026年2月營收有什麼區別？ | period_pair_compare | 1 | yes | 結論：2026-02 營收相較 2026-01 下降 240,587,808.00，變化率為 -0.73%。 |
+| 某新事業群底下哪個產品線表現較差？ | performance_assessment | 3 | no | 結論：目前表現較弱的五大產品線優先看 雲城，因為其 存在 revenue_only 或 inventory_only grain；五大產品線營收較前期下降，health_score 為 0.12。 |
+| 請畫最新月份各新事業群營收圖 | chart_request | 3 | yes | 結論：已產生 最新月份各新事業群營收比較（business_group_revenue_bar），可用於前端圖表渲染與表格檢視。 |
+| 請畫五大產品線 health_score 排名 | chart_request | 3 | yes | 結論：已產生 五大產品線 health_score 排名（product_line_health_score_bar），可用於前端圖表渲染與表格檢視。 |
+| 資料涵蓋哪些月份？ | data_quality | 2 | no | 目前真實資料已讀取：營收 1982 筆，庫存 122935 筆；共同月份 14 個，最新共同月份為 2026-02。aligned rows=229，both=148，revenue_only=36，inventory_only=45。 另外，目前有 2 筆 pipeline warnings。 |
 | 下個月營收會不會改善？ | forecast_unsupported | 2 | no | 結論：目前無法判斷下個月營收是否會改善，因為系統尚未納入預測模型、訂單、出貨、價格或市場需求資料。 |
+| 最新月份營收最高的新事業群是誰？ | ranking | 1 | yes | 結論：最新月份 2026-02 營收最高的新事業群是 1網通+技鋼，營收為 24,670,343,477.00。 |
+| 最新月份庫存最高的新事業群是誰？ | ranking | 1 | yes | 結論：最新月份 2026-02 庫存金額最高的新事業群是 1網通+技鋼，庫存金額為 73,298,408,408.75。 |
+| 哪個五大產品線營收最高？ | ranking | 1 | yes | 結論：最新月份 2026-02 營收最高的五大產品線是 IOT，營收為 24,820,989,812.00。 |
+| 哪個五大產品線庫存最高？ | ranking | 1 | yes | 結論：最新月份 2026-02 庫存金額最高的五大產品線是 Server，庫存金額為 73,165,236,987.41。 |
+| 哪個新事業群營收相對庫存效率最高？ | ranking | 1 | yes | 結論：最新月份 2026-02 營收相對庫存效率 proxy最高的新事業群是 5百事益，營收相對庫存效率 proxy為 1.44。 |
+| 哪個新事業群營收相對庫存效率最低？ | ranking | 1 | yes | 結論：最新月份 2026-02 營收相對庫存效率 proxy最低的新事業群是 7製造，營收相對庫存效率 proxy為 -5.20。 |
 
 ## Details
 
-### 請分析哪個平台表現較佳
+### 請整理最新月份各新事業群的營收與庫存重點
 
-- task_family: `performance_assessment`
-- primary_tools: `get_platform_performance_snapshot, get_inventory_turnover_proxy, get_platform_ratios`
-- tools_used: `get_platform_performance_snapshot, get_inventory_turnover_proxy, get_platform_ratios, get_anomalies`
-- key_observation_count: `3`
-- has_table: `False`
-- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，不等於正式庫存週轉率。
-- headline: 結論：目前綜合表現較佳的平台是 GG-01，因為其 營收規模排名較高；營收相對庫存效率 proxy 較高；目前未見同月異常訊號，health_score 為 0.97。
-
-### 請分析哪個平台表現較差
-
-- task_family: `performance_assessment`
-- primary_tools: `get_platform_performance_snapshot, get_inventory_turnover_proxy, get_platform_ratios`
-- tools_used: `get_platform_performance_snapshot, get_inventory_turnover_proxy, get_platform_ratios, get_anomalies`
-- key_observation_count: `3`
-- has_table: `False`
-- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，不等於正式庫存週轉率。
-- headline: 結論：目前表現較弱的平台優先看 GG-06，因為其 同月異常訊號 1 筆；營收相對庫存效率 proxy 排名偏後；營收動能相對偏弱，health_score 為 0.13。
-
-### 比較 8 月各平台營收與庫存
-
-- task_family: `cross_section_compare`
-- primary_tools: `get_platform_performance_snapshot, get_platform_ratios, get_metric_table(platform_monthly)`
-- tools_used: `get_platform_performance_snapshot, get_platform_ratios, get_anomalies`
+- task_family: `latest_month_entity_summary`
+- primary_tools: `get_entity_performance_snapshot`
+- tools_used: `get_entity_performance_snapshot, get_inventory_turnover_proxy`
 - key_observation_count: `3`
 - has_table: `True`
-- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
-- headline: 結論：2024-08 各平台比較下，GG-01 營收規模較高，GG-02 庫存水位較高；但 GG-02 的營收相對庫存效率較弱，需搭配庫存壓力判讀。
+- limitations: 此為營收與庫存資料推導的 proxy，非正式周轉指標。 | health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。 | 部分資料列的新事業群或五大產品線為未對應，已作為資料品質限制處理。
+- headline: 結論：最新月份 2026-02 各新事業群比較下，1網通+技鋼 營收規模較高，1網通+技鋼 庫存水位較高，未對應資料列在 scorecard 下需作為資料品質限制追蹤。
 
-### 哪個平台最健康？
+### 請分析哪個新事業群表現較佳
 
 - task_family: `performance_assessment`
-- primary_tools: `get_platform_performance_snapshot, get_inventory_turnover_proxy, get_platform_ratios`
-- tools_used: `get_platform_performance_snapshot, get_inventory_turnover_proxy, get_platform_ratios, get_anomalies`
+- primary_tools: `get_entity_performance_snapshot`
+- tools_used: `get_entity_performance_snapshot, get_inventory_turnover_proxy, get_anomalies`
 - key_observation_count: `3`
 - has_table: `False`
-- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，不等於正式庫存週轉率。
-- headline: 結論：目前綜合表現較佳的平台是 GG-01，因為其 營收規模排名較高；營收相對庫存效率 proxy 較高；目前未見同月異常訊號，health_score 為 0.97。
+- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，非正式周轉指標。 | health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：目前綜合表現較佳的新事業群是 1網通+技鋼，因為其 綜合分數來自營收、庫存 proxy 與資料完整性。，health_score 為 0.82。
+
+### 請分析哪個新事業群表現較差
+
+- task_family: `performance_assessment`
+- primary_tools: `get_entity_performance_snapshot`
+- tools_used: `get_entity_performance_snapshot, get_inventory_turnover_proxy, get_anomalies`
+- key_observation_count: `3`
+- has_table: `False`
+- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，非正式周轉指標。 | health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：目前未對應資料列在新事業群 scorecard 下風險較高，建議先視為資料對應限制；已對應資料則需搭配表格中的 health_score 與 proxy 判讀。
+
+### 比較最新月份各五大產品線營收與庫存
+
+- task_family: `cross_section_compare`
+- primary_tools: `get_entity_cross_section_comparison, get_entity_performance_snapshot`
+- tools_used: `get_entity_cross_section_comparison, get_entity_performance_snapshot, get_anomalies`
+- key_observation_count: `3`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：2026-02 各五大產品線比較下，IOT 營收規模較高，Server 庫存水位較高；但 Server 的營收相對庫存效率較弱，需搭配庫存壓力判讀。
+
+### 哪個產品線庫存壓力較高？
+
+- task_family: `performance_assessment`
+- primary_tools: `get_entity_performance_snapshot`
+- tools_used: `get_entity_performance_snapshot, get_inventory_turnover_proxy, get_anomalies`
+- key_observation_count: `3`
+- has_table: `False`
+- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，非正式周轉指標。 | health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：目前表現較弱的五大產品線優先看 雲城，因為其 存在 revenue_only 或 inventory_only grain；五大產品線營收較前期下降，health_score 為 0.12。
 
 ### 最近有什麼營運風險？
 
@@ -65,18 +83,48 @@
 - tools_used: `get_platform_ratios, get_anomalies, get_inventory_turnover_proxy`
 - key_observation_count: `3`
 - has_table: `False`
-- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，不等於正式庫存週轉率。
-- headline: 結論：目前最需優先追蹤的是 GG-02 風險訊號，異常類型為 營收/庫存金額比偏低。
+- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，非正式周轉指標。
+- headline: 結論：目前最需優先追蹤的是 7製造 風險訊號，異常類型為 營收/庫存金額 proxy 偏弱。
 
-### 8 月相較 7 月營收變化主要由誰貢獻？
+### 2026年1月以及2026年2月營收有什麼區別？
 
-- task_family: `time_compare`
-- primary_tools: `get_yoy_mom_breakdown, get_contribution_analysis`
-- tools_used: `get_yoy_mom_breakdown(revenue), get_contribution_analysis(revenue)`
-- key_observation_count: `2`
+- task_family: `period_pair_compare`
+- primary_tools: `get_entity_period_pair_comparison`
+- tools_used: `get_entity_period_pair_comparison(revenue)`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
+- headline: 結論：2026-02 營收相較 2026-01 下降 240,587,808.00，變化率為 -0.73%。
+
+### 某新事業群底下哪個產品線表現較差？
+
+- task_family: `performance_assessment`
+- primary_tools: `get_entity_performance_snapshot`
+- tools_used: `get_entity_performance_snapshot, get_inventory_turnover_proxy, get_anomalies`
+- key_observation_count: `3`
 - has_table: `False`
-- limitations: 目前沒有去年同期資料，因此暫時無法提供 YoY。
-- headline: 結論：2024-08 相較 2024-07 的營收變化主要由 雲端服務 貢獻，變化 195.00。
+- limitations: 目前回答仍以營收、庫存與異常訊號為主，不能直接等同完整因果判斷。 | 此為營收與庫存資料推導的 proxy，非正式周轉指標。 | health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：目前表現較弱的五大產品線優先看 雲城，因為其 存在 revenue_only 或 inventory_only grain；五大產品線營收較前期下降，health_score 為 0.12。
+
+### 請畫最新月份各新事業群營收圖
+
+- task_family: `chart_request`
+- primary_tools: `get_chart_payload`
+- tools_used: `get_chart_payload, get_chart_table, create_chart_image`
+- key_observation_count: `3`
+- has_table: `True`
+- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
+- headline: 結論：已產生 最新月份各新事業群營收比較（business_group_revenue_bar），可用於前端圖表渲染與表格檢視。
+
+### 請畫五大產品線 health_score 排名
+
+- task_family: `chart_request`
+- primary_tools: `get_chart_payload`
+- tools_used: `get_chart_payload, get_chart_table, create_chart_image`
+- key_observation_count: `3`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：已產生 五大產品線 health_score 排名（product_line_health_score_bar），可用於前端圖表渲染與表格檢視。
 
 ### 資料涵蓋哪些月份？
 
@@ -85,28 +133,8 @@
 - tools_used: `get_data_coverage, get_mapping_summary`
 - key_observation_count: `2`
 - has_table: `False`
-- limitations: 目前資料品質報告僅反映已載入資料與 pipeline 狀態。 | 若 mapping 有 ambiguous candidates，平台層分析需搭配限制解讀。 | 目前仍有 pipeline warnings，解讀結果時需一併納入。
-- headline: 目前資料涵蓋 8 個月份，最新月份為 2024-08。營收資料 48 筆，庫存資料 48 筆，mapping 資料 6 筆，mapping_success=True。 另外，目前有 1 筆 pipeline warnings。
-
-### 請整理最新月份各平台的營收與庫存重點
-
-- task_family: `latest_month_platform_summary`
-- primary_tools: `get_platform_performance_snapshot`
-- tools_used: `get_platform_performance_snapshot, get_platform_ratios, get_anomalies`
-- key_observation_count: `3`
-- has_table: `True`
-- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
-- headline: 結論：最新月份 2024-08 各平台重點是，GG-01 營收規模較高，GG-02 庫存水位較高，GG-06 在綜合 scorecard 下需要注意。
-
-### 2024年2月以及2024年7月營收有甚麼區別？
-
-- task_family: `period_pair_compare`
-- primary_tools: `get_period_pair_metric_comparison`
-- tools_used: `get_period_pair_metric_comparison(revenue)`
-- key_observation_count: `1`
-- has_table: `True`
-- limitations: 回答已盡量依據現有資料整理，但仍需搭配實際業務背景解讀。
-- headline: 結論：2024-07 營收相較 2024-02 增加 925.00，變化率為 18.01%。
+- limitations: 目前資料品質報告僅反映已載入資料與 pipeline 狀態。 | 營收/庫存 ratio 僅在 revenue 與 inventory 同時存在且分母合法時計算，屬 proxy 指標。 | 若有 missing 新事業群、missing 五大產品線、revenue_only 或 inventory_only rows，需納入解讀限制。
+- headline: 目前真實資料已讀取：營收 1982 筆，庫存 122935 筆；共同月份 14 個，最新共同月份為 2026-02。aligned rows=229，both=148，revenue_only=36，inventory_only=45。 另外，目前有 2 筆 pipeline warnings。
 
 ### 下個月營收會不會改善？
 
@@ -117,3 +145,63 @@
 - has_table: `False`
 - limitations: 目前資料無法直接支援 forecast 類問題。 | 目前系統尚未納入預測模型、訂單、出貨、價格或市場需求資料，不能直接預測未來月份。 | 目前尚無法直接判斷原因或預測未來變化，因為資料不包含完整因果所需欄位。
 - headline: 結論：目前無法判斷下個月營收是否會改善，因為系統尚未納入預測模型、訂單、出貨、價格或市場需求資料。
+
+### 最新月份營收最高的新事業群是誰？
+
+- task_family: `ranking`
+- primary_tools: `get_entity_metric_ranking`
+- tools_used: `get_metric_table(revenue_trend), get_top_groups(revenue), get_entity_metric_ranking`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：最新月份 2026-02 營收最高的新事業群是 1網通+技鋼，營收為 24,670,343,477.00。
+
+### 最新月份庫存最高的新事業群是誰？
+
+- task_family: `ranking`
+- primary_tools: `get_entity_metric_ranking`
+- tools_used: `get_metric_table(inventory_amount_trend), get_metric_table(inventory_qty_trend), get_entity_metric_ranking`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：最新月份 2026-02 庫存金額最高的新事業群是 1網通+技鋼，庫存金額為 73,298,408,408.75。
+
+### 哪個五大產品線營收最高？
+
+- task_family: `ranking`
+- primary_tools: `get_entity_metric_ranking`
+- tools_used: `get_metric_table(revenue_trend), get_top_groups(revenue), get_entity_metric_ranking`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：最新月份 2026-02 營收最高的五大產品線是 IOT，營收為 24,820,989,812.00。
+
+### 哪個五大產品線庫存最高？
+
+- task_family: `ranking`
+- primary_tools: `get_entity_metric_ranking`
+- tools_used: `get_metric_table(inventory_amount_trend), get_metric_table(inventory_qty_trend), get_top_groups(inventory), get_entity_metric_ranking`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：最新月份 2026-02 庫存金額最高的五大產品線是 Server，庫存金額為 73,165,236,987.41。
+
+### 哪個新事業群營收相對庫存效率最高？
+
+- task_family: `ranking`
+- primary_tools: `get_entity_metric_ranking`
+- tools_used: `get_entity_metric_ranking`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：最新月份 2026-02 營收相對庫存效率 proxy最高的新事業群是 5百事益，營收相對庫存效率 proxy為 1.44。
+
+### 哪個新事業群營收相對庫存效率最低？
+
+- task_family: `ranking`
+- primary_tools: `get_entity_metric_ranking`
+- tools_used: `get_entity_metric_ranking, get_platform_ratios`
+- key_observation_count: `1`
+- has_table: `True`
+- limitations: health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。
+- headline: 結論：最新月份 2026-02 營收相對庫存效率 proxy最低的新事業群是 7製造，營收相對庫存效率 proxy為 -5.20。

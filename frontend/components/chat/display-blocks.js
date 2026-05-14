@@ -1,6 +1,10 @@
 const SCORE_COLUMNS = ["health_score", "risk_score"];
 const DEFAULT_EXECUTIVE_COLUMNS = [
-  "platform",
+  "新事業群",
+  "五大產品線",
+  "entity_value",
+  "business_group",
+  "product_line_5",
   "revenue",
   "inventory_amount",
   "revenue_inventory_ratio",

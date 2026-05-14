@@ -45,7 +45,7 @@ class LLMRewriterTest(unittest.TestCase):
             limitations=[
                 "目前尚無法直接判斷營收變化的根本原因。",
                 "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位。",
-                "此為營收與庫存資料推導的 proxy，不等於正式庫存週轉率。",
+                "此為營收與庫存資料推導的 proxy，非正式周轉指標。",
             ],
             tools_used=["get_root_cause_candidates", "get_contribution_analysis(revenue)"],
         )
@@ -56,7 +56,7 @@ class LLMRewriterTest(unittest.TestCase):
                 "rewritten_answer": (
                     "目前尚無法直接判斷營收變化的根本原因。"
                     "依現有資料，2024-08 營收相較 2024-07 下降 215.00，且 GG-02 / 新事業群 1 的庫存效率 proxy 偏弱。"
-                    "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位，且此 proxy 不等於正式庫存週轉率。"
+                    "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位，且此 proxy 為非正式周轉指標。"
                 )
             }
         )
@@ -136,7 +136,7 @@ class LLMRewriterTest(unittest.TestCase):
         good_llm = FakeRewriteLLM(
             data={
                 "rewritten_answer": (
-                    "依目前已載入資料，營收最高的新事業群為代碼 1，數值為 18,810.00。"
+                    "依目前已載入真實資料，營收最高的新事業群為 1網通+技鋼，數值為 250,265,866,304。"
                 )
             }
         )

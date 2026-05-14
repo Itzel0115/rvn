@@ -15,6 +15,14 @@ from config import (
 )
 from utils import format_number
 
+UNMAPPED_ENTITY_VALUES = {"", "未對應", "未分類", "unknown", "n/a", "nan", "none", "null"}
+
+
+def is_unmapped_entity(value: Any) -> bool:
+    if value is None:
+        return True
+    return str(value).strip().lower() in UNMAPPED_ENTITY_VALUES
+
 
 @dataclass(frozen=True)
 class ProjectedObservation:
@@ -64,11 +72,15 @@ def build_display_blocks_from_roles(
     if bool(getattr(task_profile, "requires_table", False)) or bool(getattr(answer_plan, "requires_table", False)):
         table = _project_table(primary)
 
+    display_limitations = list(limitations)
+    if _has_unmapped_entity(evidence_items):
+        display_limitations.append("部分資料列的新事業群或五大產品線為未對應，已作為資料品質限制處理。")
+
     return DisplayBlocks(
         headline=headline,
         key_observations=[item.text for item in observations],
         table=table,
-        limitations=list(dict.fromkeys(limitations))[:3],
+        limitations=list(dict.fromkeys(display_limitations))[:3],
     ).to_dict()
 
 
@@ -78,7 +90,7 @@ def _build_headline(task_profile: Any | None, primary: list[Any], supporting: li
         return _forecast_unsupported_headline(task_profile)
     if not primary:
         return "結論：目前沒有足夠的 primary evidence 可以形成管理結論。"
-    if task_family == "latest_month_platform_summary":
+    if task_family in {"latest_month_platform_summary", "latest_month_entity_summary"}:
         return _latest_month_platform_summary_headline(primary, supporting)
     if task_family == "period_pair_compare":
         return _period_pair_headline(primary)
@@ -92,6 +104,8 @@ def _build_headline(task_profile: Any | None, primary: list[Any], supporting: li
         return _diagnosis_headline(primary)
     if task_family == "risk_scan":
         return _risk_headline(primary)
+    if task_family == "ranking":
+        return _ranking_headline(primary)
     return _fallback_headline(primary[0])
 
 
@@ -107,28 +121,32 @@ def _forecast_unsupported_headline(task_profile: Any | None) -> str:
 
 
 def _latest_month_platform_summary_headline(primary: list[Any], supporting: list[Any]) -> str:
-    snapshot = _first_evidence(primary, "platform_performance_snapshot")
+    snapshot = _first_evidence(primary, "entity_performance_snapshot") or _first_evidence(primary, "platform_performance_snapshot")
+    details = getattr(snapshot, "details", {}) if snapshot else {}
+    entity_label = details.get("entity_label") or "新事業群"
     rows = _metric_rows([snapshot]) if snapshot else _metric_rows(primary)
     if not rows:
-        return "結論：最新月份各平台摘要目前缺少可投影的 scorecard evidence。"
+        return f"結論：最新月份各{entity_label}摘要目前缺少可投影的 scorecard evidence。"
     month = _first_value(rows, "month") or "最新月份"
-    top_revenue = _max_row(rows, "revenue")
-    top_inventory = _max_row(rows, "inventory_amount")
+    top_revenue = _max_mapped_row(rows, "revenue") or _max_row(rows, "revenue")
+    top_inventory = _max_mapped_row(rows, "inventory_amount") or _max_row(rows, "inventory_amount")
     weakest = _min_row(rows, "health_score") or _max_row(rows, "risk_score")
     parts: list[str] = []
     if top_revenue:
         parts.append(f"{top_revenue['platform']} 營收規模較高")
     if top_inventory:
         parts.append(f"{top_inventory['platform']} 庫存水位較高")
-    if weakest:
+    if weakest and is_unmapped_entity(weakest.get("platform")):
+        parts.append("未對應資料列在 scorecard 下需作為資料品質限制追蹤")
+    elif weakest:
         parts.append(f"{weakest['platform']} 在綜合 scorecard 下需要注意")
     if not parts:
-        parts.append("各平台需要搭配營收、庫存與 scorecard 一併判讀")
-    return f"結論：最新月份 {month} 各平台重點是，" + "，".join(parts) + "。"
+        parts.append(f"各{entity_label}需要搭配營收、庫存與 scorecard 一併判讀")
+    return f"結論：最新月份 {month} 各{entity_label}比較下，" + "，".join(parts) + "。"
 
 
 def _period_pair_headline(primary: list[Any]) -> str:
-    comparison = _first_evidence(primary, "period_pair_metric_comparison")
+    comparison = _first_evidence(primary, "entity_period_pair_comparison") or _first_evidence(primary, "period_pair_metric_comparison")
     if not comparison:
         return "結論：目前缺少兩個指定月份的可比較資料。"
     details = getattr(comparison, "details", {}) or {}
@@ -150,41 +168,55 @@ def _cross_section_headline(task_profile: Any | None, primary: list[Any]) -> str
     if not rows:
         return "目前沒有足夠證據形成完整橫向比較。"
 
-    top_revenue = _max_row(rows, "revenue")
-    top_inventory = _max_row(rows, "inventory_amount")
+    top_revenue = _max_mapped_row(rows, "revenue") or _max_row(rows, "revenue")
+    top_inventory = _max_mapped_row(rows, "inventory_amount") or _max_row(rows, "inventory_amount")
     weakest_ratio = _min_row(rows, "revenue_inventory_ratio")
     if not (top_revenue and top_inventory and weakest_ratio):
         return "目前沒有足夠證據形成完整橫向比較。"
 
+    entity_label = next((row.get("entity_label") for row in rows if row.get("entity_label")), "新事業群")
+    weakest_text = (
+        "未對應資料列"
+        if weakest_ratio and is_unmapped_entity(weakest_ratio.get("platform"))
+        else weakest_ratio["platform"]
+    )
     return (
-        f"結論：{month} 各平台比較下，{top_revenue['platform']} 營收規模較高，"
-        f"{top_inventory['platform']} 庫存水位較高；但 {weakest_ratio['platform']} "
+        f"結論：{month} 各{entity_label}比較下，{top_revenue['platform']} 營收規模較高，"
+        f"{top_inventory['platform']} 庫存水位較高；但 {weakest_text} "
         "的營收相對庫存效率較弱，需搭配庫存壓力判讀。"
     )
 
 
 def _performance_headline(task_profile: Any | None, primary: list[Any], supporting: list[Any]) -> str:
     polarity = getattr(task_profile, "polarity", None)
-    snapshot = _first_evidence(primary, "platform_performance_snapshot")
+    snapshot = _first_evidence(primary, "entity_performance_snapshot") or _first_evidence(primary, "platform_performance_snapshot")
     if snapshot:
         details = getattr(snapshot, "details", {}) or {}
         summary = details.get("summary") or {}
+        entity_label = details.get("entity_label") or "新事業群"
         rows = _metric_rows([snapshot])
         if polarity in {"best", "strong"}:
-            best_platform = summary.get("best_platform")
+            best_platform = summary.get("best_entity") or summary.get("best_platform")
+            if is_unmapped_entity(best_platform):
+                best_platform = _first_mapped_entity(rows, "health_score", reverse=True)
             best_row = _find_row(rows, best_platform)
             if best_row:
                 return (
-                    f"結論：目前綜合表現較佳的平台是 {best_platform}，因為其 "
+                    f"結論：目前綜合表現較佳的{entity_label}是 {best_platform}，因為其 "
                     f"{best_row.get('primary_strength') or 'health_score 較高'}，"
                     f"health_score 為 {_format_number(best_row.get('health_score'))}。"
                 )
         if polarity in {"worst", "weak"}:
-            weakest_platform = summary.get("weakest_platform")
+            weakest_platform = summary.get("weakest_entity") or summary.get("weakest_platform")
             weakest_row = _find_row(rows, weakest_platform)
             if weakest_row:
+                if is_unmapped_entity(weakest_platform):
+                    return (
+                        f"結論：目前未對應資料列在{entity_label} scorecard 下風險較高，"
+                        "建議先視為資料對應限制；已對應資料則需搭配表格中的 health_score 與 proxy 判讀。"
+                    )
                 return (
-                    f"結論：目前表現較弱的平台優先看 {weakest_platform}，因為其 "
+                    f"結論：目前表現較弱的{entity_label}優先看 {weakest_platform}，因為其 "
                     f"{weakest_row.get('primary_risk') or 'health_score 較低'}，"
                     f"health_score 為 {_format_number(weakest_row.get('health_score'))}。"
                 )
@@ -208,13 +240,13 @@ def _performance_headline(task_profile: Any | None, primary: list[Any], supporti
         strongest = _max_row(explicit_strong, "revenue_inventory_ratio")
         if strongest:
             return (
-                f"結論：目前較佳的平台候選是 {strongest['platform']}，因為其營收相對庫存效率 proxy "
+                f"結論：目前較佳的新事業群候選是 {strongest['platform']}，因為其營收相對庫存效率 proxy "
                 "較高，且在目前 primary/supporting evidence 中未見直接異常訊號。"
             )
         if weakest:
             return (
-                "結論：目前資料較適合辨識弱勢平台，尚不足以明確判定最佳平台；"
-                f"可先排除 {weakest['platform']} 等效率偏弱平台。"
+                "結論：目前資料較適合辨識弱勢新事業群，尚不足以明確判定最佳新事業群；"
+                f"可先排除 {weakest['platform']} 等效率偏弱新事業群。"
             )
         return "目前沒有足夠證據形成明確結論。"
 
@@ -222,14 +254,14 @@ def _performance_headline(task_profile: Any | None, primary: list[Any], supporti
     if weakest:
         suffix = ""
         if anomaly and _platform(getattr(anomaly, "details", {}) or {}) == weakest.get("platform"):
-            suffix = "，且同平台也有異常訊號需要追蹤"
+            suffix = "，且同新事業群也有異常訊號需要追蹤"
         return (
-            f"結論：目前表現較弱的平台優先看 {weakest['platform']}，因為其營收相對庫存效率 proxy "
+            f"結論：目前表現較弱的新事業群優先看 {weakest['platform']}，因為其營收相對庫存效率 proxy "
             f"偏弱{suffix}。"
         )
     if anomaly:
         details = getattr(anomaly, "details", {}) or {}
-        return f"結論：目前表現較弱的平台優先看 {_platform(details) or 'N/A'}，因為其異常訊號較明顯。"
+        return f"結論：目前表現較弱的新事業群優先看 {_platform(details) or 'N/A'}，因為其異常訊號較明顯。"
     return "目前沒有足夠證據形成明確結論。"
 
 
@@ -276,6 +308,25 @@ def _risk_headline(primary: list[Any]) -> str:
     return "目前沒有足夠證據形成明確結論。"
 
 
+def _ranking_headline(primary: list[Any]) -> str:
+    ranking = _first_evidence(primary, "entity_metric_ranking")
+    if ranking:
+        details = getattr(ranking, "details", {}) or {}
+        month = details.get("month") or "最新月份"
+        label = details.get("entity_label") or "新事業群"
+        metric_label = details.get("metric_label") or details.get("metric") or "指標"
+        direction_text = "最低" if details.get("sort_direction") == "ascending" else "最高"
+        top_entity = details.get("top_entity")
+        top_value = details.get("top_value")
+        if is_unmapped_entity(top_entity):
+            return (
+                f"結論：{month} {metric_label}排序中未對應資料列位居前段，"
+                f"需先視為資料品質限制；目前無法把未對應列當作正式最佳{label}。"
+            )
+        return f"結論：最新月份 {month} {metric_label}{direction_text}的{label}是 {top_entity}，{metric_label}為 {_format_number(top_value)}。"
+    return _fallback_headline(primary[0]) if primary else "目前沒有足夠證據形成明確結論。"
+
+
 def _fallback_headline(lead: Any) -> str:
     observation = _observation_text(lead)
     return f"結論：{observation}" if observation else "目前沒有足夠證據形成明確結論。"
@@ -311,6 +362,38 @@ def _project_observations(items: list[Any], max_items: int) -> list[ProjectedObs
 def _observation_text(item: Any) -> str:
     details = getattr(item, "details", {}) or {}
     evidence_type = getattr(item, "evidence_type", "")
+    if evidence_type == "entity_performance_snapshot":
+        summary = details.get("summary") or {}
+        label = details.get("entity_label") or "新事業群"
+        best = summary.get("best_entity")
+        weakest = summary.get("weakest_entity")
+        if is_unmapped_entity(best):
+            best = "已對應資料中排名較前者"
+        weakest_text = "未對應資料列需作為資料品質限制追蹤" if is_unmapped_entity(weakest) else f"需要注意的是 {weakest}"
+        return f"{label} scorecard 顯示，綜合表現較佳的是 {best}，{weakest_text}。"
+    if evidence_type == "entity_performance_row":
+        label = details.get("entity_label") or "entity"
+        entity = details.get("entity_value") or "N/A"
+        return (
+            f"{label} {entity} 的 health_score 為 {_format_number(details.get('health_score'))}，"
+            f"主要風險為 {details.get('primary_risk', 'N/A')}。"
+        )
+    if evidence_type in {"entity_cross_section", "entity_cross_section_comparison"}:
+        label = details.get("entity_label") or "新事業群"
+        rows = details.get("rows") or []
+        return f"{label}橫向比較目前有 {len(rows)} 筆可投影列，請搭配表格查看營收、庫存與 proxy。"
+    if evidence_type == "entity_metric_ranking":
+        label = details.get("entity_label") or "新事業群"
+        metric_label = details.get("metric_label") or details.get("metric") or "指標"
+        rows = details.get("rows") or []
+        top_rows = [
+            f"第 {row.get('rank')} 名 {row.get('entity_value')}（{_format_number(row.get('value'))}）"
+            for row in rows[:3]
+        ]
+        suffix = "；".join(top_rows) if top_rows else "目前沒有可排序資料"
+        if any(is_unmapped_entity(row.get("entity_value")) for row in rows):
+            suffix += "；未對應資料列已作為資料品質限制處理"
+        return f"{label}{metric_label}排名：{suffix}。"
     if evidence_type == "platform_performance_snapshot":
         summary = details.get("summary") or {}
         best = summary.get("best_platform")
@@ -318,7 +401,7 @@ def _observation_text(item: Any) -> str:
         rows = _metric_rows([item])
         best_row = _find_row(rows, best)
         score_text = f"，health_score={_format_number(best_row.get('health_score'))}" if best_row else ""
-        return f"平台 scorecard 綜合營收規模、營收動能、營收相對庫存效率 proxy 與異常訊號；最佳候選為 {best}{score_text}，需優先注意 {weakest}。"
+        return f"新事業群 scorecard 綜合營收規模、營收動能、營收相對庫存效率 proxy 與異常訊號；最佳候選為 {best}{score_text}，需優先注意 {weakest}。"
     if evidence_type == "platform_performance_row":
         platform = _platform(details) or "N/A"
         return (
@@ -360,7 +443,7 @@ def _observation_text(item: Any) -> str:
             f"{platform} 在 {details.get(COL_MONTH, details.get('month', 'N/A'))} 的營收為 "
             f"{_format_number(details.get(COL_REVENUE))}，庫存金額為 {_format_number(details.get(COL_INV_AMOUNT))}。"
         )
-    if evidence_type == "period_pair_metric_comparison":
+    if evidence_type in {"period_pair_metric_comparison", "entity_period_pair_comparison"}:
         overall = details.get("overall") or {}
         period_a = details.get("period_a")
         period_b = details.get("period_b")
@@ -374,7 +457,7 @@ def _observation_text(item: Any) -> str:
 
 
 def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
-    period_pair = _first_evidence(primary_items, "period_pair_metric_comparison")
+    period_pair = _first_evidence(primary_items, "entity_period_pair_comparison") or _first_evidence(primary_items, "period_pair_metric_comparison")
     if period_pair:
         details = getattr(period_pair, "details", {}) or {}
         rows = []
@@ -387,12 +470,32 @@ def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
             "rows": rows[:6],
         }
 
+    ranking = _first_evidence(primary_items, "entity_metric_ranking")
+    if ranking:
+        details = getattr(ranking, "details", {}) or {}
+        entity_label = details.get("entity_label") or "新事業群"
+        metric_label = details.get("metric_label") or details.get("metric") or "value"
+        return {
+            "columns": ["rank", entity_label, metric_label, "health_score", "data_presence"],
+            "rows": [
+                {
+                    "rank": row.get("rank"),
+                    entity_label: row.get("entity_value"),
+                    metric_label: row.get("value"),
+                    "health_score": row.get("health_score"),
+                    "data_presence": row.get("data_presence_flag"),
+                }
+                for row in (details.get("rows") or [])[:5]
+            ],
+        }
+
     rows = _metric_rows(primary_items)
     if not rows:
         return None
     score_columns = ["health_score", "risk_score", "performance_label"]
     has_scorecard = any(any(row.get(column) is not None for column in score_columns) for row in rows)
-    columns = ["month", "platform", "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio"]
+    entity_label = next((row.get("entity_label") for row in rows if row.get("entity_label")), "新事業群")
+    columns = ["month", entity_label, "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio"]
     if has_scorecard:
         columns.extend(score_columns)
     return {
@@ -400,7 +503,7 @@ def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
         "rows": [
             {
                 "month": row.get("month"),
-                "platform": row.get("platform"),
+                entity_label: row.get("platform"),
                 "revenue": row.get("revenue"),
                 "inventory_amount": row.get("inventory_amount"),
                 "inventory_qty": row.get("inventory_qty"),
@@ -425,18 +528,24 @@ def _metric_rows(items: list[Any]) -> list[dict[str, Any]]:
     for item in items:
         evidence_type = getattr(item, "evidence_type", "")
         details = getattr(item, "details", {}) or {}
-        if evidence_type == "platform_performance_snapshot":
+        if evidence_type in {"entity_performance_snapshot", "platform_performance_snapshot"}:
             for row in details.get("rows") or []:
                 mapped = _scorecard_metric_row(row, getattr(item, "source_tool", ""))
                 if mapped:
                     rows.append(mapped)
             continue
-        if evidence_type == "platform_performance_row":
+        if evidence_type in {"entity_performance_row", "platform_performance_row"}:
             mapped = _scorecard_metric_row(details, getattr(item, "source_tool", ""))
             if mapped:
                 rows.append(mapped)
             continue
-        if evidence_type not in {"platform_ratio", "inventory_turnover_proxy", "platform_metric_snapshot"}:
+        if evidence_type not in {"platform_ratio", "inventory_turnover_proxy", "platform_metric_snapshot", "entity_cross_section", "entity_cross_section_comparison"}:
+            continue
+        if evidence_type in {"entity_cross_section", "entity_cross_section_comparison"}:
+            for row in details.get("rows") or []:
+                mapped = _scorecard_metric_row(row, getattr(item, "source_tool", ""))
+                if mapped:
+                    rows.append(mapped)
             continue
         platform = _platform(details)
         if not platform:
@@ -446,7 +555,11 @@ def _metric_rows(items: list[Any]) -> list[dict[str, Any]]:
                 "month": details.get("month") or details.get(COL_MONTH),
                 "platform": platform,
                 "group_code": details.get("group_code") or details.get(COL_GROUP_CODE),
-                "revenue": _to_float(details.get("revenue") if details.get("revenue") is not None else details.get(COL_REVENUE)),
+                "revenue": _to_float(
+                    details.get("revenue_amount")
+                    if details.get("revenue_amount") is not None
+                    else (details.get("revenue") if details.get("revenue") is not None else details.get(COL_REVENUE))
+                ),
                 "inventory_amount": _to_float(
                     details.get("inventory_amount") if details.get("inventory_amount") is not None else details.get(COL_INV_AMOUNT)
                 ),
@@ -459,14 +572,20 @@ def _metric_rows(items: list[Any]) -> list[dict[str, Any]]:
 
 
 def _scorecard_metric_row(details: dict[str, Any], source_tool: str) -> dict[str, Any] | None:
-    platform = _platform(details)
+    platform = details.get("entity_value") or _platform(details)
     if not platform:
         return None
     return {
         "month": details.get("month") or details.get(COL_MONTH),
         "platform": platform,
+        "entity_label": details.get("entity_label"),
+        "entity_dimension": details.get("entity_dimension"),
         "group_code": details.get("group_code") or details.get(COL_GROUP_CODE),
-        "revenue": _to_float(details.get("revenue") if details.get("revenue") is not None else details.get(COL_REVENUE)),
+        "revenue": _to_float(
+            details.get("revenue_amount")
+            if details.get("revenue_amount") is not None
+            else (details.get("revenue") if details.get("revenue") is not None else details.get(COL_REVENUE))
+        ),
         "inventory_amount": _to_float(details.get("inventory_amount") if details.get("inventory_amount") is not None else details.get(COL_INV_AMOUNT)),
         "inventory_qty": _to_float(details.get("inventory_qty") if details.get("inventory_qty") is not None else details.get(COL_INV_QTY)),
         "revenue_inventory_ratio": _to_float(details.get("revenue_inventory_amount_ratio")),
@@ -533,6 +652,13 @@ def _max_row(rows: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
     return max(candidates, key=lambda row: float(row[key]))
 
 
+def _max_mapped_row(rows: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
+    candidates = [row for row in rows if row.get(key) is not None and not is_unmapped_entity(row.get("platform"))]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda row: float(row[key]))
+
+
 def _min_row(rows: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
     candidates = [row for row in rows if row.get(key) is not None]
     if not candidates:
@@ -555,6 +681,27 @@ def _find_row(rows: list[dict[str, Any]], platform: Any) -> dict[str, Any] | Non
         if str(row.get("platform")) == str(platform):
             return row
     return None
+
+
+def _first_mapped_entity(rows: list[dict[str, Any]], key: str, *, reverse: bool) -> str | None:
+    candidates = [
+        row for row in rows
+        if row.get(key) is not None and not is_unmapped_entity(row.get("platform"))
+    ]
+    if not candidates:
+        return None
+    return str(sorted(candidates, key=lambda row: float(row[key]), reverse=reverse)[0].get("platform"))
+
+
+def _has_unmapped_entity(items: list[Any]) -> bool:
+    for item in items:
+        details = getattr(item, "details", {}) or {}
+        rows = details.get("rows") if isinstance(details, dict) else None
+        if rows and any(is_unmapped_entity(row.get("entity_value") or row.get("platform")) for row in rows):
+            return True
+        if isinstance(details, dict) and "entity_value" in details and is_unmapped_entity(details.get("entity_value")):
+            return True
+    return False
 
 
 def _profile_month(task_profile: Any | None) -> str | None:

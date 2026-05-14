@@ -99,6 +99,24 @@ ALLOWED_TOOL_REGISTRY: dict[str, AllowedToolSpec] = {
         allowed_args=("metric",),
         allowed_metrics=("revenue", "inventory_amount", "inventory_qty"),
     ),
+    "get_entity_metric_ranking": AllowedToolSpec(
+        description="Rank real-data entities by a single metric.",
+        allowed_args=("entity_dimension", "dimension", "metric"),
+        allowed_metrics=(
+            "revenue_amount",
+            "inventory_amount",
+            "inventory_qty",
+            "revenue_inventory_amount_ratio",
+            "health_score",
+            "risk_score",
+        ),
+        allowed_dimensions=("business_group", "product_line_5"),
+    ),
+    "get_entity_performance_snapshot": AllowedToolSpec(
+        description="Real-data entity scorecard.",
+        allowed_args=("entity_dimension", "dimension"),
+        allowed_dimensions=("business_group", "product_line_5"),
+    ),
     "get_platform_ratios": AllowedToolSpec(description="Revenue/inventory proxy ratios."),
     "get_anomalies": AllowedToolSpec(description="Deterministic anomalies."),
     "get_yoy_mom_breakdown": AllowedToolSpec(
@@ -143,7 +161,7 @@ TOOL_SUBSET_PRESETS: dict[str, tuple[str, ...]] = {
         "get_anomalies",
         "get_platform_ratios",
     ),
-    "ranking": ("get_top_groups", "get_platform_ranking", "get_data_coverage"),
+    "ranking": ("get_entity_metric_ranking", "get_entity_performance_snapshot", "get_data_coverage"),
     "data_quality": ("get_data_coverage", "get_mapping_summary", "get_tool_capability_matrix"),
     "overview": (
         "get_yoy_mom_breakdown",
@@ -188,7 +206,8 @@ def build_compact_tool_registry(question: str) -> list[str]:
         if spec.allowed_metrics:
             args.append("metric:" + "|".join(spec.allowed_metrics))
         if spec.allowed_dimensions:
-            args.append("dimension:" + "|".join(spec.allowed_dimensions))
+            dimension_arg = "entity_dimension" if "entity_dimension" in spec.allowed_args else "dimension"
+            args.append(f"{dimension_arg}:" + "|".join(spec.allowed_dimensions))
         if spec.allowed_args and not args:
             args.extend(spec.allowed_args)
         arg_text = f"({', '.join(args)})" if args else "()"
@@ -297,6 +316,12 @@ class LLMToolPlanner:
             dimension = call.args.get("dimension")
             if dimension in {"platform", "business_group"}:
                 return dimension
+            if dimension == "product_line_5":
+                return dimension
+            if call.tool_name in {"get_entity_metric_ranking", "get_entity_performance_snapshot"}:
+                entity_dimension = call.args.get("entity_dimension")
+                if entity_dimension in {"business_group", "product_line_5"}:
+                    return entity_dimension
             if call.tool_name == "get_platform_ranking":
                 return "platform"
             if call.tool_name == "get_top_groups":
@@ -424,6 +449,10 @@ class LLMToolPlanner:
         dimension = args.get("dimension")
         if dimension is not None and spec.allowed_dimensions and dimension not in spec.allowed_dimensions:
             raise ValueError(f"Planner returned unsupported dimension for {tool_name}: {dimension}")
+
+        entity_dimension = args.get("entity_dimension")
+        if entity_dimension is not None and spec.allowed_dimensions and entity_dimension not in spec.allowed_dimensions:
+            raise ValueError(f"Planner returned unsupported dimension for {tool_name}: {entity_dimension}")
 
     @staticmethod
     def _categorize_error(error: str | None) -> str | None:

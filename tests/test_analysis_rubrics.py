@@ -55,6 +55,34 @@ class AnalysisRubricsTest(unittest.TestCase):
         self.assertEqual(roles["platform_performance_snapshot"], "primary")
         self.assertEqual(roles["contribution_analysis"], "background")
 
+    def test_entity_cross_section_comparison_is_primary(self) -> None:
+        routing = self.assistant._plan_and_route("比較最新月份各五大產品線營收與庫存")
+        profile = build_task_profile(routing.question, routing)
+        plan = build_answer_plan(profile, routing)
+        result = assign_evidence_roles(profile, plan, [_domain_result([_entity_cross_section_comparison()])])
+
+        roles = {item.evidence_type: item.role for item in result.evidence}
+        self.assertEqual(roles["entity_cross_section_comparison"], "primary")
+
+    def test_entity_period_pair_comparison_is_primary(self) -> None:
+        routing = self.assistant._plan_and_route("2026年1月以及2026年2月營收有什麼區別？")
+        profile = build_task_profile(routing.question, routing)
+        plan = build_answer_plan(profile, routing)
+        result = assign_evidence_roles(profile, plan, [_domain_result([_entity_period_pair_comparison()])])
+
+        roles = {item.evidence_type: item.role for item in result.evidence}
+        self.assertEqual(roles["entity_period_pair_comparison"], "primary")
+
+    def test_entity_metric_ranking_is_primary_for_ranking(self) -> None:
+        routing = self.assistant._plan_and_route("最新月份營收最高的新事業群是誰？")
+        profile = build_task_profile(routing.question, routing)
+        plan = build_answer_plan(profile, routing)
+        result = assign_evidence_roles(profile, plan, [_domain_result([_entity_metric_ranking(), _inventory_amount_ranking()])])
+
+        roles = {item.evidence_type: item.role for item in result.evidence}
+        self.assertEqual(roles["entity_metric_ranking"], "primary")
+        self.assertEqual(roles["platform_ranking"], "background")
+
     def test_time_compare_makes_contribution_primary(self) -> None:
         routing = self.assistant._plan_and_route("8 \u6708\u76f8\u8f03 7 \u6708\u71df\u6536\u8b8a\u5316\u4e3b\u8981\u7531\u8ab0\u8ca2\u737b")
         profile = build_task_profile(routing.question, routing)
@@ -178,6 +206,72 @@ def _performance_snapshot() -> dict:
         },
         "rubric": {},
         "limitations": [],
+    }
+
+
+def _entity_cross_section_comparison() -> dict:
+    return {
+        "evidence_type": "entity_cross_section_comparison",
+        "source_tool": "get_entity_cross_section_comparison",
+        "month": "2026-02",
+        "dimension": "product_line_5",
+        "entity_dimension": "product_line_5",
+        "entity_label": "五大產品線",
+        "rows": [
+            {
+                "month": "2026-02",
+                "entity_value": "Server",
+                "entity_dimension": "product_line_5",
+                "entity_label": "五大產品線",
+                "revenue_amount": 100.0,
+                "inventory_amount": 200.0,
+                "inventory_qty": 10.0,
+                "revenue_inventory_amount_ratio": 0.5,
+                "health_score": 0.4,
+                "risk_score": 0.6,
+                "performance_label": "watch",
+            }
+        ],
+        "summary": {"top_revenue_entity": "Server", "top_inventory_entity": "Server"},
+    }
+
+
+def _entity_period_pair_comparison() -> dict:
+    return {
+        "evidence_type": "entity_period_pair_comparison",
+        "source_tool": "get_entity_period_pair_comparison",
+        "metric": "revenue",
+        "period_a": "2026-01",
+        "period_b": "2026-02",
+        "dimension": "business_group",
+        "entity_dimension": "business_group",
+        "entity_label": "新事業群",
+        "overall": {"value_a": 100.0, "value_b": 80.0, "change": -20.0, "change_pct": -0.2},
+        "breakdown": [],
+    }
+
+
+def _entity_metric_ranking() -> dict:
+    return {
+        "evidence_type": "entity_metric_ranking",
+        "source_tool": "get_entity_metric_ranking",
+        "month": "2026-02",
+        "entity_dimension": "business_group",
+        "entity_label": "新事業群",
+        "metric": "revenue_amount",
+        "metric_label": "營收",
+        "sort_direction": "descending",
+        "top_entity": "1網通+技鋼",
+        "top_value": 100.0,
+        "rows": [
+            {
+                "rank": 1,
+                "entity_value": "1網通+技鋼",
+                "value": 100.0,
+                "health_score": 0.8,
+                "data_presence_flag": "both",
+            }
+        ],
     }
 
 

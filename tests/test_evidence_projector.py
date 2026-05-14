@@ -10,112 +10,57 @@ from evidence_projector import build_display_blocks_from_roles
 
 
 class EvidenceProjectorTest(unittest.TestCase):
-    def test_cross_section_compare_headline_contains_specific_platform_conclusion(self) -> None:
-        profile = _profile("cross_section_compare", requires_table=True, time_scope={"month": "2024-08"})
-        plan = _plan(max_key_observations=3, requires_table=True)
+    def test_entity_summary_headline_uses_business_group_wording(self) -> None:
         blocks = build_display_blocks_from_roles(
-            profile,
-            plan,
-            _rubric(
-                [
-                    _ratio("GG-01", revenue=900.0, inventory_amount=3000.0, ratio=0.30),
-                    _ratio("GG-02", revenue=1200.0, inventory_amount=2500.0, ratio=0.48),
-                    _ratio("GG-03", revenue=700.0, inventory_amount=5000.0, ratio=0.14),
-                ]
-            ),
+            _profile("latest_month_entity_summary", requires_table=True),
+            _plan(requires_table=True),
+            _rubric([_entity_snapshot("business_group", "新事業群")]),
             [],
         )
 
-        self.assertIn("GG-02", blocks["headline"])
-        self.assertIn("GG-03", blocks["headline"])
-        self.assertIn("\u71df\u6536\u898f\u6a21\u8f03\u9ad8", blocks["headline"])
-        self.assertNotIn("\u9019\u984c\u61c9\u89e3\u8b80\u70ba", blocks["headline"])
+        self.assertIn("新事業群", blocks["headline"])
+        self.assertNotIn("各平台", blocks["headline"])
         self.assertIsNotNone(blocks["table"])
 
-    def test_cross_section_compare_does_not_use_background_contribution_headline(self) -> None:
-        profile = _profile("cross_section_compare", requires_table=True, time_scope={"month": "2024-08"})
-        plan = _plan()
+    def test_product_line_cross_section_headline_uses_product_line_wording(self) -> None:
         blocks = build_display_blocks_from_roles(
-            profile,
-            plan,
-            _rubric(
-                [
-                    _ratio("GG-01", revenue=900.0, inventory_amount=3000.0, ratio=0.30),
-                    _contribution(role="background"),
-                ]
-            ),
+            _profile("cross_section_compare", requires_table=True, time_scope={"month": "2026-02"}),
+            _plan(requires_table=True),
+            _rubric([_entity_snapshot("product_line_5", "五大產品線")]),
             [],
         )
 
-        self.assertNotIn("\u4e3b\u8981\u7531", blocks["headline"])
-        self.assertNotIn("\u8ca2\u737b", blocks["headline"])
-        self.assertNotIn("\u4e3b\u8981\u8ca2\u737b\u8005", " ".join(blocks["key_observations"]))
-
-    def test_performance_best_is_conservative_when_only_weak_evidence_exists(self) -> None:
-        profile = _profile("performance_assessment", polarity="best")
-        plan = _plan()
-        blocks = build_display_blocks_from_roles(
-            profile,
-            plan,
-            _rubric([_ratio("GG-02", ratio=0.54, source_tool="get_inventory_turnover_proxy")]),
-            [],
-        )
-
-        self.assertIn("\u5c1a\u4e0d\u8db3\u4ee5\u660e\u78ba\u5224\u5b9a\u6700\u4f73\u5e73\u53f0", blocks["headline"])
-        self.assertIn("GG-02", blocks["headline"])
-        self.assertNotIn("\u8f03\u4f73\u7684\u5e73\u53f0\u5019\u9078\u662f GG-02", blocks["headline"])
-
-    def test_performance_worst_points_to_lowest_proxy_platform(self) -> None:
-        profile = _profile("performance_assessment", polarity="worst")
-        plan = _plan()
-        blocks = build_display_blocks_from_roles(
-            profile,
-            plan,
-            _rubric([_ratio("GG-01", ratio=0.90), _ratio("GG-02", ratio=0.54)]),
-            [],
-        )
-
-        self.assertIn("GG-02", blocks["headline"])
-        self.assertIn("proxy \u504f\u5f31", blocks["headline"])
-
-    def test_performance_best_uses_scorecard_when_available(self) -> None:
-        profile = _profile("performance_assessment", polarity="best")
-        plan = _plan()
-        blocks = build_display_blocks_from_roles(profile, plan, _rubric([_snapshot()]), [])
-
-        self.assertIn("GG-05", blocks["headline"])
-        self.assertIn("health_score", blocks["headline"])
-        self.assertNotIn("\u5c1a\u4e0d\u8db3\u4ee5\u660e\u78ba\u5224\u5b9a", blocks["headline"])
-
-    def test_performance_worst_uses_scorecard_when_available(self) -> None:
-        profile = _profile("performance_assessment", polarity="worst")
-        plan = _plan()
-        blocks = build_display_blocks_from_roles(profile, plan, _rubric([_snapshot()]), [])
-
-        self.assertIn("GG-02", blocks["headline"])
-        self.assertIn("health_score", blocks["headline"])
-
-    def test_scorecard_can_project_display_table(self) -> None:
-        profile = _profile("cross_section_compare", requires_table=True, time_scope={"month": "2024-08"})
-        plan = _plan(requires_table=True)
-        blocks = build_display_blocks_from_roles(profile, plan, _rubric([_snapshot()]), [])
-
-        self.assertIsNotNone(blocks["table"])
+        self.assertIn("五大產品線", blocks["headline"])
         self.assertIn("health_score", blocks["table"]["columns"])
-        self.assertTrue(blocks["table"]["rows"])
 
-    def test_key_observations_are_limited_and_background_is_not_projected(self) -> None:
-        profile = _profile("time_compare")
-        plan = _plan(max_key_observations=1)
+    def test_key_observations_are_limited(self) -> None:
         blocks = build_display_blocks_from_roles(
-            profile,
-            plan,
-            _rubric([_contribution(), _trend(), _ratio("GG-09", role="background", ratio=0.10)]),
+            _profile("performance_assessment", polarity="best"),
+            _plan(max_key_observations=1),
+            _rubric([_entity_snapshot("business_group", "新事業群"), _entity_row("次要")]),
             [],
         )
 
         self.assertLessEqual(len(blocks["key_observations"]), 1)
-        self.assertNotIn("GG-09", " ".join(blocks["key_observations"]))
+
+    def test_unmapped_entity_is_displayed_as_data_quality_limitation(self) -> None:
+        unmapped = _entity_snapshot("business_group", "新事業群")
+        rows = unmapped.details["rows"]
+        rows[0]["entity_value"] = "未對應"
+        rows[0]["platform"] = "未對應"
+        rows[0]["health_score"] = 0.9
+        rows[1]["health_score"] = 0.2
+        unmapped.details["summary"] = {"best_entity": "未對應", "weakest_entity": "B事業群"}
+
+        blocks = build_display_blocks_from_roles(
+            _profile("performance_assessment", polarity="best"),
+            _plan(),
+            _rubric([unmapped]),
+            [],
+        )
+
+        self.assertNotIn("是 未對應", blocks["headline"])
+        self.assertTrue(any("未對應" in item for item in blocks["limitations"]))
 
     def test_answer_contract_uses_evidence_projector_for_role_based_blocks(self) -> None:
         source = inspect.getsource(answer_contract._build_display_blocks)
@@ -125,21 +70,13 @@ class EvidenceProjectorTest(unittest.TestCase):
 
 
 def _profile(task_family: str, **overrides) -> SimpleNamespace:
-    defaults = {
-        "task_family": task_family,
-        "polarity": None,
-        "time_scope": {},
-        "requires_table": False,
-    }
+    defaults = {"task_family": task_family, "polarity": None, "time_scope": {}, "requires_table": False}
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 
 
 def _plan(**overrides) -> SimpleNamespace:
-    defaults = {
-        "max_key_observations": 3,
-        "requires_table": False,
-    }
+    defaults = {"max_key_observations": 3, "requires_table": False}
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 
@@ -156,114 +93,59 @@ def _rubric(items: list[EvidenceItemWithRole]) -> RubricResult:
     )
 
 
-def _ratio(
-    platform: str,
-    *,
-    role: str = "primary",
-    revenue: float = 730.0,
-    inventory_amount: float = 1360.0,
-    inventory_qty: float = 290.0,
-    ratio: float = 0.54,
-    source_tool: str = "get_platform_ratios",
-) -> EvidenceItemWithRole:
-    return EvidenceItemWithRole(
-        role=role,
-        evidence_type="platform_ratio",
-        source_tool=source_tool,
-        summary=f"{platform} ratio",
-        details={
-            "month": "2024-08",
-            "platform": platform,
-            "revenue": revenue,
-            "inventory_amount": inventory_amount,
-            "inventory_qty": inventory_qty,
-            "revenue_inventory_amount_ratio": ratio,
-        },
-        display_priority=1,
-        reason="test",
-    )
-
-
-def _contribution(role: str = "primary") -> EvidenceItemWithRole:
-    return EvidenceItemWithRole(
-        role=role,
-        evidence_type="contribution_analysis",
-        source_tool="get_contribution_analysis(revenue)",
-        summary="contribution",
-        details={
-            "month": "2024-08",
-            "previous_month": "2024-07",
-            "metric": "revenue",
-            "contributors": [{"name": "\u96f2\u7aef\u670d\u52d9", "change": 195.0}],
-        },
-        display_priority=1,
-        reason="test",
-    )
-
-
-def _trend() -> EvidenceItemWithRole:
+def _entity_snapshot(dimension: str, label: str) -> EvidenceItemWithRole:
+    rows = [
+        _row("A事業群" if dimension == "business_group" else "Server", label, dimension, 0.82, 1000, 2000, 0.5),
+        _row("B事業群" if dimension == "business_group" else "IOT", label, dimension, 0.22, 500, 3000, 0.1),
+    ]
     return EvidenceItemWithRole(
         role="primary",
-        evidence_type="yoy_mom_breakdown",
-        source_tool="get_yoy_mom_breakdown(revenue)",
-        summary="trend",
-        details={"month": "2024-08", "previous_month": "2024-07", "metric": "revenue", "mom_change": 215.0},
+        evidence_type="entity_performance_snapshot",
+        source_tool="get_entity_performance_snapshot",
+        summary="entity snapshot",
+        details={
+            "month": "2026-02",
+            "dimension": dimension,
+            "entity_dimension": dimension,
+            "entity_label": label,
+            "rows": rows,
+            "summary": {"best_entity": rows[0]["entity_value"], "weakest_entity": rows[1]["entity_value"]},
+            "limitations": ["proxy"],
+        },
+        display_priority=1,
+        reason="test",
+    )
+
+
+def _entity_row(name: str) -> EvidenceItemWithRole:
+    return EvidenceItemWithRole(
+        role="primary",
+        evidence_type="entity_performance_row",
+        source_tool="get_entity_performance_snapshot",
+        summary=name,
+        details=_row(name, "新事業群", "business_group", 0.5, 1, 1, 1),
         display_priority=2,
         reason="test",
     )
 
 
-def _snapshot() -> EvidenceItemWithRole:
-    return EvidenceItemWithRole(
-        role="primary",
-        evidence_type="platform_performance_snapshot",
-        source_tool="get_platform_performance_snapshot",
-        summary="snapshot",
-        details={
-            "month": "2024-08",
-            "dimension": "platform",
-            "rows": [
-                {
-                    "month": "2024-08",
-                    "platform": "GG-05",
-                    "revenue": 1385.0,
-                    "inventory_amount": 980.0,
-                    "inventory_qty": 200,
-                    "revenue_inventory_amount_ratio": 1.41,
-                    "health_score": 0.82,
-                    "risk_score": 0.18,
-                    "performance_label": "healthy_candidate",
-                    "primary_strength": "\u71df\u6536\u76f8\u5c0d\u5eab\u5b58\u6548\u7387 proxy \u8f03\u9ad8",
-                    "primary_risk": "\u76ee\u524d scorecard \u672a\u986f\u793a\u4e3b\u8981\u98a8\u96aa\u8a0a\u865f",
-                },
-                {
-                    "month": "2024-08",
-                    "platform": "GG-02",
-                    "revenue": 730.0,
-                    "inventory_amount": 1360.0,
-                    "inventory_qty": 290,
-                    "revenue_inventory_amount_ratio": 0.54,
-                    "health_score": 0.22,
-                    "risk_score": 0.78,
-                    "performance_label": "risk_candidate",
-                    "primary_strength": "\u7d9c\u5408\u5206\u6578\u4f86\u81ea\u71df\u6536\u898f\u6a21\u3001\u52d5\u80fd\u3001\u6548\u7387 proxy \u8207\u7570\u5e38\u8a0a\u865f",
-                    "primary_risk": "\u71df\u6536\u76f8\u5c0d\u5eab\u5b58\u6548\u7387 proxy \u6392\u540d\u504f\u5f8c",
-                },
-            ],
-            "summary": {
-                "best_platform": "GG-05",
-                "weakest_platform": "GG-02",
-                "top_revenue_platform": "GG-05",
-                "top_inventory_platform": "GG-02",
-                "highest_efficiency_platform": "GG-05",
-                "lowest_efficiency_platform": "GG-02",
-            },
-            "rubric": {},
-            "limitations": [],
-        },
-        display_priority=1,
-        reason="test",
-    )
+def _row(name: str, label: str, dimension: str, score: float, revenue: float, inventory: float, ratio: float) -> dict:
+    return {
+        "month": "2026-02",
+        "entity_dimension": dimension,
+        "entity_label": label,
+        "entity_value": name,
+        "platform": name if dimension == "business_group" else None,
+        "revenue": revenue,
+        "inventory_amount": inventory,
+        "inventory_qty": 10,
+        "revenue_inventory_amount_ratio": ratio,
+        "health_score": score,
+        "risk_score": 1 - score,
+        "performance_label": "healthy_candidate",
+        "primary_strength": "營收相對庫存 proxy 較佳",
+        "primary_risk": "資料完整性限制",
+    }
 
 
 if __name__ == "__main__":

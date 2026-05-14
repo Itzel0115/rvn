@@ -76,7 +76,7 @@ DATA_QUALITY_KEYWORDS = [
     "缺失",
     "mapping",
 ]
-CHART_KEYWORDS = ["chart", "plot", "graph", "visual", "圖", "畫圖", "圖表", "視覺化", "趨勢圖"]
+CHART_KEYWORDS = ["chart", "plot", "graph", "visual", "圖", "畫", "畫圖", "圖表", "視覺化", "趨勢圖"]
 DECISION_KEYWORDS = ["priority", "prioritize", "decision", "next step", "action", "最近狀況", "優先", "下一步", "決策", "要注意"]
 COMPARISON_KEYWORDS = ["compare", "comparison", "versus", " vs ", "比較", "對比", "差異"]
 RISK_KEYWORDS = ["risk", "anomaly", "anomalies", "warning", "divergence", "risky", "風險", "異常", "警示", "背離"]
@@ -116,6 +116,11 @@ PERFORMANCE_WEAKNESS_KEYWORDS = [
     "needs attention",
     "performing worse",
     "performing poorly",
+    "inventory pressure",
+    "pressure",
+    "庫存壓力",
+    "壓力較高",
+    "壓力高",
 ]
 
 REVENUE_KEYWORDS = ["revenue", "sales", "sell", "營收", "銷售"]
@@ -123,6 +128,7 @@ INVENTORY_KEYWORDS = ["inventory", "stock", "qty", "庫存", "存貨", "金額",
 EFFICIENCY_KEYWORDS = ["ratio", "efficiency", "營收/庫存", "庫存/營收", "效率", "週轉", "周轉", "proxy"]
 PLATFORM_KEYWORDS = ["platform", "平台", "平臺", "gg-"]
 GROUP_KEYWORDS = ["group", "business group", "新事業群", "事業群", "群組"]
+PRODUCT_LINE_KEYWORDS = ["product line", "product_line", "產品線", "五大產品線", "哪個產品線"]
 MONTH_KEYWORDS = ["month", "months", "月份", "本月", "最新月份", "最新月", "latest month", "current month"]
 
 
@@ -146,9 +152,10 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
         )
 
     if _is_latest_month_platform_summary(text, lowered):
+        dimension = object_dimension or "business_group"
         return BusinessQuestionProfile(
             question_type="summary",
-            intents=["summary", "performance", "platform"],
+            intents=["summary", "performance", "entity"],
             domains=["financial"],
             kpi_lenses=[
                 KPI_LENSES["revenue_scale"],
@@ -156,8 +163,8 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
                 KPI_LENSES["overall_health"],
                 KPI_LENSES["risk_anomaly"],
             ],
-            object_dimension="platform",
-            answer_strategy="latest_month_platform_summary",
+            object_dimension=dimension,
+            answer_strategy="latest_month_entity_summary",
             needs_chart=needs_chart,
         )
 
@@ -221,7 +228,7 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
             intents=["performance_weakness", "risk", "performance"],
             domains=["financial"],
             kpi_lenses=[KPI_LENSES["inventory_efficiency"], KPI_LENSES["risk_anomaly"]],
-            object_dimension="platform" if object_dimension == "platform" else object_dimension,
+            object_dimension="business_group" if object_dimension == "platform" else object_dimension,
             answer_strategy="performance_weakness",
             needs_chart=needs_chart,
         )
@@ -348,7 +355,10 @@ def _is_forecast_question(text: str, lowered: str) -> bool:
 
 
 def _is_latest_month_platform_summary(text: str, lowered: str) -> bool:
-    has_platform = any(token in lowered or token in text for token in ["platform", "\u5e73\u53f0", "\u5e73\u81fa", "\u5404\u5e73\u53f0"])
+    has_platform = any(
+        token in lowered or token in text
+        for token in ["platform", "\u5e73\u53f0", "\u5e73\u81fa", "\u5404\u5e73\u53f0", "\u65b0\u4e8b\u696d\u7fa4", "\u4e8b\u696d\u7fa4", "\u4e94\u5927\u7522\u54c1\u7dda", "\u7522\u54c1\u7dda"]
+    )
     has_latest = any(
         token in lowered or token in text
         for token in ["latest month", "current month", "this month", "\u6700\u65b0\u6708\u4efd", "\u6700\u65b0\u6708", "\u672c\u6708"]
@@ -407,7 +417,11 @@ def _is_proxy_anomaly_question(text: str, lowered: str) -> bool:
 
 
 def _is_performance_weakness_question(text: str, lowered: str, object_dimension: str | None) -> bool:
-    has_platform_context = object_dimension == "platform" or _contains_any(text, lowered, PLATFORM_KEYWORDS) or "平台" in text
+    has_platform_context = (
+        object_dimension in {"platform", "business_group", "product_line_5"}
+        or _contains_any(text, lowered, PLATFORM_KEYWORDS + GROUP_KEYWORDS + PRODUCT_LINE_KEYWORDS)
+        or "平台" in text
+    )
     if not has_platform_context:
         return False
 
@@ -422,11 +436,13 @@ def _is_performance_weakness_question(text: str, lowered: str, object_dimension:
 
 
 def _detect_object_dimension(text: str, lowered: str) -> str | None:
-    if any(token in text for token in ["平台", "平臺"]):
-        return "platform"
-    if _contains_any(text, lowered, PLATFORM_KEYWORDS):
-        return "platform"
+    if _contains_any(text, lowered, PRODUCT_LINE_KEYWORDS):
+        return "product_line_5"
     if _contains_any(text, lowered, GROUP_KEYWORDS):
+        return "business_group"
+    if any(token in text for token in ["平台", "平臺"]):
+        return "business_group"
+    if _contains_any(text, lowered, PLATFORM_KEYWORDS):
         return "business_group"
     if _contains_any(text, lowered, MONTH_KEYWORDS):
         return "month"

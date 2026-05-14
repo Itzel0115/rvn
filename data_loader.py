@@ -12,6 +12,14 @@ from preprocess import (
     normalize_text_column,
 )
 from utils import MessageCollector
+from real_data import (
+    build_real_analysis_tables,
+    load_real_data_sources,
+    load_real_inventory_data,
+    load_real_revenue_data,
+    normalize_business_keys,
+    normalize_month_key,
+)
 
 
 def load_excel_file(path: Path, collector: MessageCollector, sheet_name: int | str = 0) -> pd.DataFrame:

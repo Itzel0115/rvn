@@ -15,16 +15,17 @@ import {
 import { ChartSurface } from "@/components/chart-surface";
 
 const QUICK_PROMPTS = [
-  "哪個平台表現最差？",
-  "目前有哪些高風險平台？",
-  "最近營收趨勢如何？",
+  "請整理最新月份各新事業群的營收與庫存重點",
+  "比較最新月份各五大產品線營收與庫存",
+  "請分析哪個新事業群表現較差",
+  "哪個產品線庫存壓力較高？",
 ];
 
 const DEFAULT_MESSAGE = {
   id: "welcome",
   role: "assistant",
   title: "AI 分析助手",
-  text: "我可以協助判斷平台表現、庫存效率、營收趨勢與本月風險。請直接輸入主管想知道的問題。",
+  text: "我可以協助判斷新事業群與五大產品線表現、庫存效率、營收趨勢與本月風險。請直接輸入主管想知道的問題。",
 };
 
 function newId() {
@@ -324,12 +325,12 @@ export function MobileConsole() {
 
       <section className="snapshot-list">
         <div className="snapshot-item">
-          <span>營收最高平台</span>
+          <span>營收最高新事業群</span>
           <strong>{topRevenue?.platform || "-"}</strong>
           <small>{formatNumber(topRevenue?.value ?? topRevenue?.revenue)}</small>
         </div>
         <div className="snapshot-item">
-          <span>庫存最高平台</span>
+          <span>庫存最高新事業群</span>
           <strong>{topInventory?.platform || "-"}</strong>
           <small>{formatNumber(topInventory?.value ?? topInventory?.inventory_amount)}</small>
         </div>
@@ -397,7 +398,7 @@ export function MobileConsole() {
             id="mobile-question"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="例如：哪個平台表現最差？"
+            placeholder="例如：哪個新事業群表現最差？"
           />
           <button className="send-button" type="submit" disabled={busy || !draft.trim()}>
             <SendHorizonal size={17} />

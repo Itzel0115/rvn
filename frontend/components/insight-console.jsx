@@ -39,7 +39,7 @@ const TEXT = {
   structuredReport: "結構化回覆",
   promptLabel: "輸入分析需求",
   promptPlaceholder:
-    "例如：比較 8 月各平台營收與庫存、畫出七月平台營收圓餅圖，或觀察哪個事業群最近異常最多。",
+    "例如：比較最新月份各新事業群營收與庫存、畫出五大產品線營收長條圖，或觀察哪個新事業群最近異常最多。",
   metaIdle: "可直接提問、要求重畫圖表，或在下方資料觀察區做自訂比較。",
   metaBusy: "正在協調 Agent 分析並整理結果…",
   send: "送出分析",
@@ -57,35 +57,35 @@ const TEXT = {
   currentMonthAnomalies: "本月異常訊號",
   noCurrentMonthAnomalies: "本月未偵測到異常訊號",
   monthOverMonth: "月增率",
-  minRevenuePlatform: "本月最低營收平台",
-  minInventoryPlatform: "本月最低庫存平台",
+  minRevenuePlatform: "本月最低營收新事業群",
+  minInventoryPlatform: "本月最低庫存新事業群",
   statCurrentRevenue: "最新月份總營收",
   statCurrentInventory: "最新月份總庫存",
   statRecentRevenue: "近三月累積營收",
   statRecentInventory: "近三月累積庫存",
-  statTopRevenuePlatform: "本月最高營收平台",
-  statTopInventoryPlatform: "本月最高庫存平台",
+  statTopRevenuePlatform: "本月最高營收新事業群",
+  statTopInventoryPlatform: "本月最高庫存新事業群",
   observationTitle: "資料觀察區",
-  observationSubtitle: "依時間、平台、事業群與指標組合，自行切換比較視角。",
+  observationSubtitle: "依時間、新事業群、五大產品線與指標組合，自行切換比較視角。",
   observationApply: "更新觀察",
   observationLoading: "正在整理觀察表…",
   observationEmpty: "目前條件下沒有可供比較的資料。",
-  observationMessageDefault: "可自由切換維度與比較條件，觀察各月份、平台或事業群表現。",
+  observationMessageDefault: "可自由切換維度與比較條件，觀察各月份、新事業群或五大產品線表現。",
   observationRowDimension: "觀察維度",
   observationMetric: "比較指標",
   observationCompareMode: "比較方式",
   observationCurrentMonth: "當期月份",
   observationCompareMonth: "比較月份",
-  observationPlatform: "平台篩選",
+  observationPlatform: "新事業群篩選",
   observationGroup: "事業群篩選",
-  allPlatforms: "全部平台",
+  allPlatforms: "全部新事業群",
   allGroups: "全部事業群",
 };
 
 const QUICK_PROMPTS = [
-  "請比較最新月份各平台營收與庫存差異",
+  "請比較最新月份各新事業群營收與庫存差異",
   "請列出最近三個月最顯著的異常訊號",
-  "幫我畫七月各平台營收圓餅圖並附表格",
+  "幫我畫最新月份各新事業群營收長條圖並附表格",
   "請整理目前最值得關注的事業群觀察重點",
 ];
 
@@ -732,7 +732,7 @@ export function InsightConsole() {
                 <ul className="anomaly-list">
                   {dashboardSnapshot.anomalies.map((item, index) => (
                     <li key={`${item.month}-${item.platform}-${item.type}-${index}`}>
-                      <strong>{item.platform || "未標示平台"}</strong>
+                      <strong>{item.platform || "未標示新事業群"}</strong>
                       <span>{item.reason || item.type || TEXT.noData}</span>
                       <em>{formatCompactNumber(item.signal, { maximumFractionDigits: 2 })}</em>
                     </li>

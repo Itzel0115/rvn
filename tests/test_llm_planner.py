@@ -181,6 +181,28 @@ class LLMPlannerTest(unittest.TestCase):
         self.assertFalse(result.ok)
         self.assertEqual(result.rejection_category, "invalid_args")
 
+    def test_entity_ranking_accepts_dimension_alias(self) -> None:
+        planner = LLMToolPlanner("test-llm-planner")
+        llm = FakePlannerLLM(
+            data={
+                "question_type": "ranking",
+                "domains": ["sales"],
+                "tools": [
+                    {
+                        "tool_name": "get_entity_metric_ranking",
+                        "args": {"metric": "revenue_amount", "dimension": "business_group"},
+                        "reason": "Rank latest business-group revenue.",
+                    }
+                ],
+                "answer_mode": "ranking",
+                "requires_limitations": False,
+                "unsupported_reason": None,
+            }
+        )
+        result = planner.plan_question("最新月份營收最高的新事業群是誰？", llm)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.plan.tools[0].tool_name, "get_entity_metric_ranking")
+
 
 if __name__ == "__main__":
     unittest.main()
