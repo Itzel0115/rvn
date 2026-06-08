@@ -117,8 +117,18 @@ def build_answer_contract(
         "latest_month_platform_summary",
         "latest_month_entity_summary",
         "period_pair_compare",
+        "entity_period_pair_table_lookup",
+        "entity_multi_month_table_lookup",
+        "entity_period_pair_metric_lookup",
         "forecast_unsupported",
-        "ranking",
+        "entity_ranking",
+        "entity_time_series",
+        "overall_trend_analysis",
+        "entity_trend_comparison",
+        "metric_relationship_analysis",
+        "contribution_analysis",
+        "parent_child_drilldown",
+        "risk_scan",
     }:
         answer = _compose_answer_from_display_blocks(display_blocks)
 
@@ -198,7 +208,7 @@ def build_data_quality_answer_contract(
     limitations = [
         "目前資料品質報告僅反映已載入資料與 pipeline 狀態。",
         "營收/庫存 ratio 僅在 revenue 與 inventory 同時存在且分母合法時計算，屬 proxy 指標。",
-        "若有 missing 新事業群、missing 五大產品線、revenue_only 或 inventory_only rows，需納入解讀限制。",
+        "若有 missing 事業群、missing 產品線、revenue_only 或 inventory_only rows，需納入解讀限制。",
     ]
     if warnings:
         limitations.append("目前仍有 pipeline warnings，解讀結果時需一併納入。")
@@ -420,23 +430,23 @@ def _build_performance_assessment_display_blocks(
     if polarity == "best":
         if weakest:
             headline = (
-                "結論：這題屬於新事業群表現評估，不以庫存金額最高作為較佳結論；"
-                f"目前可先用營收/庫存效率 proxy 與異常訊號排除風險新事業群，{weakest.get('platform')} 是較弱參考點。"
+                "結論：這題屬於事業群表現評估，不以庫存金額最高作為較佳結論；"
+                f"目前可先用營收/庫存效率 proxy 與異常訊號排除風險事業群，{weakest.get('platform')} 是較弱參考點。"
             )
         else:
-            headline = "結論：這題屬於新事業群表現評估，不能只用庫存金額最高判定較佳新事業群；目前缺少足夠 proxy 證據。"
+            headline = "結論：這題屬於事業群表現評估，不能只用庫存金額最高判定較佳事業群；目前缺少足夠 proxy 證據。"
     elif polarity == "worst" and weakest:
         headline = (
-            f"結論：目前較差的新事業群優先看 {weakest.get('platform')}，依據是營收/庫存效率 proxy 偏弱，"
+            f"結論：目前較差的事業群優先看 {weakest.get('platform')}，依據是營收/庫存效率 proxy 偏弱，"
             "而不是庫存金額最高排序。"
         )
     elif weakest:
         headline = (
-            f"結論：新事業群表現需綜合營收、庫存效率 proxy 與異常訊號；目前 {weakest.get('platform')} "
-            "是需要優先檢查的弱勢新事業群。"
+            f"結論：事業群表現需綜合營收、庫存效率 proxy 與異常訊號；目前 {weakest.get('platform')} "
+            "是需要優先檢查的弱勢事業群。"
         )
     else:
-        headline = "結論：新事業群表現需綜合營收、庫存效率 proxy 與異常訊號，目前沒有足夠證據形成排序。"
+        headline = "結論：事業群表現需綜合營收、庫存效率 proxy 與異常訊號，目前沒有足夠證據形成排序。"
 
     if weakest:
         observations.append(
@@ -473,7 +483,7 @@ def _build_cross_section_compare_display_blocks(
     if rows:
         first = rows[0]
         observations.append(
-            f"{scope} 新事業群橫向比較中，{first.get('platform')} 的營收/庫存金額 proxy 為 {_format_number(first.get('revenue_inventory_amount_ratio'))}。"
+            f"{scope} 事業群橫向比較中，{first.get('platform')} 的營收/庫存金額 proxy 為 {_format_number(first.get('revenue_inventory_amount_ratio'))}。"
         )
         if first.get("revenue") is not None or first.get("inventory_amount") is not None:
             observations.append(
@@ -488,7 +498,7 @@ def _build_cross_section_compare_display_blocks(
     table_rows = [
         {
             "month": row.get("month"),
-            "新事業群": row.get("platform"),
+            "事業群": row.get("platform"),
             "revenue": row.get("revenue"),
             "inventory_amount": row.get("inventory_amount"),
             "inventory_qty": row.get("inventory_qty"),
@@ -497,10 +507,10 @@ def _build_cross_section_compare_display_blocks(
         for row in rows[:5]
     ]
     return {
-        "headline": f"結論：{scope} 這題應解讀為同月份新事業群橫向比較，主軸是各新事業群營收與庫存差異，不是 MoM contribution。",
+        "headline": f"結論：{scope} 這題應解讀為同月份事業群橫向比較，主軸是各事業群營收與庫存差異，不是 MoM contribution。",
         "key_observations": observations[:max_items],
         "table": {
-            "columns": ["month", "新事業群", "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio"],
+            "columns": ["month", "事業群", "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio"],
             "rows": table_rows,
         }
         if table_rows
@@ -585,21 +595,21 @@ def _observations_for_evidence_type(domain_results: list[Any], evidence_type: st
     if evidence_type == "inventory_turnover_proxy":
         rows = _find_turnover_proxy_rows(domain_results)
         return [
-            f"{row.get('month')} / {row.get('platform')} / 新事業群 {row.get('group_code')} 的營收/庫存金額比為 {_format_number(row.get('revenue_inventory_amount_ratio'))}。"
+            f"{row.get('month')} / {row.get('platform')} / 事業群 {row.get('group_code')} 的營收/庫存金額比為 {_format_number(row.get('revenue_inventory_amount_ratio'))}。"
             for row in rows[:2]
         ]
     if evidence_type == "platform_ratio":
         ratio = _find_weakest_ratio(domain_results)
         if ratio:
             return [
-                f"{ratio.get('month')} / {ratio.get('platform')} / 新事業群 {ratio.get('group_code')} 的營收相對庫存表現偏弱，比值為 {_format_number(ratio.get('revenue_inventory_amount_ratio'))}。"
+                f"{ratio.get('month')} / {ratio.get('platform')} / 事業群 {ratio.get('group_code')} 的營收相對庫存表現偏弱，比值為 {_format_number(ratio.get('revenue_inventory_amount_ratio'))}。"
             ]
         return []
     if evidence_type == "anomaly":
         anomaly = _find_anomaly(domain_results)
         if anomaly:
             return [
-                f"{anomaly.get(COL_MONTH, 'N/A')} / {anomaly.get(COL_PLATFORM, 'N/A')} / 新事業群 {anomaly.get(COL_GROUP_CODE, 'N/A')} 出現異常訊號，類型為 {anomaly.get(COL_ANOMALY_TYPE, MISSING_INFO_TEXT)}。"
+                f"{anomaly.get(COL_MONTH, 'N/A')} / {anomaly.get(COL_PLATFORM, 'N/A')} / 事業群 {anomaly.get(COL_GROUP_CODE, 'N/A')} 出現異常訊號，類型為 {anomaly.get(COL_ANOMALY_TYPE, MISSING_INFO_TEXT)}。"
             ]
         return []
     if evidence_type == "yoy_mom":
@@ -628,12 +638,12 @@ def _observations_for_evidence_type(domain_results: list[Any], evidence_type: st
     if evidence_type == "platform_ranking":
         platform_rank = _find_platform_ranking(domain_results)
         if platform_rank:
-            return [f"新事業群 {platform_rank.get('platform')} 的觀測值為 {platform_rank.get('value_text')}。"]
+            return [f"事業群 {platform_rank.get('platform')} 的觀測值為 {platform_rank.get('value_text')}。"]
         return []
     if evidence_type == "group_ranking":
         group_rank = _find_group_ranking(domain_results)
         if group_rank:
-            return [f"新事業群 {group_rank.get('group_code')} 的觀測值為 {group_rank.get('value_text')}。"]
+            return [f"事業群 {group_rank.get('group_code')} 的觀測值為 {group_rank.get('value_text')}。"]
         return []
     return []
 
@@ -672,8 +682,11 @@ def _build_direct_answer(
     if answer_type == "chart":
         chart = _find_chart_payload(domain_results)
         if chart:
+            chart_type = chart.get("chart_type")
+            chart_type_label = {"pie": "圓餅圖", "bar": "長條圖", "line": "折線圖"}.get(chart_type, chart_type or "圖表")
+            title = chart.get("title") or chart.get("chart_key")
             return (
-                f"已整理好 {chart.get('chart_type')} 圖表資料（{chart.get('chart_key')}），"
+                f"已整理好 {title}（{chart.get('chart_key')}，{chart_type_label}），"
                 "並附上表格預覽，方便直接檢視或續做圖表。"
             )
 
@@ -714,7 +727,7 @@ def _build_ranking_answer(
     entity_ranking = _find_entity_metric_ranking(domain_results)
     if entity_ranking:
         month = entity_ranking.get("month") or latest_month or "最新月份"
-        label = entity_ranking.get("entity_label") or "新事業群"
+        label = entity_ranking.get("entity_label") or "事業群"
         metric_label = entity_ranking.get("metric_label") or entity_ranking.get("metric") or "指標"
         direction_text = "最低" if entity_ranking.get("sort_direction") == "ascending" else "最高"
         return (
@@ -730,8 +743,8 @@ def _build_ranking_answer(
         turnover = _find_turnover_proxy(domain_results)
         if turnover:
             return (
-                f"依目前已載入資料，庫存效率最低的新事業群為 {turnover.get('platform')}，"
-                f"新事業群 {turnover.get('group_code')} 的營收/庫存金額 proxy 為 "
+                f"依目前已載入資料，庫存效率最低的事業群為 {turnover.get('platform')}，"
+                f"事業群 {turnover.get('group_code')} 的營收/庫存金額 proxy 為 "
                 f"{_format_number(turnover.get('revenue_inventory_amount_ratio'))}。"
             )
 
@@ -739,11 +752,11 @@ def _build_ranking_answer(
     if platform_rank:
         if routing.filters.month:
             return (
-                f"依目前已載入資料，{routing.filters.month} 庫存金額最高的新事業群為 "
+                f"依目前已載入資料，{routing.filters.month} 庫存金額最高的事業群為 "
                 f"{platform_rank['platform']}，數值為 {platform_rank['value_text']}。"
             )
         return (
-            f"依目前已載入資料，目前為累計排名，庫存金額最高的新事業群為 "
+            f"依目前已載入資料，目前為累計排名，庫存金額最高的事業群為 "
             f"{platform_rank['platform']}，數值為 {platform_rank['value_text']}。"
         )
 
@@ -752,16 +765,16 @@ def _build_ranking_answer(
         metric_label = group_rank["metric_label"]
         if routing.filters.month:
             return (
-                f"依目前已載入資料，{routing.filters.month} {metric_label}最高的新事業群為代碼 "
+                f"依目前已載入資料，{routing.filters.month} {metric_label}最高的事業群為代碼 "
                 f"{group_rank['group_code']}，數值為 {group_rank['value_text']}。"
             )
         if _asks_latest_month(question) and latest_month:
             return (
-                f"依目前已載入資料，{latest_month} {metric_label}最高的新事業群為代碼 "
+                f"依目前已載入資料，{latest_month} {metric_label}最高的事業群為代碼 "
                 f"{group_rank['group_code']}，數值為 {group_rank['value_text']}。"
             )
         return (
-            f"依目前已載入資料，目前為累計排名，{metric_label}最高的新事業群為代碼 "
+            f"依目前已載入資料，目前為累計排名，{metric_label}最高的事業群為代碼 "
             f"{group_rank['group_code']}，數值為 {group_rank['value_text']}。"
         )
 
@@ -769,7 +782,7 @@ def _build_ranking_answer(
     if weakest_ratio:
         return (
             f"依目前已載入資料，營收相對庫存表現最弱的是 {weakest_ratio.get('month')} / "
-            f"{weakest_ratio.get('platform')} / 新事業群 {weakest_ratio.get('group_code')}，"
+            f"{weakest_ratio.get('platform')} / 事業群 {weakest_ratio.get('group_code')}，"
             f"營收/庫存金額比值為 {_format_number(weakest_ratio.get('revenue_inventory_amount_ratio'))}。"
         )
     return _first_finding(domain_results) or "目前沒有足夠的排名證據可供整理。"
@@ -815,15 +828,15 @@ def _build_proxy_anomaly_answer(domain_results: list[Any]) -> str:
         signal = _format_number(anomaly.get(COL_ANOMALY_SIGNAL))
         return (
             f"有。依目前已載入資料，偵測到風險訊號出現在 {anomaly.get(COL_MONTH, 'N/A')} / "
-            f"{anomaly.get(COL_PLATFORM, 'N/A')} / 新事業群 {anomaly.get(COL_GROUP_CODE, 'N/A')}，"
+            f"{anomaly.get(COL_PLATFORM, 'N/A')} / 事業群 {anomaly.get(COL_GROUP_CODE, 'N/A')}，"
             f"異常類型為 {anomaly_type}，原因為 {reason}，訊號值為 {signal}。"
-            "這代表營收與庫存之間出現需要追蹤的風險訊號，建議進一步檢查該新事業群的近期變化。"
+            "這代表營收與庫存之間出現需要追蹤的風險訊號，建議進一步檢查該事業群的近期變化。"
         )
 
     turnover = _find_turnover_proxy(domain_results)
     if turnover:
         return (
-            f"有。依目前已載入資料，{turnover.get('month')} / {turnover.get('platform')} / 新事業群 "
+            f"有。依目前已載入資料，{turnover.get('month')} / {turnover.get('platform')} / 事業群 "
             f"{turnover.get('group_code')} 的庫存效率 proxy 偏弱，營收/庫存金額 ratio 為 "
             f"{_format_number(turnover.get('revenue_inventory_amount_ratio'))}。"
         )
@@ -839,13 +852,13 @@ def _build_risk_answer(domain_results: list[Any]) -> str:
         reason = anomaly.get(COL_ANOMALY_REASON) or MISSING_INFO_TEXT
         signal = _format_number(anomaly.get(COL_ANOMALY_SIGNAL))
         message = (
-            f"目前最需要注意的是 {anomaly.get(COL_MONTH, 'N/A')} / {anomaly.get(COL_PLATFORM, 'N/A')} / 新事業群 "
+            f"目前最需要注意的是 {anomaly.get(COL_MONTH, 'N/A')} / {anomaly.get(COL_PLATFORM, 'N/A')} / 事業群 "
             f"{anomaly.get(COL_GROUP_CODE, 'N/A')}，異常類型為 {anomaly_type}，原因為 {reason}，訊號值為 {signal}。"
-            "這代表營收與庫存之間出現需要追蹤的風險訊號，建議進一步檢查該新事業群的近期變化。"
+            "這代表營收與庫存之間出現需要追蹤的風險訊號，建議進一步檢查該事業群的近期變化。"
         )
         if turnover:
             message += (
-                f" 另外，{turnover.get('month')} / {turnover.get('platform')} / 新事業群 {turnover.get('group_code')} "
+                f" 另外，{turnover.get('month')} / {turnover.get('platform')} / 事業群 {turnover.get('group_code')} "
                 f"的庫存效率 proxy 為 {_format_number(turnover.get('revenue_inventory_amount_ratio'))}，"
                 f"效率層級為 {turnover.get('efficiency_level')}。"
             )
@@ -854,14 +867,14 @@ def _build_risk_answer(domain_results: list[Any]) -> str:
     if turnover:
         return (
             f"依目前已載入資料，庫存效率 proxy 最弱的是 {turnover.get('month')} / {turnover.get('platform')} / "
-            f"新事業群 {turnover.get('group_code')}，營收/庫存金額 ratio 為 {_format_number(turnover.get('revenue_inventory_amount_ratio'))}。"
+            f"事業群 {turnover.get('group_code')}，營收/庫存金額 ratio 為 {_format_number(turnover.get('revenue_inventory_amount_ratio'))}。"
         )
 
     weakest_ratio = _find_weakest_ratio(domain_results)
     if weakest_ratio:
         return (
             f"依目前已載入資料，較需要關注的是 {weakest_ratio.get('month')} / {weakest_ratio.get('platform')} / "
-            f"新事業群 {weakest_ratio.get('group_code')}，營收/庫存金額比值為 {_format_number(weakest_ratio.get('revenue_inventory_amount_ratio'))}。"
+            f"事業群 {weakest_ratio.get('group_code')}，營收/庫存金額比值為 {_format_number(weakest_ratio.get('revenue_inventory_amount_ratio'))}。"
         )
 
     return "目前未偵測到明確的高風險訊號。"
@@ -884,7 +897,7 @@ def _build_performance_weakness_display_blocks(domain_results: list[Any]) -> dic
     anomaly = _find_anomaly(domain_results)
     if not proxy_rows:
         return {
-            "headline": "結論：目前沒有足夠的營收與庫存 proxy 證據，暫時無法判斷哪個新事業群表現較弱。",
+            "headline": "結論：目前沒有足夠的營收與庫存 proxy 證據，暫時無法判斷哪個事業群表現較弱。",
             "key_observations": [],
             "limitations": [
                 "目前資料只能指出營收與庫存之間的弱勢訊號，尚不能直接判定根本原因。",
@@ -893,17 +906,17 @@ def _build_performance_weakness_display_blocks(domain_results: list[Any]) -> dic
 
     primary = proxy_rows[0]
     headline = (
-        "結論：目前表現較弱的新事業群應優先關注 "
-        f"{primary.get('platform')}，尤其是 {primary.get('month')} / 新事業群 {primary.get('group_code')}，"
+        "結論：目前表現較弱的事業群應優先關注 "
+        f"{primary.get('platform')}，尤其是 {primary.get('month')} / 事業群 {primary.get('group_code')}，"
         f"因為其營收相對庫存表現最弱，營收/庫存金額比為 {_format_number(primary.get('revenue_inventory_amount_ratio'))}。"
     )
     observations = [
-        f"第一，{primary.get('platform')} / 新事業群 {primary.get('group_code')} 是目前營收相對庫存最弱的組合，庫存效率 proxy 比值為 {_format_number(primary.get('revenue_inventory_amount_ratio'))}。",
+        f"第一，{primary.get('platform')} / 事業群 {primary.get('group_code')} 是目前營收相對庫存最弱的組合，庫存效率 proxy 比值為 {_format_number(primary.get('revenue_inventory_amount_ratio'))}。",
     ]
     if len(proxy_rows) > 1:
         second = proxy_rows[1]
         observations.append(
-            f"第二，次弱組合為 {second.get('platform')} / 新事業群 {second.get('group_code')}，比值為 {_format_number(second.get('revenue_inventory_amount_ratio'))}。"
+            f"第二，次弱組合為 {second.get('platform')} / 事業群 {second.get('group_code')}，比值為 {_format_number(second.get('revenue_inventory_amount_ratio'))}。"
         )
     if anomaly and anomaly.get(COL_PLATFORM):
         observations.append(
@@ -946,7 +959,7 @@ def _build_diagnosis_answer(domain_results: list[Any]) -> str:
     anomaly = _find_anomaly(domain_results)
     if anomaly:
         observations.append(
-            f"風險訊號出現在 {anomaly.get(COL_MONTH, 'N/A')} / {anomaly.get(COL_PLATFORM, 'N/A')} / 新事業群 "
+            f"風險訊號出現在 {anomaly.get(COL_MONTH, 'N/A')} / {anomaly.get(COL_PLATFORM, 'N/A')} / 事業群 "
             f"{anomaly.get(COL_GROUP_CODE, 'N/A')}"
         )
         observations.append(
@@ -964,14 +977,14 @@ def _build_diagnosis_answer(domain_results: list[Any]) -> str:
     turnover = _find_turnover_proxy(domain_results)
     if turnover:
         observations.append(
-            f"庫存效率 proxy 偏弱的是 {turnover.get('month')} / {turnover.get('platform')} / 新事業群 {turnover.get('group_code')}，"
+            f"庫存效率 proxy 偏弱的是 {turnover.get('month')} / {turnover.get('platform')} / 事業群 {turnover.get('group_code')}，"
             f"營收/庫存金額 ratio 為 {_format_number(turnover.get('revenue_inventory_amount_ratio'))}"
         )
 
     weakest_ratio = _find_weakest_ratio(domain_results)
     if weakest_ratio and not turnover:
         observations.append(
-            f"較弱的營收/庫存組合為 {weakest_ratio.get('month')} / {weakest_ratio.get('platform')} / 新事業群 "
+            f"較弱的營收/庫存組合為 {weakest_ratio.get('month')} / {weakest_ratio.get('platform')} / 事業群 "
             f"{weakest_ratio.get('group_code')}，比值為 {_format_number(weakest_ratio.get('revenue_inventory_amount_ratio'))}"
         )
 
@@ -1057,27 +1070,27 @@ def _suggest_followups(
     if unsupported_topics:
         return [
             "要不要先查看現有資料能直接支援哪些營收與庫存分析？",
-            "要不要改看新事業群或五大產品線的最近變化？",
+            "要不要改看事業群或產品線的最近變化？",
             "要不要檢查目前資料品質與 mapping 狀態？",
         ]
 
     if answer_type == "chart":
         return [
             "要不要產生其他相關圖表？",
-            "要不要比較其他新事業群或五大產品線？",
+            "要不要比較其他事業群或產品線？",
             "要不要改看最近三個月的變化？",
         ]
 
     if answer_type == "risk":
         return [
             "要不要列出所有偵測到的風險訊號？",
-            "要不要查看該新事業群近三個月的營收與庫存趨勢？",
-            "要不要比較其他新事業群或五大產品線？",
+            "要不要查看該事業群近三個月的營收與庫存趨勢？",
+            "要不要比較其他事業群或產品線？",
         ]
 
     if answer_type == "diagnosis":
         return [
-            "要不要查看該新事業群近三個月的營收與庫存趨勢？",
+            "要不要查看該事業群近三個月的營收與庫存趨勢？",
             "要不要列出本月變化的主要貢獻對象？",
             "要不要檢查目前資料品質與 mapping 狀態？",
         ]
@@ -1086,11 +1099,11 @@ def _suggest_followups(
     if filters.get("month"):
         scope.append("要不要改看其他月份？")
     if filters.get("platform"):
-        scope.append("要不要比較其他新事業群？")
+        scope.append("要不要比較其他事業群？")
     if filters.get("group_code"):
-        scope.append("要不要比較其他新事業群？")
+        scope.append("要不要比較其他事業群？")
     if not scope:
-        scope.append("要不要比較其他新事業群或五大產品線？")
+        scope.append("要不要比較其他事業群或產品線？")
 
     return [
         scope[0],
@@ -1102,7 +1115,7 @@ def _suggest_followups(
 def _detect_unsupported_topics(question: str) -> list[str]:
     lowered = question.lower()
     matched: list[str] = []
-    product_line_question = any(token in lowered or token in question for token in ["product line", "產品線", "五大產品線"])
+    product_line_question = any(token in lowered or token in question for token in ["product line", "產品線", "產品線"])
     for topic, hints in UNSUPPORTED_FIELD_HINTS.items():
         if topic == "product" and product_line_question:
             continue
@@ -1169,9 +1182,9 @@ def _change_label(direction: Any) -> str:
 
 def _dimension_subject(item: dict[str, Any]) -> str:
     if item.get("dimension") == "platform" and item.get("platform"):
-        return f"新事業群 {item.get('platform')} 的"
+        return f"事業群 {item.get('platform')} 的"
     if item.get("dimension") == "business_group" and item.get("group_code"):
-        return f"新事業群 {item.get('group_code')} 的"
+        return f"事業群 {item.get('group_code')} 的"
     return ""
 
 

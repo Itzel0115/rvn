@@ -1,7 +1,7 @@
 const SCORE_COLUMNS = ["health_score", "risk_score"];
 const DEFAULT_EXECUTIVE_COLUMNS = [
-  "新事業群",
-  "五大產品線",
+  "事業群",
+  "產品線",
   "entity_value",
   "business_group",
   "product_line_5",
@@ -70,10 +70,11 @@ export function getDisplayTable(message, { compact = true } = {}) {
     return null;
   }
 
-  const sourceColumns = asArray(table.columns).length ? table.columns : Object.keys(rows[0] || {});
+  const explicitColumns = asArray(table.columns);
+  const sourceColumns = explicitColumns.length ? explicitColumns : Object.keys(rows[0] || {});
   let columns = sourceColumns;
 
-  if (compact) {
+  if (compact && !explicitColumns.length) {
     const preferred = DEFAULT_EXECUTIVE_COLUMNS.filter((column) => sourceColumns.includes(column));
     const scoreColumns = SCORE_COLUMNS.filter((column) => sourceColumns.includes(column) && !preferred.includes(column));
     columns = preferred.length ? uniqueItems([...preferred, ...scoreColumns]) : sourceColumns.slice(0, 6);

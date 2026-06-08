@@ -1,553 +1,683 @@
-# Revenue POC 技術報告
+# Revenue POC 白話技術報告
 
-## 1. 專案總覽
+更新日期：2026-06-02
 
-本專案是一個以 Excel 為資料來源的營收與庫存分析 PoC，核心目標是把原始表格、對照關係與商業問答整合成同一套可重用的分析系統。
+## 1. 一句話摘要
 
-目前系統由三層組成：
+這個專案是一套「用 Excel 當資料來源的營收與庫存智慧分析系統」。它會把庫存表、營收表與對照資料整理成標準格式，再計算月趨勢、事業群與產品線表現、營收/庫存 proxy ratio、異常訊號與圖表資料；最後透過 Python API、Next.js 前端與 multi-agent 問答介面，讓使用者可以用自然語言詢問「哪個事業群營收最高」、「哪個產品線庫存壓力大」、「幫我畫最新月份營收圖」這類問題。
 
-1. Python 分析後端：負責讀取 Excel、解析 mapping、計算 KPI、異常與關聯分析，並提供 API。
-2. Desktop Web 前端：提供分析師導向的桌機操作介面與 multi-agent 問答體驗。
-3. Mobile Web 前端：提供管理者導向的行動版 KPI 與輕量 AI 問答介面。
+白話來說，它不是單純的 Excel 報表工具，也不是把問題全部丟給 AI 猜答案。它比較像是一個小型資料分析產品原型：
 
-目前執行中的服務入口如下：
+- Excel 負責提供資料。
+- Python 負責清理、對齊、計算與產生可信證據。
+- Agent 負責判斷使用者想問什麼、該查哪些工具。
+- LLM 只在需要時協助規劃或整理文字，不負責憑空算數字。
+- 前端負責把 KPI、圖表、表格與回答呈現成可操作的工作台。
 
-- Python API：`http://127.0.0.1:8765`
-- 桌機版 UI：`http://127.0.0.1:3000`
-- 手機版 UI：`http://127.0.0.1:3001`
+## 2. 專案定位
 
-系統的關鍵設計原則是「同一份分析真相來源」。也就是說，無論是圖表、摘要、觀察表、agent 回答或匯出檔案，全部都建立在同一套 `PipelineContext` 與 `AnalysisArtifacts` 上，而不是各自重算或在前端重寫邏輯。
+本專案目前的定位是 PoC，也就是 proof of concept。它已經具備接近內部分析產品的骨架，但仍保留一些 PoC 常見特徵，例如啟動流程偏本機、前端有桌機版與手機版兩套、資料刷新需要重啟服務、部分文件與功能仍帶有階段演進痕跡。
 
-## 2. 專案目標
+它適合處理的問題包含：
 
-本專案主要解決以下四類問題：
+- 營收、庫存金額、庫存 QTY 的月度趨勢。
+- 最新月份各事業群或產品線的比較。
+- 兩個月份之間的營收或庫存差異。
+- 事業群或產品線的排行、表格查詢與時間序列。
+- 營收相對庫存的 proxy ratio 分析。
+- 基於現有資料的風險訊號掃描。
+- 產生前端圖表 payload 或 PNG 圖表。
+- 以自然語言問答方式查詢上述結果。
 
-1. 將 `inventory.xlsx`、`revenue.xlsx`、`mapping.xlsx` 轉成可分析的標準化資料。
-2. 解析事業群、HQBU、平台代碼與匿名化規則之間的對照關係。
-3. 產出月趨勢、群組排名、異常訊號、關聯分析、圖表 payload 與匯出報表。
-4. 透過 multi-agent assistant 讓使用者能以自然語言詢問營收、庫存、異常與圖表相關問題。
+它不適合直接處理的問題包含：
 
-## 3. 輸入與輸出
+- 預測未來營收或需求，因為目前沒有 forecast model。
+- 判定真正根因，因為目前資料不足以證明因果。
+- 毛利、成本、現金流、EPS、客戶、訂單、出貨等未提供欄位。
+- 交易層級 market basket association rules。
 
-### 3.1 輸入資料
+## 3. 目前資料現況
 
-系統預設讀取 `data/` 目錄下的三份 Excel：
+以下是使用 `uv run python main.py --project-summary --agent-json` 讀取目前專案資料後得到的現況摘要。
+
+| 項目 | 目前狀態 |
+| --- | --- |
+| 庫存資料 | `data/inventory.xlsx` |
+| 營收資料 | `data/revenue.xlsx` |
+| mapping 路徑 | `data/mapping.xlsx` |
+| 庫存列數 | 122,935 |
+| 營收列數 | 1,982 |
+| mapping 列數 | 8 |
+| 可用月份 | 2025-01 到 2026-02，共 14 個月 |
+| 最新月份 | 2026-02 |
+| 支援領域 | sales、inventory、financial、chart |
+| association | 目前不可用，因現有資料不足以做完整相關分析 |
+
+最新月份 2026-02 的摘要如下：
+
+| 指標 | 數值 |
+| --- | ---: |
+| 總營收 | 32,877,963,113 |
+| 總庫存金額 | 102,271,212,123.05 |
+| 總庫存 QTY | 5,623,769,646 |
+| 營收月增率 | -0.73% |
+| 庫存金額月增率 | 0.68% |
+| 庫存 QTY 月增率 | -5.99% |
+
+目前資料品質警訊：
+
+- 有一個事業群只出現在庫存端：`未對應`。
+- 對齊後存在 `revenue_only=23` 與 `inventory_only=45` 的資料列。
+- 這代表有些營收資料找不到對應庫存，或有些庫存資料找不到對應營收；系統會保留這些列並在限制說明中揭露，不會偷偷丟掉後假裝資料完美。
+
+## 4. 專案目標
+
+專案目標可以拆成四層。
+
+第一層是資料工程：把使用者提供的 Excel 讀進來，檢查欄位，統一月份格式，清理數值欄位，整理出可分析的標準表。
+
+第二層是分析計算：建立月營收、月庫存、事業群排行、產品線排行、營收/庫存比值、異常訊號、資料品質報告等 artifacts。
+
+第三層是產品化 API：把分析結果包成穩定的 API、chart catalog、chart payload、observation table 與 answer contract，讓前端與 agent 都能重用同一份計算結果。
+
+第四層是自然語言操作：讓使用者可以用白話提問，由 router 判斷問題類型，再由不同 domain agent 使用 deterministic tools 找證據，最後組成有數據、有來源限制、有後續建議的回答。
+
+## 5. 整體架構
+
+整體架構可以想成一條從 Excel 到 UI 的資料流水線。
+
+```mermaid
+flowchart TD
+    A[Excel 資料<br/>inventory / revenue / mapping] --> B[資料讀取與標準化]
+    B --> C[PipelineContext]
+    C --> D[AnalysisArtifacts]
+    D --> E[AnalysisToolbox]
+
+    E --> F[Python API<br/>demo_web.py :8765]
+    E --> G[MultiAgentAssistant]
+    G --> H[Answer Contract]
+
+    F --> I[Next.js Desktop UI<br/>frontend :3000]
+    F --> J[Next.js Mobile UI<br/>frontend /mobile]
+    H --> I
+    H --> J
+
+    G --> K[Ollama<br/>可選]
+```
+
+這個設計最重要的概念是「單一分析真相來源」。也就是說，前端圖表、自然語言回答、資料觀察表與匯出報表，都應該盡量來自同一份 `PipelineContext` 與 `AnalysisArtifacts`。這樣可以避免同一個營收數字在圖表、回答、Excel 匯出中各算各的，最後出現不一致。
+
+## 6. 主要目錄與檔案
+
+| 路徑 | 角色 |
+| --- | --- |
+| `config.py` | 集中管理資料路徑、輸出路徑、欄位名稱、門檻值與 Ollama 設定 |
+| `real_data.py` | 新版真實資料路徑，負責把實際 Excel 欄位標準化成分析用欄位 |
+| `data_loader.py` | 舊版資料讀取與欄位檢查 |
+| `preprocess.py` | 日期、代碼、文字、數值等清理邏輯 |
+| `mapping_parser.py` | 解析 mapping workbook，建立事業群、HQBU、平台與匿名化規則 |
+| `analysis_pipeline.py` | 建立 `PipelineContext`，是後端共用分析上下文 |
+| `analyzer.py` | 舊版 mapping-based 分析引擎，產生 `AnalysisArtifacts` |
+| `analysis_tools.py` | 工具層，封裝所有可查詢、可繪圖、可觀察的 deterministic tools |
+| `multi_agent.py` | 問答 orchestrator 與各 domain agent |
+| `answer_contract.py` | 統一回答合約，讓前端知道回答、證據、限制與建議如何呈現 |
+| `demo_web.py` | Python HTTP API server |
+| `main.py` | CLI 入口，可產生報表、進入問答或輸出 project summary |
+| `visualizer.py` | 圖表 payload 與 PNG 圖表輸出 |
+| `frontend/` | 桌機版 Next.js 分析工作台 |
+| `tests/` | 單元測試與合約測試 |
+| `eval/` | 問答、planner、smoke regression 結果 |
+| `docs/` | 各階段設計文件與 API 說明 |
+
+## 7. 輸入資料設計
+
+系統預設讀取三份檔案：
 
 - `data/inventory.xlsx`
 - `data/revenue.xlsx`
 - `data/mapping.xlsx`
 
-這些路徑定義於 [config.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/config.py:4)。
+目前新版主流程會優先走 `real_data.py` 的真實資料解析。這條路徑期待的庫存原始欄位包含：
 
-### 3.2 輸出成果
+- `Wn日期`
+- `年`
+- `月`
+- `HQBU`
+- `typename`
+- `金額`
+- `QTY`
+- `Productline_5`
+- `五大產品線`
+- `新事業群`
 
-系統分析完成後，會在 `output/` 產出下列成果：
+營收原始欄位包含：
 
-- 清洗後的 inventory 與 revenue Excel
-- 解析後的 mapping Excel
-- merged analysis Excel
-- summary metrics Excel
-- Markdown 分析報告
-- LLM 補充說明
-- QA transcript
-- PNG 圖表
-- 統一 request log
+- `公司類別`
+- `年度`
+- `月份`
+- `合併事業群`
+- `產品類別名稱`
+- `實際營收`
+- `五大產品線`
+- `新事業群`
 
-輸出檔案定義於 [config.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/config.py:10)。
+這些欄位會被標準化成比較乾淨的內部欄位。例如：
 
-## 4. 整體架構
+| 原始概念 | 內部欄位 |
+| --- | --- |
+| 年月 | `month_key` |
+| 新事業群 | `business_group` |
+| 五大產品線 | `product_line_5` |
+| 庫存金額 | `inventory_amount` |
+| 庫存數量 | `inventory_qty` |
+| 實際營收 | `revenue_amount` |
 
-### 4.1 系統架構圖
+舊版流程仍保留在 `data_loader.py`、`mapping_parser.py` 與 `analyzer.py`。如果真實資料路徑無法建立有效資料，系統會退回舊版欄位契約與 mapping-based 分析流程。
 
-```mermaid
-flowchart TD
-    A[使用者] --> B[Desktop UI<br/>Next.js :3000]
-    A --> C[Mobile UI<br/>Next.js :3001]
+## 8. 資料處理流程
 
-    B --> D[Next API Routes]
-    C --> E[Next API Routes]
+### 8.1 真實資料優先路徑
 
-    D --> F[Python API<br/>demo_web.py :8765]
-    E --> F
+目前 `analysis_pipeline.py` 的核心流程是：
 
-    F --> G[Pipeline Context Builder]
-    G --> H[Excel Loader]
-    G --> I[Mapping Parser]
-    G --> J[Analyzer]
+1. 先呼叫 `load_real_data_sources()` 讀取庫存與營收 Excel。
+2. 如果兩邊都成功讀到資料，就進入 `build_real_analysis_tables()`。
+3. 將庫存整理成「月份 + 事業群 + 產品線」粒度。
+4. 將營收整理成「月份 + 事業群 + 產品線」粒度。
+5. 用這三個 key 做 outer join，產生 `revenue_inventory_aligned`。
+6. 針對同時有營收與庫存的列計算 proxy ratio。
+7. 產生資料品質報告，例如共同月份、共同事業群、缺失列、只有營收或只有庫存的列。
+8. 把新版表格轉成舊版相容的 `AnalysisArtifacts`，讓既有工具與前端不用大改。
 
-    F --> K[Analysis Toolbox]
-    F --> L[Multi-Agent Assistant]
+白話來說，這條路徑的重點是「先用實際 Excel 欄位建立乾淨的共同分析粒度」。只要營收和庫存能在月份、事業群、產品線三個欄位上對齊，就能比較兩邊的關係。
 
-    L --> K
-    L --> M[Ollama Client]
+### 8.2 舊版 mapping-based 路徑
 
-    J --> N[Analysis Artifacts]
-    K --> N
-    M --> O[Ollama<br/>localhost:11434]
+舊版流程會讀取 inventory、revenue、mapping 三份資料，並透過 mapping 建立以下對照：
 
-    N --> P[圖表輸出 / 報表 / 日誌]
+- 事業群代碼到事業群名稱。
+- 庫存 HQBU 代碼到庫存分類。
+- 營收平台代碼到營收分類。
+- HQBU 到平台的 bridge candidate。
+- 匿名化欄位處理規則。
+
+舊版流程比較適合處理代碼化、匿名化後的資料。它會盡量建立 HQBU 與平台的對照，但如果對照不可靠，系統會產生 warning，不會硬把模糊關係當成事實。
+
+## 9. 分析引擎
+
+分析引擎最後會產生一個 `AnalysisArtifacts` 物件。它可以理解成「所有分析成果的資料包」，主要包含：
+
+| Artifact | 說明 |
+| --- | --- |
+| `inventory_enriched` | 清理並補上分類後的庫存資料 |
+| `revenue_enriched` | 清理並補上分類後的營收資料 |
+| `monthly_revenue` | 各月份總營收與月增率 |
+| `monthly_inventory_amount` | 各月份總庫存金額與月增率 |
+| `monthly_inventory_qty` | 各月份總庫存 QTY 與月增率 |
+| `revenue_by_group` | 依事業群彙總營收 |
+| `inventory_by_group` | 依事業群彙總庫存 |
+| `merged_analysis` | 營收與庫存對齊後的分析主表 |
+| `platform_monthly_analysis` | 前端與舊工具沿用的每月事業群/平台分析表 |
+| `anomalies` | 異常訊號表 |
+| `correlation_analysis` | 相關性分析表；目前真實資料路徑下不可用 |
+| `summary_metrics` | 匯出 Excel 時使用的彙總表集合 |
+| `report_context` | 產生 Markdown 與 LLM 說明需要的摘要資料 |
+| `revenue_inventory_aligned` | 新版真實資料對齊主表 |
+| `data_quality_report` | 新版資料品質報告 |
+
+### 9.1 主要計算邏輯
+
+系統目前會計算：
+
+- 每月營收總額。
+- 每月庫存金額。
+- 每月庫存 QTY。
+- 各事業群營收與庫存排名。
+- 各產品線營收與庫存排名。
+- 營收/庫存金額 proxy ratio。
+- 營收/庫存 QTY proxy ratio。
+- 月增率。
+- 最新月份弱勢 proxy 排名。
+- revenue-only 與 inventory-only 對齊狀態。
+
+### 9.2 proxy ratio 的意思
+
+專案裡的 `revenue_inventory_amount_ratio` 不是正式財務周轉率。它只是用目前資料能推導出的 proxy：
+
+```text
+營收/庫存金額 proxy = revenue_amount / inventory_amount
 ```
 
-### 4.2 啟動方式
+如果這個值偏低，通常代表「營收相對庫存金額較弱」。但它不能直接解釋原因，也不能等同庫存周轉率。原因可能是資料粒度、時間落差、品類特性、會計口徑或資料缺失造成，因此回答裡必須保留限制說明。
 
-目前的啟動腳本為：
+## 10. 異常偵測
 
-- [scripts/start_backend.ps1](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/scripts/start_backend.ps1:1)
-- [scripts/start_frontend.ps1](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/scripts/start_frontend.ps1:1)
-- [scripts/start_mobile.ps1](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/scripts/start_mobile.ps1:1)
-- [scripts/start_all.ps1](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/scripts/start_all.ps1:1)
+舊版 `analyzer.py` 內的異常偵測包含幾種規則：
 
-其中 `start_all.ps1` 已整理為一鍵啟動：
+- 營收月增率超過門檻。
+- 庫存金額月增率超過門檻。
+- 庫存上升但營收沒有同步上升。
+- 營收下降但庫存仍高。
+- 營收/庫存金額比偏低。
+- 營收/庫存 QTY 比偏低。
+- 連續多月庫存上升但營收下降。
 
-1. 啟動 Python API
-2. 啟動桌機版前端
-3. 啟動手機版前端
+新版真實資料路徑目前比較保守，主要在最新共同月份中找出營收/庫存金額 proxy 偏弱的前幾名。這樣做的好處是風險較低，避免在資料對齊仍有缺口時做過度診斷。
 
-## 5. 後端架構
+目前資料中最新月份的異常訊號數量為 5，其中最需要注意的是 `7製造` 的營收/庫存金額 proxy 偏弱訊號。
 
-### 5.1 API 層
+## 11. Tool Layer：為什麼它重要
 
-HTTP 入口位於 [demo_web.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/demo_web.py:1)。
+`analysis_tools.py` 是這個專案很關鍵的一層。它把底層 DataFrame 包成穩定工具，讓 API、agent、前端都不用直接操作 pandas。
 
-目前它的責任是：
+可以把它想成「分析工具箱」。常見工具包含：
 
-- 啟動時建立共享的分析 context
-- 提供後端 API
-- 作為桌機版與手機版共同依賴的資料服務
+- `get_data_coverage()`：查目前資料涵蓋哪些月份、幾筆資料、支援哪些 domain。
+- `get_tool_capability_matrix()`：告訴 agent 目前哪些工具可用、支援哪些 filter。
+- `get_metric_table()`：取出指定指標表。
+- `get_top_groups()`：取得營收或庫存排名。
+- `get_platform_ratios()`：取得營收/庫存 proxy ratio。
+- `get_anomalies()`：取得異常訊號。
+- `get_mapping_summary()`：取得 mapping 摘要。
+- `get_chart_catalog()`：列出前端可畫的圖。
+- `get_chart_payload()`：產生 Recharts 或圖表元件可用的資料。
+- `create_chart_image()`：輸出 PNG 圖。
+- `get_observation_options()`：取得觀察區可選月份、事業群、產品線。
+- `get_observation_table()`：產生前端資料觀察表。
+- `get_entity_metric_value()`：查單一月份、單一 entity 的指定指標。
+- `get_entity_time_series()`：查某 entity 的多月時間序列。
+- `get_entity_contribution_analysis()`：比較兩期變化來源。
 
-主要 API：
+這層最大的價值是控制資料邊界。Agent 不能任意自己拼 SQL 或自己算 Excel；它必須透過工具取數據。這讓回答更可測、更可追蹤，也比較不容易出現 AI 編數字。
 
-- `GET /`
-- `GET /api/summary`
-- `GET /api/chart-catalog`
-- `GET /api/observe-options`
-- `POST /api/ask`
-- `POST /api/chart`
-- `POST /api/observe`
+## 12. Multi-Agent 問答架構
 
-其中 `GET /` 現在只回傳 API 狀態 JSON，不再承載舊版第一代靜態 web demo。
-
-### 5.2 PipelineContext
-
-[analysis_pipeline.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/analysis_pipeline.py:1) 是後端的共享骨幹。
-
-`PipelineContext` 包含：
-
-- 原始與標準化後的 inventory / revenue DataFrame
-- 解析後的 mapping 結構
-- 全部分析 artifacts
-- 讀檔、mapping、分析過程中累積的訊息
-- domain 能力標記
-- source file metadata
-
-這個設計讓系統只需要分析一次，後續 API、圖表、agent 問答都能直接重用結果。
-
-### 5.3 Excel 讀取與標準化
-
-資料讀取由 [data_loader.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/data_loader.py:1) 與 [preprocess.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/preprocess.py:1) 負責。
-
-主要流程如下：
-
-1. 使用 `openpyxl` 讀取 Excel。
-2. 依照 `config.py` 中的欄位契約檢查必填欄位。
-3. 將日期標準化為月份欄位。
-4. 正規化代碼欄與文字欄。
-5. 將營收、庫存金額、QTY、事業群代碼轉為數值型態。
-
-這一層的特點是輸入契約明確，因此當來源 Excel 變更時，系統會盡快在載入階段報錯，而不是在後段靜默產生錯誤分析。
-
-### 5.4 Mapping 解析
-
-對照表解析邏輯位於 [mapping_parser.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/mapping_parser.py:1)。
-
-系統會將 mapping workbook 前九欄轉成幾個結構化表：
-
-- business group mapping
-- inventory HQBU mapping
-- revenue platform mapping
-- anonymization rules
-- bridge candidates
-
-關鍵設計如下：
-
-- HQBU 與平台代碼都會檢查是否符合 `GG-01` 到 `GG-91` 的格式。
-- 透過 business group code 將 inventory 與 revenue 兩側關聯起來。
-- 若 HQBU 與平台代碼完全相同，視為高信心 direct match。
-- 若存在多對一或模糊 bridge，不強制推論，而是以 warning 形式暴露風險。
-
-這一層是整個分析是否能把庫存與營收對齊的核心。
-
-### 5.5 分析引擎
-
-核心分析邏輯位於 [analyzer.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/analyzer.py:1)。
-
-它會產生 `AnalysisArtifacts`，內容包括：
-
-- inventory_enriched
-- revenue_enriched
-- monthly_revenue
-- monthly_inventory_amount
-- monthly_inventory_qty
-- revenue_by_group
-- inventory_by_group
-- merged_analysis
-- platform_monthly_analysis
-- anomalies
-- correlation_analysis
-- summary_metrics
-- report_context
-
-主要分析步驟如下：
-
-1. 將 inventory 與 revenue 資料補上 mapping 資訊。
-2. 依月份彙總營收、庫存金額與庫存數量。
-3. 依 business group 彙總營收與庫存。
-4. 依月份、群組、平台做對齊合併。
-5. 計算營收對庫存金額、營收對庫存數量等 proxy ratio。
-6. 偵測單月異常、庫存升營收降、低 ratio 等異常模式。
-7. 計算月層級、群組層級、平台層級的相關性。
-
-### 5.6 Tool Layer
-
-[analysis_tools.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/analysis_tools.py:1) 是後端最重要的抽象層之一。
-
-它把 `AnalysisArtifacts` 封裝成穩定工具介面，供 API 與 multi-agent 使用。主要能力包含：
-
-- `get_data_coverage`
-- `get_tool_capability_matrix`
-- `get_metric_table`
-- `get_top_groups`
-- `get_platform_ratios`
-- `get_anomalies`
-- `get_correlations`
-- `get_mapping_summary`
-- `get_chart_catalog`
-- `get_chart_payload`
-- `create_chart_image`
-- `get_observation_options`
-- `get_observation_table`
-
-這一層同時集中管理：
-
-- chart definition
-- 每種 metric 支援的 filters
-- observation table 的欄位邏輯
-- chart payload contract
-
-這讓前端與 agent 不需要直接理解底層 DataFrame 結構。
-
-### 5.7 Multi-Agent Assistant
-
-multi-agent 邏輯位於 [multi_agent.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/multi_agent.py:1)。
-
-主要結構包含：
-
-- Router：決定問題類型、domain、filters 與 subtasks
-- Domain agents：例如 sales、inventory、financial、association、chart
-- AnalysisToolbox：所有 agent 共用的 deterministic tool layer
-- OllamaClient：必要時進行規劃與語意合成
-- Final synthesizer：把多個 domain 結果整理成最終回答
-
-這個 assistant 不是「全部交給 LLM」，而是混合式設計：
-
-- 能 deterministic 的地方先 deterministic
-- LLM 只負責規劃、補述或整理
-- 回答盡量建立在工具產生的證據之上
-
-### 5.8 LLM 與 fallback 設計
-
-LLM 整合位於 [ollama_client.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/ollama_client.py:1)。
-
-目前設定如下：
-
-- Base URL：`http://localhost:11434`
-- Model：`gemma4:e4b`
-- Timeout：90 秒
-
-重要的是，系統不是完全依賴 Ollama：
-
-- LLM 不可用時，仍可回傳 deterministic 結果
-- JSON parse 失敗時有 fallback
-- question routing 與 evidence-first composition 仍能部分運作
-
-### 5.9 Logging
-
-日誌系統位於 [logging_utils.py](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/logging_utils.py:1)。
-
-每次請求都會帶有：
-
-- `request_id`
-- `domain`
-- console log
-- file log
-
-主要 log 檔為：
-
-- `output/logs/multi_agent_assistant.log`
-
-這能用來追查：
-
-- router decision
-- tool execution
-- LLM 是否失敗
-- 哪個 domain 回傳 warning
-
-## 6. 前端架構
-
-### 6.1 Desktop Web
-
-桌機版專案位於 `frontend/`，採用 Next.js App Router。
-
-關鍵檔案：
-
-- [frontend/app/page.js](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/frontend/app/page.js:1)
-- [frontend/components/insight-console.jsx](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/frontend/components/insight-console.jsx:1)
-- [frontend/components/message-card.jsx](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/frontend/components/message-card.jsx:1)
-- [frontend/components/chart-surface.jsx](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/frontend/components/chart-surface.jsx:1)
-- [frontend/lib/python-api.js](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/frontend/lib/python-api.js:1)
-
-桌機版定位偏分析師工作台，功能較完整，包含：
-
-- 專案摘要
-- 對話區
-- multi-agent 回答卡片
-- dashboard chart
-- observation table
-- chart filter 與切換
-- history context 傳入問答
-
-### 6.2 Mobile Web
-
-手機版專案位於 `mobile-demo/`，同樣採用 Next.js。
-
-關鍵檔案：
-
-- [mobile-demo/app/page.js](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/mobile-demo/app/page.js:1)
-- [mobile-demo/components/mobile-console.jsx](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/mobile-demo/components/mobile-console.jsx:1)
-- [mobile-demo/components/chart-surface.jsx](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/mobile-demo/components/chart-surface.jsx:1)
-- [mobile-demo/lib/python-api.js](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/mobile-demo/lib/python-api.js:1)
-
-手機版定位偏管理層快覽，特徵為：
-
-- KPI tile
-- 單頁 dashboard
-- drawer 式 AI 對話
-- 簡化的 chart interaction
-
-### 6.3 Next API Proxy
-
-桌機版與手機版都各自提供 `app/api/*/route.js`，作為前端同源 API 入口，再轉發到 Python API。
-
-常見路由包含：
-
-- `summary`
-- `chart-catalog`
-- `chart`
-- `ask`
-- `observe`
-- `observe-options` 只存在桌機版
-
-這個模式的優點是：
-
-- 前端不需要直接暴露跨域 Python URL
-- 可保留同源 fetch 模式
-- 後續若要抽換後端入口，改動面較集中
-
-## 7. 資料與請求流程
-
-### 7.1 分析資料流
-
-```mermaid
-flowchart TD
-    A[inventory.xlsx] --> B[data_loader.py]
-    C[revenue.xlsx] --> B
-    D[mapping.xlsx] --> E[mapping_parser.py]
-
-    B --> F[標準化 inventory / revenue DataFrame]
-    E --> G[ParsedMapping]
-
-    F --> H[analyzer.py]
-    G --> H
-
-    H --> I[AnalysisArtifacts]
-    I --> J[analysis_tools.py]
-    I --> K[報表匯出 / PNG 圖表]
-    I --> L[Multi-Agent Assistant]
-```
-
-### 7.2 問答請求流程
+問答入口在 `MultiAgentAssistant.answer()`。一個問題進來後，大致會經過五個步驟：
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant FE as Next.js UI
-    participant API as Python API
-    participant CTX as PipelineContext
-    participant MA as MultiAgentAssistant
-    participant TB as AnalysisToolbox
-    participant LLM as Ollama
+    participant U as 使用者
+    participant A as MultiAgentAssistant
+    participant R as Router / Task Profile
+    participant T as AnalysisToolbox
+    participant C as Answer Contract
+    participant L as Ollama 可選
 
-    U->>FE: 輸入問題
-    FE->>API: POST /api/ask
-    API->>CTX: 取得共享分析 context
-    API->>MA: answer(question, history, chart_context)
-    MA->>MA: 分類 question type / domains / filters
-    MA->>TB: 執行 deterministic tools
-    opt 需要 LLM 規劃或合成
-        MA->>LLM: 送出 prompt
-        LLM-->>MA: 回傳文字或 JSON
+    U->>A: 自然語言問題
+    A->>R: 判斷問題類型、時間、entity、metric
+    R-->>A: RoutingDecision
+    A->>T: 執行 deterministic tools
+    opt 需要 LLM 規劃或改寫
+        A->>L: 呼叫本機 Ollama
+        L-->>A: 規劃或文字整理
     end
-    MA-->>API: summary + routing + domain_results
-    API-->>FE: JSON response
-    FE-->>U: 顯示回答、重點、圖表與 agent 卡片
+    A->>C: 組裝 answer contract
+    C-->>U: 回答、證據、限制、建議追問
 ```
 
-## 8. API 設計摘要
+目前 domain agent 包含：
 
-### 8.1 讀取型 API
+| Agent | 負責範圍 |
+| --- | --- |
+| `SalesAgent` | 營收趨勢、營收排行、營收查詢 |
+| `InventoryAgent` | 庫存金額、庫存 QTY、庫存趨勢 |
+| `FinancialMetricsAgent` | 營收與庫存的 proxy ratio、效率與風險訊號 |
+| `ChartAgent` | 圖表需求、chart payload、圖表表格 |
+| `AssociationAgent` | 相關性與關聯分析；目前資料下能力有限 |
 
-- `GET /api/summary`
-  回傳專案摘要、最新月份分析、dashboard snapshot、異常與能力資訊。
+### 12.1 問題分類
 
-- `GET /api/chart-catalog`
-  回傳可用圖表清單與支援的 filter。
+專案有一套 canonical task taxonomy，記錄在 `docs/task_taxonomy.md`。常見 task family 包含：
 
-- `GET /api/observe-options`
-  回傳 observation mode 可選的月份、平台、群組與 comparison options。
+- `metric_lookup`：查某月份某指標是多少。
+- `entity_ranking`：問哪個事業群或產品線最高/最低。
+- `latest_month_entity_summary`：整理最新月份各 entity 表現。
+- `cross_section_compare`：同月份橫向比較。
+- `period_pair_compare`：兩個月份比較。
+- `entity_time_series`：某 entity 的多月走勢。
+- `overall_trend_analysis`：整體趨勢。
+- `entity_trend_comparison`：多個 entity 的趨勢比較。
+- `performance_assessment`：表現強弱、庫存壓力、健康分數。
+- `risk_scan`：找風險訊號。
+- `metric_relationship_analysis`：營收與庫存關係。
+- `contribution_analysis`：成長或下降主要來自哪裡。
+- `parent_child_drilldown`：某事業群底下產品線比較。
+- `data_quality`：資料涵蓋與品質問題。
+- `chart_request`：要求畫圖。
+- `forecast_unsupported`：預測類問題，明確拒絕當成可回答預測。
 
-### 8.2 動作型 API
+### 12.2 LLM 的角色
 
-- `POST /api/chart`
-  輸入 chart key 與 filters，回傳 chart payload 與可選 image。
+系統可以串本機 Ollama，設定在 `config.py`：
 
-- `POST /api/observe`
-  輸入 observation 參數，回傳結構化比較表。
+- `OLLAMA_BASE_URL` 預設 `http://localhost:11434`
+- `OLLAMA_MODEL` 預設 `gemma4:e4b`
+- `OLLAMA_TIMEOUT_SECONDS` 預設 90 秒
 
-- `POST /api/ask`
-  輸入自然語言問題與可選 context，回傳 router、domain results 與 summary。
+但 LLM 不是單點依賴。設計原則是：
 
-## 9. 架構優勢
+- 數字由 deterministic tools 產生。
+- LLM 不負責自己計算營收、庫存、排名。
+- LLM planner 或 rewriter 如果輸出不合規，會 fallback deterministic。
+- 預測、根因、未支援欄位不能被 LLM 包裝成肯定答案。
 
-### 9.1 單一分析真相來源
+## 13. Answer Contract：回答為什麼可追蹤
 
-目前最大的優勢，是整個專案不是每個模組各算各的，而是建立在同一份 artifacts 上。這可以降低：
+`answer_contract.py` 會把 agent 結果整理成穩定 JSON。這個 contract 對產品化很重要，因為前端不能只拿一段純文字；它還需要知道這段文字背後的證據、工具、限制與資料範圍。
 
-- 前後端數字不一致
-- 問答回答與圖表不一致
-- 匯出報表與 dashboard 指標不一致
+主要欄位包含：
 
-### 9.2 Tool abstraction 清楚
+| 欄位 | 說明 |
+| --- | --- |
+| `answer` | 給使用者看的主回答 |
+| `evidence` | 支撐回答的結構化證據 |
+| `tools_used` | 本次回答用過哪些 deterministic tools |
+| `data_scope` | 回答依據的月份、domain、filter 與支援領域 |
+| `limitations` | 必須揭露的資料限制與 proxy caveat |
+| `suggested_followups` | 建議下一步可以追問什麼 |
+| `display_blocks` | 前端可直接渲染的結構化區塊 |
+| `task_profile` | canonical 問題解析結果 |
+| `answer_plan` | 回答策略與證據計畫 |
 
-`AnalysisToolbox` 是很好的中介層，讓上層只需要操作工具，不必直接觸碰底層 DataFrame 拼接邏輯。
+這種 evidence-first 的設計可以降低 AI 問答常見的風險：回答聽起來很順，但不知道數字從哪裡來。
 
-### 9.3 LLM 不是單點依賴
+## 14. API 設計
 
-系統保留 deterministic 路徑，因此即使 Ollama 暫時失效，仍可輸出部分分析成果。
+Python API 入口在 `demo_web.py`，使用標準函式庫的 `ThreadingHTTPServer`，預設監聽：
 
-### 9.4 Log 可追蹤
+```text
+http://127.0.0.1:8765
+```
 
-透過 request_id 與 domain log，可以回溯一次問答到底經過哪些 router、工具與 agent。
+### 14.1 GET endpoints
 
-## 10. 目前技術債與風險
+| Endpoint | 用途 |
+| --- | --- |
+| `GET /` | 回傳服務狀態與 endpoint 清單 |
+| `GET /api/health` | API 與 pipeline 健康狀態 |
+| `GET /api/data-version` | 目前資料版本、月份、列數與來源檔 |
+| `GET /api/pipeline-status` | pipeline infos、warnings、errors |
+| `GET /api/data-quality` | 產品化資料品質報告 |
+| `GET /api/summary` | 專案摘要、最新月份 snapshot、dashboard snapshot |
+| `GET /api/chart-catalog` | 可用圖表清單 |
+| `GET /api/observe-options` | 資料觀察區可用選項 |
 
-### 10.1 桌機版與手機版仍是兩套 Next.js 專案
+### 14.2 POST endpoints
 
-目前 `frontend/` 與 `mobile-demo/` 各自擁有：
+| Endpoint | 用途 |
+| --- | --- |
+| `POST /api/ask` | 自然語言問答 |
+| `POST /api/chart` | 產生指定 chart payload 與可選 PNG |
+| `POST /api/observe` | 產生 observation table |
 
-- package.json
-- node_modules
-- API proxy
-- chart component
-- 啟動流程
+### 14.3 狀態判斷
 
-這代表維護成本偏高，且很容易出現桌機版與手機版規格飄移。
+API health 的狀態規則很直覺：
 
-### 10.2 原始碼中仍有亂碼字串
+1. 如果有 errors，狀態是 `error`。
+2. 如果沒有 errors 但有 warnings，狀態是 `warning`。
+3. 如果都沒有，狀態是 `ok`。
 
-部分 Python 與前端字串出現 mojibake，這會影響：
+這套規則同時用在 `/api/health`、`/api/pipeline-status` 與 `/api/data-quality`。
 
-- 維護可讀性
-- 使用者介面文案品質
-- 報告與後續開發溝通
+## 15. 前端架構
 
-### 10.3 後端啟動時就建完整 context
+專案目前已整併成單一 Next.js 前端，桌機與手機體驗都在 `frontend/`。
 
-目前 `demo_web.py` 啟動時就會完整建立 pipeline context。這雖然簡潔，但也代表：
+### 15.1 桌機版 `frontend/`
 
-- 啟動成本依賴資料大小
-- 若 Excel 更新，需要重啟服務才能完全刷新
-- 不適合更大規模資料量
+桌機版定位是分析師工作台，主要畫面由 `frontend/components/insight-console.jsx` 組成。它提供：
 
-### 10.4 API proxy duplicated
+- 最新月份 KPI。
+- 對話式分析區。
+- 快速提示問題。
+- 結構化回答卡片。
+- 圖表儀表板。
+- 圖表對應表格。
+- 資料觀察區。
+- 事業群與產品線切換。
+- 問答 history 與 chart context 傳回後端。
 
-桌機版與手機版都有幾乎相同的 Python proxy helper，雖然不大，但確實是重複架構。
+Next API routes 會透過 `frontend/lib/python-api.js` 轉發到 Python API。預設 Python API base 是 `http://127.0.0.1:8765`，也可用 `PYTHON_API_BASE` 覆蓋。
 
-### 10.5 Excel schema 耦合度高
+### 15.2 手機版 `frontend/app/mobile`
 
-專案對 Excel 欄位名稱與欄位位置依賴很深，若資料源格式改動，整體會受到明顯影響。
+手機版已移到 `frontend/app/mobile`，定位偏管理層快覽，介面比較輕量：
 
-## 11. 建議的簡化路線
+- KPI tile。
+- 單頁 dashboard。
+- mobile chart surface。
+- drawer 式 AI 問答。
+- 簡化互動。
 
-### 第一階段
+### 15.3 前端整併狀態
 
-先穩定現況：
+獨立的 `mobile-demo/` 已刪除。現在桌機版與手機版共用同一個 `frontend/` 專案、同一份 API proxy、共用 chart/chat/KPI 模組，手機入口為 `/mobile`。
 
-- 清理所有舊文檔中誤導性的啟動方式
-- 修正亂碼與文案
-- 為 `summary`、`chart-catalog`、`ask` 建立 smoke test
+## 16. 圖表設計
 
-### 第二階段
+圖表能力集中在 `analysis_tools.py` 的 chart definitions 與 `visualizer.py`。
 
-將 `frontend/` 與 `mobile-demo/` 合併成單一 Next.js 專案：
+目前支援的圖表類型包含：
 
-- 共用一份 package.json
-- 共用一份 API route
-- 共用一份 chart component
-- 依 responsive layout 或 route variant 分桌機與手機體驗
+- 整體營收趨勢折線圖。
+- 整體庫存金額趨勢折線圖。
+- 整體庫存 QTY 趨勢折線圖。
+- 最新月份各事業群營收長條圖。
+- 最新月份各事業群庫存長條圖。
+- 最新月份各產品線營收長條圖。
+- 最新月份各產品線庫存長條圖。
+- 事業群或產品線圓餅圖。
+- health score 排名。
+- revenue/inventory proxy ratio 排名。
+- 異常訊號排行。
 
-這是整個專案最有價值的減法。
+圖表 API 的設計重點是前後端分工清楚：
 
-### 第三階段
+- 後端決定 chart key、資料表、filter 與 payload。
+- 前端負責渲染互動與視覺呈現。
+- 若需要 demo 或報告輸出，後端也可以產生 PNG。
 
-更清楚地分離 API server 職責：
+## 17. CLI 與輸出報表
 
-- 將 `demo_web.py` 視為 API bootstrap
-- 若 API 進一步擴大，可考慮改為 FastAPI 等框架
+`main.py` 是 CLI 入口，常用方式包含：
 
-### 第四階段
+```bash
+uv run python main.py
+uv run python main.py --generate-test-data
+uv run python main.py --chat
+uv run python main.py --project-summary --agent-json
+uv run python main.py --agent-question "請整理最新月份各事業群的營收與庫存重點"
+```
 
-導入資料刷新與 cache 策略：
+傳統分析流程會輸出到 `output/`，包含：
 
-- 來源 Excel 變更時的 context reload
-- chart payload 快取
-- dataset version metadata
+- `cleaned_inventory.xlsx`
+- `cleaned_revenue.xlsx`
+- `parsed_mapping.xlsx`
+- `merged_analysis.xlsx`
+- `summary_metrics.xlsx`
+- `analysis_report.md`
+- `llm_explanation.md`
+- `qa_transcript.md`
+- `charts/*.png`
+- `logs/*.log`
 
-## 12. 建議運作模式
+注意：目前 API server 走的是 `build_pipeline_context()`，會優先走真實資料路徑；`main.py` 的傳統報表路徑仍保留舊版 mapping-based 流程。因此若要讓 CLI 匯出與 API 完全一致，後續可以再整理這兩條路徑。
 
-在目前架構下，建議以下使用方式：
+## 18. 啟動方式
 
-1. 用 [scripts/start_all.ps1](/abs/path/c:/Users/itzel.hsiao/Desktop/revenue-poc/scripts/start_all.ps1:1) 一鍵啟動全部服務。
-2. 將 `8765` 僅視為 Python API。
-3. 將 `3000` 作為桌機分析工作台。
-4. 將 `3001` 作為手機或管理層快覽介面。
-5. 將 `output/logs/multi_agent_assistant.log` 作為主要除錯依據。
+### 18.1 Python 後端
 
-## 13. 結論
+```bash
+uv run python demo_web.py
+```
 
-這個專案已經具備一個完整資料分析產品雛形所需的主要骨架：
+預設啟動：
 
-- 資料載入
-- mapping 解譯
-- 指標分析
-- 圖表輸出
-- multi-agent 問答
-- 桌機 / 手機雙端呈現
+```text
+http://127.0.0.1:8765
+```
 
-它目前最值得做的，不是繼續加功能，而是繼續做減法：
+### 18.2 桌機前端
 
-- 合併雙前端
-- 去除重複 proxy
-- 清理亂碼字串
-- 持續維持單一分析真相來源
+```bash
+cd frontend
+npm run dev
+```
 
-若沿著這條路線演進，這個 PoC 會更容易轉成可維運、可擴充的內部分析產品。
+預設 Next.js dev server 通常是：
+
+```text
+http://127.0.0.1:3000
+```
+
+### 18.3 手機前端
+
+```bash
+cd frontend
+npm run dev
+```
+
+手機版不再使用獨立 dev server；啟動 `frontend/` 後開啟 `http://127.0.0.1:3000/mobile`。
+
+### 18.4 Windows script
+
+`scripts/` 下保留 PowerShell 與 batch 啟動腳本，例如：
+
+- `scripts/start_backend.ps1`
+- `scripts/start_frontend.ps1`
+- `scripts/start_mobile.ps1`
+- `scripts/start_all.ps1`
+- `scripts/START_ALL.bat`
+
+這些腳本適合 demo 場景，但若要部署成正式服務，建議改用明確的 process manager、container 或 service unit。
+
+## 19. 測試與評估
+
+專案測試集中在 `tests/`，目前涵蓋面相包含：
+
+- 資料載入與真實資料合約。
+- 分析工具與圖表 payload。
+- answer contract。
+- evidence contract。
+- task profile 與 canonical task。
+- router。
+- LLM planner 與 rewriter。
+- writer validator。
+- API status endpoints。
+- 前端圖表與 demo readiness。
+
+`eval/` 目錄則保存多組 regression 與 smoke 結果，例如：
+
+- `demo_smoke_report.md`
+- `eval_report.md`
+- `llm_planner_eval_report.md`
+- `demo_answer_review.md`
+- `demo_llm_writer_shadow_report.md`
+
+這些測試與 eval 的價值在於保護問答品質。自然語言系統很容易因為一點 routing 改動就造成回答飄移，因此用 contract test 與 regression case 鎖住行為是合理的。
+
+## 20. Logging 與可觀測性
+
+日誌工具在 `logging_utils.py`。每次 request 會帶 `request_id`，並且 domain agent、toolbox、pipeline 都會記錄關鍵事件。
+
+主要用途：
+
+- 追蹤一次問答用了哪些 tools。
+- 檢查 LLM planner 是否被啟用。
+- 檢查 fallback 是否發生。
+- 查看 pipeline warnings / errors。
+- debug 前端顯示與後端資料是否一致。
+
+常見 log 位置：
+
+```text
+output/logs/
+```
+
+## 21. 安全與資料治理觀點
+
+這個專案處理的是營收與庫存資料，即使已去識別化，仍應該用內部敏感資料的標準看待。
+
+目前設計上的正向點：
+
+- 不把所有計算交給外部雲端 LLM。
+- Ollama 預設是本機端點。
+- 回答保留 evidence 與 limitations。
+- 不支援預測與根因時會明確拒絕。
+- 資料來源路徑與 data version 可查。
+
+仍需注意的點：
+
+- Excel 檔本身仍在 repo 工作目錄內，正式環境應避免把敏感資料 commit。
+- `output/` 可能包含分析結果、圖表與 log，也可能具敏感性。
+- 若未來改接雲端 LLM，必須新增資料遮罩、欄位白名單與 prompt 外送審查。
+- 若要多人使用，需要權限控管與 audit trail。
+
+## 22. 技術債與風險
+
+### 22.1 前端重複
+
+此項已處理：獨立的 `mobile-demo/` 已刪除，手機體驗已移入 `frontend/app/mobile`。後續仍需維持共用元件邊界，避免桌機與手機邏輯重新分叉。
+
+### 22.2 CLI 與 API 主流程不完全一致
+
+API 走 `build_pipeline_context()`，會優先使用真實資料路徑；傳統 `main.py` 報表流程仍直接使用 `data_loader.py`、`mapping_parser.py`、`analyzer.py`。兩者共用很多概念，但不是完全同一條 pipeline。
+
+### 22.3 啟動時建立完整 context
+
+`demo_web.py` 啟動時就建立完整 `PipelineContext`。這對 demo 很方便，但有幾個限制：
+
+- 啟動時間會隨資料量變大。
+- Excel 更新後需要重啟 API 才能刷新。
+- 多使用者或大資料量場景下需要 cache / reload 策略。
+
+### 22.4 欄位契約耦合
+
+系統很依賴 Excel 欄位名稱與特定格式。一旦來源欄位改名或新增合併儲存格、表頭列偏移，讀取流程就可能失敗。
+
+### 22.5 proxy 指標容易被誤解
+
+營收/庫存比值是有用的觀察訊號，但不是正式財務指標。產品介面與回答文字必須持續提醒它是 proxy，不是因果或正式周轉率。
+
+### 22.6 association 能力目前有限
+
+目前資料摘要顯示 `association=false`，`correlations` metric 不可用。若未來要做更完整關聯分析，需要先確認資料粒度、共同 key 與樣本數是否足夠。
+
+## 23. 建議演進路線
+
+### 第一階段：穩定現有 demo
+
+- 清理舊文件中的過期路徑與階段名稱。
+- 確認 README、TECHNICAL_REPORT、docs 與實際程式一致。
+- 建立固定的 demo smoke script，一次檢查 API、summary、ask、chart、observe。
+- 把 `output/` 與敏感 Excel 的 git 策略整理清楚。
+
+### 第二階段：合併 pipeline
+
+- 讓 CLI 報表輸出也改用 `build_pipeline_context()`。
+- 避免 API 與 CLI 各自走不同資料處理路徑。
+- 將 `AnalysisArtifacts` 的新版/舊版欄位語意整理成明確文件。
+
+### 第三階段：合併前端
+
+- 持續維護單一 `frontend/` Next.js 專案。
+- 共用 API routes、chart surface、message card、KPI components。
+- 用 responsive layout 或 `/mobile` route 保留手機體驗。
+
+### 第四階段：資料刷新與版本控管
+
+- 新增 `/api/reload-data` 或後台 reload 流程。
+- data version 加入檔案 mtime、hash 或 dataset id。
+- 對 chart payload 與 summary 做 cache。
+- 在 UI 顯示目前資料版本與最新刷新時間。
+
+### 第五階段：正式化部署
+
+- 將 Python API 改為 FastAPI 或其他正式 web framework。
+- 建立 container 化部署。
+- 增加 authentication。
+- 設計資料目錄與輸出目錄的權限控管。
+- 導入 structured logging 與 monitoring。
+

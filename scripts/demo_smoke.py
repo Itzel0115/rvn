@@ -18,27 +18,7 @@ from tests.support import build_stubbed_assistant
 REPORT_DIR = PROJECT_ROOT / "eval"
 CSV_FILE = REPORT_DIR / "demo_smoke_results.csv"
 MD_FILE = REPORT_DIR / "demo_smoke_report.md"
-
-DEMO_QUESTIONS = [
-    "請整理最新月份各新事業群的營收與庫存重點",
-    "請分析哪個新事業群表現較佳",
-    "請分析哪個新事業群表現較差",
-    "比較最新月份各五大產品線營收與庫存",
-    "哪個產品線庫存壓力較高？",
-    "最近有什麼營運風險？",
-    "2026年1月以及2026年2月營收有什麼區別？",
-    "某新事業群底下哪個產品線表現較差？",
-    "請畫最新月份各新事業群營收圖",
-    "請畫五大產品線 health_score 排名",
-    "資料涵蓋哪些月份？",
-    "下個月營收會不會改善？",
-    "最新月份營收最高的新事業群是誰？",
-    "最新月份庫存最高的新事業群是誰？",
-    "哪個五大產品線營收最高？",
-    "哪個五大產品線庫存最高？",
-    "哪個新事業群營收相對庫存效率最高？",
-    "哪個新事業群營收相對庫存效率最低？",
-]
+CASE_FILE = PROJECT_ROOT / "eval" / "questions_answer.jsonl"
 
 
 def main() -> None:
@@ -57,15 +37,20 @@ def main() -> None:
     print(f"Wrote {MD_FILE}")
 
 
+def load_cases() -> list[dict[str, Any]]:
+    return [json.loads(line) for line in CASE_FILE.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
 def run_direct_smoke() -> list[dict[str, Any]]:
     assistant = build_stubbed_assistant("demo-smoke", use_llm_planner=False, use_llm_rewriter=False)
-    return [summarize_response(question, assistant.answer(question)) for question in DEMO_QUESTIONS]
+    return [summarize_response(case["question"], assistant.answer(case["question"])) for case in load_cases()]
 
 
 def run_api_smoke(api_url: str) -> list[dict[str, Any]]:
     base = api_url.rstrip("/")
     rows: list[dict[str, Any]] = []
-    for question in DEMO_QUESTIONS:
+    for case in load_cases():
+        question = str(case["question"])
         body = json.dumps(
             {
                 "question": question,

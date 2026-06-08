@@ -2,26 +2,30 @@
 
 ## Goal
 
-This checklist helps determine when `mobile-demo/` can be archived or deleted safely.
+This checklist records the final state of the former standalone mobile demo workspace.
 
-## Current Readiness Questions
+## Final Status
+
+The standalone `mobile-demo/` directory has been deleted. The mobile experience now lives in the unified frontend app:
+
+```text
+frontend/app/mobile
+frontend/components/mobile
+```
+
+## Migration Checks
 
 ### 1. Has `frontend/app/mobile` taken over the main mobile UI?
 
-Check:
+Status: Yes.
 
-- mobile executive summary is shown in `frontend/app/mobile`
-- KPI strip is shown in `frontend/app/mobile`
-- chart area is shown in `frontend/app/mobile`
-- AI chat drawer is shown in `frontend/app/mobile`
-
-Current status:
-
-- Yes, the main mobile executive demo is now served from `frontend/app/mobile`
+The mobile executive summary, KPI strip, chart area, and AI chat drawer are served from `frontend/app/mobile`.
 
 ### 2. Are shared proxy routes complete in `frontend/`?
 
-Check:
+Status: Yes.
+
+The shared proxy layer exists in `frontend/app/api/*` and covers:
 
 - `GET /api/summary`
 - `POST /api/ask`
@@ -30,72 +34,29 @@ Check:
 - `POST /api/observe`
 - `GET /api/observe-options`
 
-Current status:
-
-- Yes, the shared proxy layer already exists in `frontend/app/api/*`
-
 ### 3. Has chart rendering been consolidated?
 
-Check:
+Status: Yes.
 
-- desktop uses shared chart implementation
-- mobile uses shared chart implementation
-- wrappers remain only for compatibility
-
-Current status:
-
-- Yes
+Desktop and mobile use the shared chart implementation, with lightweight wrappers retained for import compatibility.
 
 ### 4. Have chat utilities been consolidated?
 
-Check:
+Status: Yes.
 
-- ask request builder is shared
-- chart evidence extraction is shared
-- assistant / user / error message shaping is shared
-- quick prompts are grouped in shared constants
-
-Current status:
-
-- Yes
+Ask request building, chart evidence extraction, message shaping, and quick prompts are shared.
 
 ### 5. Have KPI / summary utilities been consolidated?
 
-Check:
+Status: Yes.
 
-- KPI formatter logic is shared
-- latest month / executive headline extraction is shared
-- shared KPI card and snapshot item components exist
+KPI formatter logic, latest month / executive headline extraction, and shared KPI components live under `frontend/components/kpi`.
 
-Current status:
+### 6. Does the deleted standalone workspace still contain unique runtime behavior?
 
-- Yes
+Status: No known must-keep runtime behavior remains outside `frontend/`.
 
-### 6. Does `mobile-demo/` still contain unique runtime behavior?
-
-Review:
-
-- unique mobile-only UI behavior not present in `frontend/app/mobile`
-- unique API proxy routes not present in `frontend/app/api`
-- unique chart / chat / KPI logic not already migrated
-
-Current status:
-
-- No known must-keep runtime behavior has been identified so far
-- `mobile-demo/` still remains useful as a historical reference until one more cleanup and verification pass is complete
-
-## Conditions For Archiving Or Deleting `mobile-demo/`
-
-`mobile-demo/` can be considered ready for archival when all of the following are true:
-
-- `/mobile` in `frontend/` fully covers the intended mobile demo
-- no unique API proxy route remains only in `mobile-demo/`
-- no unique chart, chat, or KPI logic remains only in `mobile-demo/`
-- frontend build passes
-- smoke checks pass for `/dashboard`, `/mobile`, `/api/summary`, `/api/ask`, `/api/chart`, and `/api/chart-catalog`
-- the team agrees that `mobile-demo/` is no longer needed as a rollback reference
-
-## Recommended Validation Before Deletion
+## Recommended Validation After Deletion
 
 Run at minimum:
 
@@ -109,12 +70,3 @@ Run at minimum:
 8. verify KPI / summary display on both routes
 9. verify chart rendering on both routes
 10. verify ask flow still updates chart evidence on both routes
-
-## Recommendation
-
-Current recommendation:
-
-- `mobile-demo/` is archive-ready as a reference
-- It is not deleted yet
-- deletion requires final team approval
-- if the team wants extra confidence, deletion should happen only after one more full manual demo verification

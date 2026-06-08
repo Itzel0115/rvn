@@ -136,10 +136,32 @@ def _assign_role(
             return EvidenceRole.BACKGROUND, 80, "raw metric table is not primary for explicit period-pair comparison"
         return EvidenceRole.BACKGROUND, 90, "not part of period pair primary rubric"
 
+    if task_family == "entity_period_pair_table_lookup":
+        if evidence_type == "entity_period_pair_table":
+            return EvidenceRole.PRIMARY, 1, "explicit period-pair entity table evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for period-pair entity table lookup"
+
+    if task_family == "entity_multi_month_table_lookup":
+        if evidence_type == "entity_multi_month_table":
+            return EvidenceRole.PRIMARY, 1, "explicit date-range entity table evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for multi-month entity table lookup"
+
+    if task_family == "entity_period_pair_metric_lookup":
+        if evidence_type == "entity_period_pair_value":
+            return EvidenceRole.PRIMARY, 1, "single entity period-pair metric evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for single entity period-pair lookup"
+
     if task_family == "forecast_unsupported":
         return EvidenceRole.BACKGROUND, 90, "forecast questions should not promote historical metric tables as primary evidence"
 
+    if task_family == "entity_month_table_lookup":
+        if evidence_type == "entity_month_table":
+            return EvidenceRole.PRIMARY, 1, "single-month entity table lookup evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for entity month table lookup"
+
     if task_family == "cross_section_compare":
+        if evidence_type == "entity_month_table":
+            return EvidenceRole.PRIMARY, 1, "single-month entity table can drive single-metric cross-section comparison"
         if evidence_type in {"entity_performance_snapshot", "entity_cross_section", "entity_cross_section_comparison", "platform_performance_snapshot", "platform_performance_row"}:
             return EvidenceRole.PRIMARY, 1, "entity performance scorecard can drive same-month cross-section comparison"
         if evidence_type in {"entity_ratio", "platform_ratio", "inventory_turnover_proxy", "platform_metric_snapshot"} and same_month:
@@ -177,7 +199,14 @@ def _assign_role(
             return EvidenceRole.SUPPORTING, 20, "supporting signal for diagnosis"
         return EvidenceRole.BACKGROUND, 80, "background only for diagnosis"
 
-    if task_family == "ranking":
+    if task_family == "metric_lookup":
+        if evidence_type == "entity_metric_lookup":
+            return EvidenceRole.PRIMARY, 1, "direct entity month metric lookup evidence"
+        if evidence_type in {"metric_table", "platform_metric_snapshot"}:
+            return EvidenceRole.PRIMARY, 5, "legacy metric lookup evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for metric lookup"
+
+    if task_family == "entity_ranking":
         if evidence_type == "entity_metric_ranking":
             return EvidenceRole.PRIMARY, 1, "explicit entity metric ranking evidence"
         if evidence_type in {"platform_ranking", "group_ranking"}:
@@ -186,9 +215,45 @@ def _assign_role(
             return EvidenceRole.PRIMARY, 2, "explicit efficiency ranking evidence"
         return EvidenceRole.BACKGROUND, 80, "unrelated to explicit ranking"
 
+    if task_family == "entity_time_series":
+        if evidence_type == "entity_time_series":
+            return EvidenceRole.PRIMARY, 1, "named entity monthly series evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for entity time series"
+
+    if task_family == "overall_trend_analysis":
+        if evidence_type == "overall_time_series":
+            return EvidenceRole.PRIMARY, 1, "overall monthly series evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for overall trend analysis"
+
+    if task_family == "entity_trend_comparison":
+        if evidence_type == "entity_trend_comparison":
+            return EvidenceRole.PRIMARY, 1, "multi-entity monthly trend comparison evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for entity trend comparison"
+
+    if task_family == "metric_relationship_analysis":
+        if evidence_type == "metric_relationship":
+            return EvidenceRole.PRIMARY, 1, "revenue and inventory relationship evidence"
+        if evidence_type in {"entity_performance_snapshot", "inventory_turnover_proxy", "anomaly"}:
+            return EvidenceRole.SUPPORTING, 20, "supporting proxy or scorecard context"
+        return EvidenceRole.BACKGROUND, 80, "background only for metric relationship analysis"
+
+    if task_family == "contribution_analysis":
+        if evidence_type == "entity_contribution_analysis":
+            return EvidenceRole.PRIMARY, 1, "explicit entity contribution evidence"
+        return EvidenceRole.BACKGROUND, 80, "background only for contribution analysis"
+
+    if task_family == "parent_child_drilldown":
+        if evidence_type in {"parent_child_drilldown", "entity_performance_snapshot"}:
+            return EvidenceRole.PRIMARY, 1, "child entity scorecard under parent filter"
+        if evidence_type == "inventory_turnover_proxy":
+            return EvidenceRole.SUPPORTING, 20, "supporting proxy under parent filter"
+        return EvidenceRole.BACKGROUND, 80, "background only for parent child drilldown"
+
     if task_family == "risk_scan":
         if evidence_type in {"anomaly", "inventory_turnover_proxy"}:
             return EvidenceRole.PRIMARY, 1, "risk scan primary signal"
+        if evidence_type == "metric_relationship":
+            return EvidenceRole.PRIMARY, 2, "relationship divergence is primary risk evidence"
         if evidence_type == "platform_ratio":
             return EvidenceRole.SUPPORTING, 20, "platform ratio supports risk scan"
         return EvidenceRole.BACKGROUND, 80, "background only for risk scan"
@@ -208,6 +273,26 @@ def _assign_role(
 def _detect_evidence_type(item: dict[str, Any], domain: str | None) -> str:
     if item.get("evidence_type"):
         return str(item["evidence_type"])
+    if item.get("evidence_type") == "entity_metric_lookup" or (item.get("entity_value") and item.get("metric") and "value" in item and item.get("month")):
+        return "entity_metric_lookup"
+    if item.get("evidence_type") == "entity_month_table":
+        return "entity_month_table"
+    if item.get("evidence_type") == "entity_period_pair_table":
+        return "entity_period_pair_table"
+    if item.get("evidence_type") == "entity_multi_month_table":
+        return "entity_multi_month_table"
+    if item.get("evidence_type") == "entity_period_pair_value":
+        return "entity_period_pair_value"
+    if item.get("entity_value") and item.get("metric") and isinstance(item.get("rows"), list) and item.get("summary") is not None:
+        return "entity_time_series"
+    if item.get("metric") and isinstance(item.get("rows"), list) and item.get("summary") is not None and item.get("entity_dimension") is None:
+        return "overall_time_series"
+    if item.get("entity_summaries") is not None and isinstance(item.get("rows"), list):
+        return "entity_trend_comparison"
+    if item.get("relationship_label") or isinstance((item.get("summary") or {}).get("relationship_counts"), dict):
+        return "metric_relationship"
+    if item.get("period_a") and item.get("period_b") and item.get("entity_label") and isinstance(item.get("rows"), list) and (item.get("summary") or {}).get("top_contributor") is not None:
+        return "entity_contribution_analysis"
     if item.get("period_a") and item.get("period_b") and isinstance(item.get("overall"), dict):
         return "period_pair_metric_comparison"
     if item.get("entity_dimension") and isinstance(item.get("rows"), list) and item.get("summary") is not None:
@@ -264,8 +349,30 @@ def _infer_source_tool(evidence_type: str, item: dict[str, Any]) -> str:
         return "get_inventory_turnover_proxy"
     if evidence_type in {"entity_performance_snapshot", "entity_performance_row"}:
         return "get_entity_performance_snapshot"
+    if evidence_type == "entity_metric_lookup":
+        return "get_entity_metric_value"
+    if evidence_type == "entity_month_table":
+        return "get_entity_month_table"
+    if evidence_type == "entity_period_pair_table":
+        return "get_entity_period_pair_table"
+    if evidence_type == "entity_multi_month_table":
+        return "get_entity_multi_month_table"
+    if evidence_type == "entity_period_pair_value":
+        return "get_entity_period_pair_value"
     if evidence_type == "entity_metric_ranking":
         return "get_entity_metric_ranking"
+    if evidence_type == "entity_time_series":
+        return "get_entity_time_series"
+    if evidence_type == "overall_time_series":
+        return "get_overall_time_series"
+    if evidence_type == "entity_trend_comparison":
+        return "get_entity_trend_comparison"
+    if evidence_type == "metric_relationship":
+        return "get_revenue_inventory_relationship"
+    if evidence_type == "entity_contribution_analysis":
+        return "get_entity_contribution_analysis"
+    if evidence_type == "parent_child_drilldown":
+        return "get_entity_performance_snapshot"
     if evidence_type in {"entity_cross_section", "entity_cross_section_comparison"}:
         return "get_entity_cross_section_comparison"
     if evidence_type in {"platform_performance_snapshot", "platform_performance_row"}:
@@ -307,12 +414,50 @@ def _summarize_evidence(evidence_type: str, item: dict[str, Any], domain: str | 
             f"{item.get('entity_label', 'entity')} scorecard best={summary.get('best_entity')} "
             f"weakest={summary.get('weakest_entity')}"
         )
+    if evidence_type == "entity_metric_lookup":
+        return (
+            f"{item.get('month')} {item.get('entity_label', 'entity')} {item.get('entity_value')} "
+            f"{item.get('metric_label', item.get('metric'))}={format_number(item.get('value'))}"
+        )
+    if evidence_type == "entity_month_table":
+        summary = item.get("summary") or {}
+        return (
+            f"{item.get('month')} 各{item.get('entity_label', 'entity')} "
+            f"{item.get('metric_label', item.get('metric'))} table rows={summary.get('row_count', len(item.get('rows') or []))}"
+        )
+    if evidence_type == "entity_period_pair_table":
+        summary = item.get("summary") or {}
+        return (
+            f"{item.get('period_b')} vs {item.get('period_a')} 各{item.get('entity_label', 'entity')} "
+            f"{item.get('metric_label', item.get('metric'))} table rows={summary.get('row_count', len(item.get('rows') or []))}"
+        )
+    if evidence_type == "entity_multi_month_table":
+        summary = item.get("summary") or {}
+        return (
+            f"{item.get('start_month')} to {item.get('end_month')} 各{item.get('entity_label', 'entity')} "
+            f"{item.get('metric_label', item.get('metric'))} table rows={summary.get('row_count', len(item.get('rows') or []))}"
+        )
+    if evidence_type == "entity_period_pair_value":
+        return (
+            f"{item.get('entity_value')} {item.get('period_b')} vs {item.get('period_a')} "
+            f"{item.get('metric_label', item.get('metric'))} change {format_number(item.get('change'))}"
+        )
     if evidence_type == "entity_metric_ranking":
         return (
             f"{item.get('month')} {item.get('entity_label', 'entity')} "
             f"{item.get('metric_label', item.get('metric'))} ranking top={item.get('top_entity')} "
             f"value={format_number(item.get('top_value'))}"
         )
+    if evidence_type == "entity_time_series":
+        return f"{item.get('entity_value')} {item.get('metric_label', item.get('metric'))} monthly series"
+    if evidence_type == "overall_time_series":
+        return f"overall {item.get('metric_label', item.get('metric'))} monthly series"
+    if evidence_type == "entity_trend_comparison":
+        return f"{item.get('entity_label', 'entity')} trend comparison"
+    if evidence_type == "metric_relationship":
+        return f"{item.get('entity_label', 'entity')} revenue/inventory relationship"
+    if evidence_type == "entity_contribution_analysis":
+        return f"{item.get('period_b')} vs {item.get('period_a')} contribution analysis"
     if evidence_type == "entity_performance_row":
         return (
             f"{item.get('month')} / {item.get('entity_value')} health_score "

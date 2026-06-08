@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -37,6 +38,18 @@ def _coerce_optional_bool(value: object) -> bool | None:
         if lowered in {"false", "0", "no", "off"}:
             return False
     return None
+
+
+def _json_safe(value: object) -> object:
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 def derive_health_status(messages: MessageCollector) -> str:
@@ -416,7 +429,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         APP.logger.info("HTTP %s", format % args)
 
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        body = json.dumps(_json_safe(payload), ensure_ascii=False, allow_nan=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

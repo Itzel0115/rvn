@@ -28,6 +28,7 @@ def build_stubbed_assistant(
     *,
     use_llm_planner: bool | None = None,
     use_llm_rewriter: bool | None = None,
+    use_llm_writer: bool | None = None,
     llm_client: StubLLM | None = None,
 ) -> MultiAgentAssistant:
     assistant = MultiAgentAssistant(
@@ -35,6 +36,7 @@ def build_stubbed_assistant(
         request_id,
         use_llm_planner=use_llm_planner,
         use_llm_rewriter=use_llm_rewriter,
+        use_llm_writer=use_llm_writer,
     )
     stub = llm_client or StubLLM()
     assistant.llm_client = stub

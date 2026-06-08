@@ -86,6 +86,7 @@ LIMITATION_RULES = [
 ]
 
 NUMBER_PATTERN = re.compile(r"\d[\d,]*(?:\.\d+)?%?")
+MONTH_PATTERN = re.compile(r"20\d{2}-\d{2}")
 
 
 @dataclass(frozen=True)
@@ -192,6 +193,39 @@ class LLMAnswerRewriter:
                 if not any(hint.lower() in rewritten_lower for hint in rule["required_hints"]):
                     violations.append(f"missing_limitation:{rule['label']}")
 
+        required_months = set(MONTH_PATTERN.findall(request.deterministic_answer))
+        missing_months = sorted(month for month in required_months if month not in rewritten_answer)
+        if missing_months:
+            violations.append(f"missing_months={missing_months}")
+
+        allowed_entities = _extract_allowed_entities(request)
+        rewritten_entities = _extract_entity_tokens(rewritten_answer)
+        disallowed_entities = sorted(token for token in rewritten_entities if token not in allowed_entities)
+        if disallowed_entities:
+            violations.append(f"new_entities={disallowed_entities}")
+
+        if _contains_direction_conflict(request.deterministic_answer, rewritten_answer):
+            violations.append("direction_conflict")
+
+        if "新事業群" in rewritten_answer:
+            violations.append("legacy_business_group_label")
+
+        if "最新月份" not in request.deterministic_answer and "最新月份" in rewritten_answer:
+            violations.append("explicit_month_changed_to_latest")
+
+        source_lower = request.deterministic_answer.lower()
+        if ("圓餅圖" in request.deterministic_answer or "pie" in source_lower) and ("長條圖" in rewritten_answer or "bar" in rewritten_lower):
+            violations.append("chart_type_pie_changed_to_bar")
+
+        if "正式庫存週轉率" in rewritten_answer or "formal inventory turnover" in rewritten_lower:
+            violations.append("formal_turnover_claim")
+
+        answer_type = str(request.answer_contract.get("answer_type") or "")
+        task_family = str((request.answer_contract.get("task_profile") or {}).get("task_family") or "")
+        if answer_type == "unsupported" or task_family == "forecast_unsupported":
+            if any(token in rewritten_lower for token in ["會成長", "會改善", "will improve", "will grow"]):
+                violations.append("unsupported_became_supported")
+
         base_length = max(len(request.deterministic_answer.strip()), 1)
         if len(rewritten_answer.strip()) > math.ceil(base_length * 2.5):
             violations.append("rewritten_answer_too_long")
@@ -210,7 +244,9 @@ class LLMAnswerRewriter:
             "4. Do not say root cause is confirmed.\n"
             "5. Do not predict the future.\n"
             "6. Preserve limitation semantics when the original answer includes them.\n"
-            "7. Return JSON only with one key: rewritten_answer.\n"
+            "7. Use 事業群 and 產品線 as display labels; do not reintroduce 新事業群 in main copy.\n"
+            "8. Preserve explicit months and chart types such as pie/bar/line exactly.\n"
+            "9. Return JSON only with one key: rewritten_answer.\n"
         )
 
     @staticmethod
@@ -232,6 +268,45 @@ class LLMAnswerRewriter:
 
 def _extract_numbers(text: str) -> list[str]:
     return NUMBER_PATTERN.findall(text or "")
+
+
+def _extract_allowed_entities(request: RewriteRequest) -> set[str]:
+    tokens = set(_extract_entity_tokens(request.deterministic_answer))
+    tokens.update(_extract_entity_tokens(json.dumps(request.answer_contract, ensure_ascii=False)))
+    tokens.update(_extract_entity_tokens(json.dumps(request.evidence, ensure_ascii=False)))
+    tokens.update(_extract_entity_tokens(json.dumps(request.limitations, ensure_ascii=False)))
+    return tokens
+
+
+def _extract_entity_tokens(text: str) -> set[str]:
+    if not text:
+        return set()
+    matches = set(re.findall(r"[A-Za-z0-9+\-/]{2,}|[\u4e00-\u9fff]{2,}(?:\+[\u4e00-\u9fffA-Za-z0-9]+)?", text))
+    ignored = {
+        "目前",
+        "資料",
+        "限制",
+        "說明",
+        "營收",
+        "庫存",
+        "月份",
+        "新事業群",
+        "事業群",
+        "五大產品線",
+        "產品線",
+        "proxy",
+        "health_score",
+        "risk_score",
+    }
+    return {match for match in matches if match not in ignored}
+
+
+def _contains_direction_conflict(source: str, rewritten: str) -> bool:
+    source_has_down = any(token in source for token in ["下降", "下滑", "decrease", "down"])
+    source_has_up = any(token in source for token in ["上升", "增加", "improve", "up"])
+    rewritten_has_down = any(token in rewritten for token in ["下降", "下滑", "decrease", "down"])
+    rewritten_has_up = any(token in rewritten for token in ["上升", "增加", "improve", "up"])
+    return (source_has_down and rewritten_has_up and not rewritten_has_down) or (source_has_up and rewritten_has_down and not rewritten_has_up)
 
 
 def build_rewrite_request(question: str, contract: dict[str, Any]) -> RewriteRequest:

@@ -10,8 +10,9 @@ import pandas as pd
 
 from analysis_pipeline import PipelineContext
 from answer_plan import AnswerPlan, build_answer_plan
+from canonical_task import CanonicalTaskProfile
 from answer_contract import build_answer_contract, build_data_quality_answer_contract, render_answer_contract
-from analysis_tools import AnalysisToolbox, QueryFilters
+from analysis_tools import AnalysisToolbox, QueryFilters, is_unmapped_entity
 from business_answer_templates import LLM_FIELD_BOUNDARY_PROMPT, compose_evidence_first_answer
 from business_question_classifier import BusinessQuestionProfile, classify_business_question, profile_to_routing_fields
 from config import (
@@ -27,12 +28,21 @@ from config import (
     COL_PLATFORM,
     COL_REVENUE,
 )
-from llm_planner import LLMPlanningResult, LLMToolPlanner, ToolPlan
+from llm_planner import (
+    LLMPlanningResult,
+    LLMToolPlanner,
+    ToolPlan,
+)
 from llm_rewriter import LLMAnswerRewriter, build_rewrite_request
+from evidence_contracts import EvidenceContractBuilder
+from llm_evidence_writer import EvidenceWriteRequest, LLMEvidenceWriter
 from logging_utils import get_logger
 from ollama_client import OllamaClient
+from plan_validator import PlanValidator
+from tool_registry import build_allowed_tool_names_for_task_family
 from task_profile import TaskProfile, build_task_profile
 from utils import format_number
+from writer_validator import WriterValidator
 
 
 @dataclass
@@ -52,6 +62,10 @@ class RoutingDecision:
     planning_source: str | None = None
     requires_limitations: bool = False
     parent_filter: dict[str, Any] = field(default_factory=dict)
+    target_entity: dict[str, Any] = field(default_factory=dict)
+    time_scope: dict[str, Any] = field(default_factory=dict)
+    metric: str | None = None
+    task_family: str | None = None
 
 
 @dataclass
@@ -112,7 +126,17 @@ class BaseDomainAgent:
             "latest_month_platform_summary",
             "latest_month_entity_summary",
             "period_pair_compare",
+            "entity_period_pair_table_lookup",
+            "entity_multi_month_table_lookup",
+            "entity_period_pair_metric_lookup",
+            "entity_time_series",
+            "overall_trend_analysis",
+            "entity_trend_comparison",
+            "metric_relationship_analysis",
+            "contribution_analysis",
+            "parent_child_drilldown",
             "chart",
+            "chart_request",
             "decision",
             "data_quality",
             "metric_query",
@@ -144,7 +168,8 @@ class BaseDomainAgent:
             return defaults
 
         planned = result.data.get("tools", []) if result.data else []
-        selected = [tool for tool in planned if tool in tool_catalog]
+        planned_names = [item.get("tool_name") if isinstance(item, dict) else item for item in planned]
+        selected = [tool for tool in planned_names if isinstance(tool, str) and tool in tool_catalog]
         if not selected:
             return defaults
         return list(dict.fromkeys(selected))
@@ -195,6 +220,26 @@ class BaseDomainAgent:
             )
         if tool_name.startswith("get_entity_period_pair_comparison(") and tool_name.endswith(")"):
             return not self.toolbox.context.artifacts.revenue_inventory_aligned.empty
+        if tool_name == "get_entity_metric_value":
+            return capability_matrix["tools"].get("get_entity_metric_value", {}).get("available", False)
+        if tool_name == "get_entity_month_table":
+            return capability_matrix["tools"].get("get_entity_month_table", {}).get("available", False)
+        if tool_name == "get_entity_period_pair_table":
+            return capability_matrix["tools"].get("get_entity_period_pair_table", {}).get("available", False)
+        if tool_name == "get_entity_multi_month_table":
+            return capability_matrix["tools"].get("get_entity_multi_month_table", {}).get("available", False)
+        if tool_name == "get_entity_period_pair_value":
+            return capability_matrix["tools"].get("get_entity_period_pair_value", {}).get("available", False)
+        if tool_name == "get_entity_time_series":
+            return capability_matrix["tools"].get("get_entity_time_series", {}).get("available", False)
+        if tool_name == "get_overall_time_series":
+            return capability_matrix["tools"].get("get_overall_time_series", {}).get("available", False)
+        if tool_name == "get_entity_trend_comparison":
+            return capability_matrix["tools"].get("get_entity_trend_comparison", {}).get("available", False)
+        if tool_name == "get_revenue_inventory_relationship":
+            return capability_matrix["tools"].get("get_revenue_inventory_relationship", {}).get("available", False)
+        if tool_name == "get_entity_contribution_analysis":
+            return capability_matrix["tools"].get("get_entity_contribution_analysis", {}).get("available", False)
         if tool_name == "get_period_pair_metric_comparison":
             return capability_matrix["tools"].get("get_period_pair_metric_comparison", {}).get("available", False)
         return capability_matrix["tools"].get(tool_name, {}).get("available", True)
@@ -396,7 +441,7 @@ class SalesAgent(BaseDomainAgent):
             if group_rank:
                 top_group = group_rank[0]
                 findings.append(
-                    f"整體營收最高的新事業群是 {top_group['group_name']}（代碼 {top_group['group_code']}），"
+                    f"整體營收最高的事業群是 {top_group['group_name']}（代碼 {top_group['group_code']}），"
                     f"累計營收 {top_group['value_text']}。"
                 )
                 evidence.extend(group_rank[:3])
@@ -556,7 +601,7 @@ class InventoryAgent(BaseDomainAgent):
             if group_rank:
                 top_group = group_rank[0]
                 findings.append(
-                    f"整體庫存金額最高的新事業群是 {top_group['group_name']}（代碼 {top_group['group_code']}），"
+                    f"整體庫存金額最高的事業群是 {top_group['group_name']}（代碼 {top_group['group_code']}），"
                     f"累計庫存金額 {top_group['value_text']}。"
                 )
                 evidence.extend(group_rank[:3])
@@ -566,7 +611,7 @@ class InventoryAgent(BaseDomainAgent):
             if platform_rank:
                 top_platform = platform_rank[0]
                 scope_label = f"{routing.filters.month} " if routing.filters.month else "目前累計 "
-                entity_label = "五大產品線" if routing.object_dimension == "product_line_5" else "新事業群"
+                entity_label = "產品線" if routing.object_dimension == "product_line_5" else "事業群"
                 findings.append(
                     f"{scope_label}庫存金額最高的{entity_label}是 {top_platform['platform']}，"
                     f"數值為 {top_platform['value_text']}。"
@@ -619,7 +664,7 @@ class InventoryAgent(BaseDomainAgent):
             )
             if proxy_rows:
                 weakest = proxy_rows[0]
-                entity_label = weakest.get("entity_label") or ("五大產品線" if routing.object_dimension == "product_line_5" else "新事業群")
+                entity_label = weakest.get("entity_label") or ("產品線" if routing.object_dimension == "product_line_5" else "事業群")
                 entity_value = weakest.get("entity_value") or weakest.get("platform") or weakest.get("business_group")
                 findings.append(
                     f"庫存效率 proxy 最弱的是 {weakest['month']} / {entity_label} {entity_value}，"
@@ -649,7 +694,18 @@ class FinancialMetricsAgent(BaseDomainAgent):
         return {
             "get_entity_performance_snapshot": "Return deterministic entity performance scorecard for business_group or product_line_5.",
             "get_entity_cross_section_comparison": "Return same-month entity comparison across revenue, inventory, proxy ratios, and health score.",
+            "get_entity_metric_value": "Lookup one real-data entity metric for one explicit month.",
+            "get_entity_month_table": "List all entities for one explicit month and metric.",
+            "get_entity_period_pair_table": "List all entities for two explicit periods and metric.",
+            "get_entity_multi_month_table": "List all entities by month for an explicit date range and metric.",
+            "get_entity_period_pair_value": "Lookup one named entity for two explicit periods and metric.",
             "get_entity_metric_ranking": "Return latest-month real-data entity ranking by a single metric.",
+            "get_entity_period_pair_comparison(revenue)": "Compare explicit months for a real-data entity dimension.",
+            "get_entity_time_series": "Return one named entity's monthly time series.",
+            "get_overall_time_series": "Return overall monthly trend for one metric.",
+            "get_entity_trend_comparison": "Return monthly trend comparison across entities.",
+            "get_revenue_inventory_relationship": "Return deterministic revenue/inventory relationship labels.",
+            "get_entity_contribution_analysis": "Return deterministic entity contribution between two explicit periods.",
             "get_platform_performance_snapshot": "Return deterministic platform performance scorecard across revenue scale, momentum, inventory-efficiency proxy, and anomalies.",
             "get_platform_ratios": "Return revenue to inventory proxy ratios on platform-month level.",
             "get_anomalies": "Return anomaly records produced by the existing analyzer.",
@@ -660,8 +716,34 @@ class FinancialMetricsAgent(BaseDomainAgent):
 
     def default_tools(self, routing: RoutingDecision) -> list[str]:
         tools = ["get_platform_ratios", "get_anomalies"]
-        if routing.answer_strategy == "ranking":
+        if routing.task_family == "entity_month_table_lookup":
+            return ["get_entity_month_table"]
+        if routing.task_family == "entity_period_pair_table_lookup":
+            return ["get_entity_period_pair_table"]
+        if routing.task_family == "entity_multi_month_table_lookup":
+            return ["get_entity_multi_month_table"]
+        if routing.task_family == "entity_period_pair_metric_lookup":
+            return ["get_entity_period_pair_value"]
+        if routing.task_family == "cross_section_compare" and getattr(routing, "metric", None):
+            return ["get_entity_month_table"]
+        if routing.task_family == "metric_lookup" and routing.target_entity.get("value"):
+            return ["get_entity_metric_value"]
+        if routing.answer_strategy == "entity_ranking":
             return ["get_entity_metric_ranking"]
+        if routing.answer_strategy == "period_pair_compare":
+            return ["get_entity_period_pair_comparison(revenue)"]
+        if routing.answer_strategy == "entity_time_series":
+            return ["get_entity_time_series"]
+        if routing.answer_strategy == "overall_trend_analysis":
+            return ["get_overall_time_series"]
+        if routing.answer_strategy == "entity_trend_comparison":
+            return ["get_entity_trend_comparison"]
+        if routing.answer_strategy == "metric_relationship_analysis":
+            return ["get_revenue_inventory_relationship"]
+        if routing.answer_strategy == "contribution_analysis":
+            return ["get_entity_contribution_analysis"]
+        if routing.answer_strategy == "parent_child_drilldown":
+            return ["get_entity_performance_snapshot", "get_inventory_turnover_proxy"]
         if routing.answer_strategy in {"comparison", "performance_weakness", "latest_month_platform_summary", "latest_month_entity_summary"}:
             tools.insert(0, "get_entity_performance_snapshot")
         if routing.answer_strategy in {"comparison", "diagnosis"}:
@@ -696,13 +778,199 @@ class FinancialMetricsAgent(BaseDomainAgent):
             effective_tools.append("get_anomalies")
 
         if ratio_question and not ratio_available:
-            unsupported_reasons.append("目前資料無法形成新事業群層整合分析，因此無法提供穩定的營收/庫存比值工具結果。")
+            unsupported_reasons.append("目前資料無法形成事業群層整合分析，因此無法提供穩定的營收/庫存比值工具結果。")
+
+        canonical_metric = str(routing.metric or "revenue_amount")
+        target_dimension = routing.target_entity.get("dimension") or routing.object_dimension or "business_group"
+        target_value = routing.target_entity.get("value")
+        parent_filter = getattr(routing, "parent_filter", None) or None
+        time_scope = getattr(routing, "time_scope", {}) or {}
+
+        if "get_entity_metric_value" in effective_tools and target_value:
+            lookup_month = routing.filters.month or time_scope.get("single_month") or time_scope.get("month")
+            payload = self.toolbox.get_entity_metric_value(
+                entity_dimension=target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group",
+                entity_value=str(target_value),
+                metric=canonical_metric,
+                month=lookup_month,
+            )
+            if payload.get("value") is not None:
+                findings.append(
+                    f"{payload.get('month')} {payload.get('entity_label')} {payload.get('entity_value')} "
+                    f"的{payload.get('metric_label')}為 {format_number(payload.get('value'))}。"
+                )
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 entity metric lookup 資料。"]))
+
+        if "get_entity_month_table" in effective_tools:
+            lookup_month = routing.filters.month or time_scope.get("single_month") or time_scope.get("month")
+            payload = self.toolbox.get_entity_month_table(
+                entity_dimension=target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group",
+                metric=canonical_metric,
+                month=lookup_month,
+                parent_filter=parent_filter,
+            )
+            if payload.get("rows"):
+                summary = payload.get("summary") or {}
+                findings.append(
+                    f"已列出 {payload.get('month')} 各{payload.get('entity_label')}的{payload.get('metric_label')}資料，"
+                    f"共 {summary.get('row_count', len(payload.get('rows') or []))} 筆。"
+                )
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 entity month table 資料。"]))
+
+        if "get_entity_period_pair_comparison(revenue)" in effective_tools:
+            dimension = target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group"
+            comparison = self.toolbox.get_entity_period_pair_comparison(
+                entity_dimension=dimension,
+                metric="revenue",
+                period_a=getattr(routing, "period_a", None),
+                period_b=getattr(routing, "period_b", None),
+                parent_filter=parent_filter,
+            )
+            if comparison.get("overall"):
+                evidence.append(comparison)
+            else:
+                warnings.extend(comparison.get("limitations", ["目前無法比較指定月份。"]))
+
+        if "get_entity_period_pair_table" in effective_tools:
+            dimension = target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group"
+            payload = self.toolbox.get_entity_period_pair_table(
+                entity_dimension=dimension,
+                metric=canonical_metric,
+                period_a=str(time_scope.get("period_a") or getattr(routing, "period_a", "") or ""),
+                period_b=str(time_scope.get("period_b") or getattr(routing, "period_b", "") or ""),
+                parent_filter=parent_filter,
+                include_change=True,
+            )
+            if payload.get("rows"):
+                summary = payload.get("summary") or {}
+                findings.append(
+                    f"已列出 {payload.get('period_a')} 與 {payload.get('period_b')} 各{payload.get('entity_label')}的{payload.get('metric_label')}資料，"
+                    f"共 {summary.get('row_count', len(payload.get('rows') or []))} 筆。"
+                )
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 period-pair entity table 資料。"]))
+
+        if "get_entity_multi_month_table" in effective_tools:
+            dimension = target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group"
+            payload = self.toolbox.get_entity_multi_month_table(
+                entity_dimension=dimension,
+                metric=canonical_metric,
+                start_month=str(time_scope.get("start_month") or getattr(routing, "start_month", "") or ""),
+                end_month=str(time_scope.get("end_month") or getattr(routing, "end_month", "") or ""),
+                parent_filter=parent_filter,
+            )
+            if payload.get("rows"):
+                summary = payload.get("summary") or {}
+                findings.append(
+                    f"已列出 {payload.get('start_month')} 至 {payload.get('end_month')} 各{payload.get('entity_label')}的{payload.get('metric_label')}資料，"
+                    f"共 {summary.get('row_count', len(payload.get('rows') or []))} 筆。"
+                )
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 multi-month entity table 資料。"]))
+
+        if "get_entity_period_pair_value" in effective_tools and target_value:
+            payload = self.toolbox.get_entity_period_pair_value(
+                entity_dimension=target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group",
+                entity_value=str(target_value),
+                metric=canonical_metric,
+                period_a=str(time_scope.get("period_a") or getattr(routing, "period_a", "") or ""),
+                period_b=str(time_scope.get("period_b") or getattr(routing, "period_b", "") or ""),
+                parent_filter=parent_filter,
+            )
+            if payload.get("value_a") is not None or payload.get("value_b") is not None:
+                findings.append(
+                    f"已列出 {payload.get('entity_value')} 在 {payload.get('period_a')} 與 {payload.get('period_b')} 的{payload.get('metric_label')}資料。"
+                )
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 entity period-pair value 資料。"]))
+
+        if "get_entity_time_series" in effective_tools and target_value:
+            payload = self.toolbox.get_entity_time_series(
+                entity_dimension=target_dimension,
+                entity_value=str(target_value),
+                metric=canonical_metric,
+                recent_n=getattr(routing, "recent_n", None),
+                start_month=getattr(routing, "start_month", None),
+                end_month=getattr(routing, "end_month", None),
+                parent_filter=parent_filter,
+            )
+            if payload.get("rows"):
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 entity time series。"]))
+
+        if "get_overall_time_series" in effective_tools:
+            payload = self.toolbox.get_overall_time_series(
+                metric=canonical_metric,
+                recent_n=getattr(routing, "recent_n", None),
+                start_month=getattr(routing, "start_month", None),
+                end_month=getattr(routing, "end_month", None),
+            )
+            if payload.get("rows"):
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 overall time series。"]))
+
+        if "get_entity_trend_comparison" in effective_tools:
+            payload = self.toolbox.get_entity_trend_comparison(
+                entity_dimension=target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group",
+                metric=canonical_metric,
+                recent_n=getattr(routing, "recent_n", None),
+                start_month=getattr(routing, "start_month", None),
+                end_month=getattr(routing, "end_month", None),
+                parent_filter=parent_filter,
+            )
+            if payload.get("rows"):
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 entity trend comparison。"]))
+
+        if "get_revenue_inventory_relationship" in effective_tools:
+            payload = self.toolbox.get_revenue_inventory_relationship(
+                entity_dimension=target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group",
+                recent_n=getattr(routing, "recent_n", None),
+                month=time_scope.get("month"),
+                parent_filter=parent_filter,
+            )
+            if payload.get("rows"):
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的營收/庫存關係資料。"]))
+
+        if "get_entity_contribution_analysis" in effective_tools and getattr(routing, "period_a", None) and getattr(routing, "period_b", None):
+            payload = self.toolbox.get_entity_contribution_analysis(
+                entity_dimension=target_dimension if target_dimension in {"business_group", "product_line_5"} else "business_group",
+                metric=canonical_metric,
+                period_a=str(routing.period_a),
+                period_b=str(routing.period_b),
+                parent_filter=parent_filter,
+            )
+            if payload.get("rows"):
+                evidence.append(payload)
+            else:
+                warnings.extend(payload.get("limitations", ["目前沒有可用的 contribution analysis。"]))
 
         if "get_entity_metric_ranking" in effective_tools:
-            dimension = routing.object_dimension or "business_group"
+            dimension = target_dimension or "business_group"
             if dimension == "platform":
                 dimension = "business_group"
-            metric = self._ranking_metric_from_question(routing.question)
+            metric = canonical_metric if canonical_metric != "risk_score" else "risk_score"
+            if metric not in {
+                "revenue_amount",
+                "inventory_amount",
+                "inventory_qty",
+                "revenue_inventory_amount_ratio",
+                "health_score",
+                "risk_score",
+            }:
+                metric = self._ranking_metric_from_question(routing.question)
             sort_direction = self._ranking_sort_direction_from_question(routing.question, metric)
             ranking = self.toolbox.get_entity_metric_ranking(
                 entity_dimension=dimension,
@@ -713,7 +981,7 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 sort_direction=sort_direction,
             )
             if ranking.get("rows"):
-                label = ranking.get("entity_label", "新事業群")
+                label = ranking.get("entity_label", "事業群")
                 top_entity = ranking.get("top_entity") or "N/A"
                 metric_label = ranking.get("metric_label", "指標")
                 findings.append(
@@ -725,13 +993,13 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 warnings.extend(ranking.get("limitations", ["目前沒有 entity ranking 結果。"]))
 
         if "get_entity_performance_snapshot" in effective_tools:
-            dimension = routing.object_dimension or "business_group"
+            dimension = target_dimension or "business_group"
             if dimension == "platform":
                 dimension = "business_group"
             snapshot = self.toolbox.get_entity_performance_snapshot(
                 entity_dimension=dimension,
                 filters=routing.filters,
-                parent_filter=getattr(routing, "parent_filter", None) or None,
+                parent_filter=parent_filter,
             )
             if snapshot.get("rows"):
                 summary = snapshot.get("summary", {})
@@ -740,7 +1008,16 @@ class FinancialMetricsAgent(BaseDomainAgent):
                     f"{label} performance scorecard 顯示，目前綜合表現較佳的是 "
                     f"{summary.get('best_entity', 'N/A')}，需優先注意的是 {summary.get('weakest_entity', 'N/A')}。"
                 )
-                evidence.append(snapshot)
+                if routing.task_family == "parent_child_drilldown":
+                    evidence.append(
+                        {
+                            **snapshot,
+                            "evidence_type": "parent_child_drilldown",
+                            "source_tool": "get_entity_performance_snapshot",
+                        }
+                    )
+                else:
+                    evidence.append(snapshot)
             else:
                 warnings.extend(snapshot.get("limitations", ["目前沒有 entity performance scorecard 結果。"]))
 
@@ -761,12 +1038,12 @@ class FinancialMetricsAgent(BaseDomainAgent):
             if snapshot.get("rows"):
                 summary = snapshot.get("summary", {})
                 findings.append(
-                    "新事業群 performance scorecard 顯示，目前綜合表現較佳的是 "
-                    f"{summary.get('best_platform', 'N/A')}，需優先注意的新事業群為 {summary.get('weakest_platform', 'N/A')}。"
+                    "事業群 performance scorecard 顯示，目前綜合表現較佳的是 "
+                    f"{summary.get('best_platform', 'N/A')}，需優先注意的事業群為 {summary.get('weakest_platform', 'N/A')}。"
                 )
                 evidence.append(snapshot)
             else:
-                warnings.extend(snapshot.get("limitations", ["目前沒有新事業群 performance scorecard 結果。"]))
+                warnings.extend(snapshot.get("limitations", ["目前沒有事業群 performance scorecard 結果。"]))
 
         if "get_platform_ratios" in effective_tools:
             if ratio_available:
@@ -774,8 +1051,8 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 if ratio_records:
                     weakest = ratio_records[0]
                     findings.append(
-                        "在目前可對齊的新事業群資料中，營收相對庫存表現最弱的組合為 "
-                        f"{weakest.get('month')} / 新事業群 {weakest.get('business_group') or weakest.get('platform') or weakest.get('group_code')}。"
+                        "在目前可對齊的事業群資料中，營收相對庫存表現最弱的組合為 "
+                        f"{weakest.get('month')} / 事業群 {weakest.get('business_group') or weakest.get('platform') or weakest.get('group_code')}。"
                     )
                     findings.append(
                         f"營收/庫存金額比值 {format_number(weakest.get('revenue_inventory_amount_ratio'))}，"
@@ -785,12 +1062,12 @@ class FinancialMetricsAgent(BaseDomainAgent):
                         second = ratio_records[1]
                         findings.append(
                             "次弱組合為 "
-                            f"{second.get('month')} / 新事業群 {second.get('business_group') or second.get('platform') or second.get('group_code')}，"
+                            f"{second.get('month')} / 事業群 {second.get('business_group') or second.get('platform') or second.get('group_code')}，"
                             f"營收/庫存金額比值 {format_number(second.get('revenue_inventory_amount_ratio'))}。"
                         )
                     evidence.extend(ratio_records[:3])
                 else:
-                    warnings.append("目前沒有符合條件的新事業群比值結果。")
+                    warnings.append("目前沒有符合條件的事業群比值結果。")
 
         if "get_anomalies" in effective_tools:
             anomaly_records = self.toolbox.get_anomalies(filters=routing.filters)
@@ -798,7 +1075,7 @@ class FinancialMetricsAgent(BaseDomainAgent):
                 first = anomaly_records[0]
                 findings.append(
                     f"目前偵測到 {len(anomaly_records)} 筆異常訊號；最需要注意的是 "
-                    f"{first.get(COL_MONTH, 'N/A')} / 新事業群 {first.get(COL_GROUP_CODE, first.get(COL_PLATFORM, 'N/A'))}。"
+                    f"{first.get(COL_MONTH, 'N/A')} / 事業群 {first.get(COL_GROUP_CODE, first.get(COL_PLATFORM, 'N/A'))}。"
                 )
                 findings.append(
                     f"異常類型為 {first.get(COL_ANOMALY_TYPE, '欄位不足')}，"
@@ -835,7 +1112,7 @@ class FinancialMetricsAgent(BaseDomainAgent):
             if proxy_rows:
                 weakest = proxy_rows[0]
                 findings.append(
-                    f"庫存效率 proxy 偏弱的是 {weakest['month']} / {weakest.get('entity_label', '新事業群')} {weakest.get('entity_value') or weakest.get('platform')}，"
+                    f"庫存效率 proxy 偏弱的是 {weakest['month']} / {weakest.get('entity_label', '事業群')} {weakest.get('entity_value') or weakest.get('platform')}，"
                     f"營收/庫存金額 ratio 為 {format_number(weakest['revenue_inventory_amount_ratio'])}。"
                 )
                 evidence.extend(proxy_rows[:2])
@@ -914,8 +1191,26 @@ class ChartAgent(BaseDomainAgent):
         evidence: list[dict[str, Any]] = []
         effective_tools = list(dict.fromkeys(selected_tools))
         request = self._interpret_chart_request(routing.question)
-        chart_key = request["chart_key"]
+        chart_key = self._resolve_chart_key(request["chart_key"], routing)
         chart_type_override = request["chart_type"]
+
+        temporal_payload = self._build_temporal_entity_chart_payload(routing, chart_type_override)
+        if temporal_payload:
+            findings.append(f"已整理圖表：{temporal_payload.get('title')}")
+            findings.append(
+                f"圖型為 {temporal_payload.get('chart_type')}，包含 {len(temporal_payload.get('series', []))} 組資料序列。"
+            )
+            evidence.append(temporal_payload)
+            return DomainResult(
+                domain="chart",
+                status="success",
+                task="圖表規劃、動態繪圖與表格整理",
+                key_findings=findings,
+                evidence=evidence,
+                warnings=warnings,
+                confidence="high",
+                used_tools=list(dict.fromkeys([*effective_tools, temporal_payload.get("source_tool", "get_chart_payload")])),
+            )
 
         if "get_chart_payload" not in effective_tools:
             effective_tools.append("get_chart_payload")
@@ -980,6 +1275,151 @@ class ChartAgent(BaseDomainAgent):
             used_tools=effective_tools,
         )
 
+    def _build_temporal_entity_chart_payload(self, routing: RoutingDecision, chart_type_override: str | None = None) -> dict[str, Any] | None:
+        time_scope = getattr(routing, "time_scope", {}) or {}
+        target = getattr(routing, "target_entity", {}) or {}
+        dimension = target.get("dimension")
+        metric = getattr(routing, "metric", None) or "revenue_amount"
+        parent_filter = getattr(routing, "parent_filter", None) or None
+        if dimension not in {"business_group", "product_line_5"}:
+            return None
+        metric_label = {
+            "revenue_amount": "營收",
+            "inventory_amount": "庫存金額",
+            "inventory_qty": "庫存數量",
+        }.get(metric, metric)
+        entity_label = "事業群" if dimension == "business_group" else "產品線"
+        requested = chart_type_override or ("line" if "趨勢" in routing.question or "折線" in routing.question else "bar")
+        if time_scope.get("mode") == "period_pair" and target.get("scope") in {"all", "children"}:
+            table = self.toolbox.get_entity_period_pair_table(
+                entity_dimension=dimension,
+                metric=metric,
+                period_a=str(time_scope.get("period_a") or ""),
+                period_b=str(time_scope.get("period_b") or ""),
+                parent_filter=parent_filter,
+            )
+            rows = (table.get("rows") or [])[:12]
+            if not rows:
+                return None
+            labels = [str(row.get("entity_value")) for row in rows]
+            chart_type = "grouped_bar" if requested in {None, "bar", "chart"} else requested
+            return {
+                "evidence_type": "chart_payload",
+                "source_tool": "get_entity_period_pair_table",
+                "chart_key": "entity_period_pair_table_chart",
+                "chart_type": chart_type,
+                "title": f"{table.get('period_a')} 與 {table.get('period_b')} 各{entity_label}{metric_label}比較圖",
+                "x_label": entity_label,
+                "y_label": metric_label,
+                "labels": labels,
+                "series": [
+                    {"name": str(table.get("period_a")), "data": [row.get("value_a") for row in rows]},
+                    {"name": str(table.get("period_b")), "data": [row.get("value_b") for row in rows]},
+                ],
+                "filters": {"month": None, "platform": None, "group_code": None, "parent_filter": parent_filter or {}},
+                "table_preview": rows,
+                "limitations": table.get("limitations", []),
+            }
+        if time_scope.get("mode") in {"date_range", "multi_month_series"} and time_scope.get("start_month") and time_scope.get("end_month"):
+            if target.get("value"):
+                series = self.toolbox.get_entity_time_series(
+                    entity_dimension=dimension,
+                    entity_value=str(target.get("value")),
+                    metric=metric,
+                    start_month=str(time_scope.get("start_month")),
+                    end_month=str(time_scope.get("end_month")),
+                    parent_filter=parent_filter,
+                )
+                rows = series.get("rows") or []
+                if not rows:
+                    return None
+                return {
+                    "evidence_type": "chart_payload",
+                    "source_tool": "get_entity_time_series",
+                    "chart_key": "entity_time_series_line",
+                    "chart_type": "line",
+                    "title": f"{target.get('value')} {time_scope.get('start_month')} 至 {time_scope.get('end_month')} {metric_label}折線圖",
+                    "x_label": "月份",
+                    "y_label": metric_label,
+                    "labels": [row.get("month") for row in rows],
+                    "series": [{"name": str(target.get("value")), "data": [row.get("value") for row in rows]}],
+                    "filters": {"month": None, "platform": target.get("value"), "group_code": None, "parent_filter": parent_filter or {}},
+                    "table_preview": rows,
+                    "limitations": series.get("limitations", []),
+                }
+            table = self.toolbox.get_entity_multi_month_table(
+                entity_dimension=dimension,
+                metric=metric,
+                start_month=str(time_scope.get("start_month")),
+                end_month=str(time_scope.get("end_month")),
+                parent_filter=parent_filter,
+            )
+            rows = table.get("rows") or []
+            if not rows:
+                return None
+            months = sorted({str(row.get("month")) for row in rows})
+            entities = sorted({str(row.get("entity_value")) for row in rows})[:8]
+            value_map = {(str(row.get("entity_value")), str(row.get("month"))): row.get("value") for row in rows}
+            return {
+                "evidence_type": "chart_payload",
+                "source_tool": "get_entity_multi_month_table",
+                "chart_key": "entity_multi_month_table_line",
+                "chart_type": "line",
+                "title": f"{time_scope.get('start_month')} 至 {time_scope.get('end_month')} 各{entity_label}{metric_label}趨勢圖",
+                "x_label": "月份",
+                "y_label": metric_label,
+                "labels": months,
+                "series": [{"name": entity, "data": [value_map.get((entity, month)) for month in months]} for entity in entities],
+                "filters": {"month": None, "platform": None, "group_code": None, "parent_filter": parent_filter or {}},
+                "table_preview": rows[:12],
+                "limitations": table.get("limitations", []),
+            }
+        if time_scope.get("mode") == "single_month" and parent_filter and target.get("scope") in {"all", "children"}:
+            table = self.toolbox.get_entity_month_table(
+                entity_dimension=dimension,
+                metric=metric,
+                month=str(time_scope.get("month") or time_scope.get("single_month") or ""),
+                parent_filter=parent_filter,
+            )
+            rows = (table.get("rows") or [])[:12]
+            if not rows:
+                return None
+            return {
+                "evidence_type": "chart_payload",
+                "source_tool": "get_entity_month_table",
+                "chart_key": "entity_month_table_bar",
+                "chart_type": "bar" if requested in {None, "chart"} else requested,
+                "title": f"{table.get('month')} {parent_filter.get('business_group')} 底下各{entity_label}{metric_label}長條圖",
+                "x_label": entity_label,
+                "y_label": metric_label,
+                "labels": [str(row.get("entity_value")) for row in rows],
+                "series": [{"name": metric_label, "data": [row.get("value") for row in rows]}],
+                "filters": {"month": table.get("month"), "platform": None, "group_code": None, "parent_filter": parent_filter or {}},
+                "table_preview": rows,
+                "limitations": table.get("limitations", []),
+            }
+        return None
+
+    @classmethod
+    def _resolve_chart_key(cls, chart_key: str, routing: RoutingDecision) -> str:
+        question = routing.question
+        lowered = question.lower()
+        target_entity = getattr(routing, "target_entity", {}) or {}
+        if target_entity.get("dimension") == "business_group" and target_entity.get("value"):
+            if any(token in question for token in ["各月", "每月", "趨勢"]) or any(token in lowered for token in ["trend", "monthly"]):
+                if any(token in question for token in ["庫存數量", "QTY"]) or "qty" in lowered:
+                    return "platform_monthly_inventory_qty"
+                if any(token in question for token in ["庫存", "存貨"]) or "inventory" in lowered:
+                    return "platform_monthly_inventory_amount"
+                return "entity_time_series_line"
+        if (
+            any(token in question for token in ["關係圖", "關係", "背離"])
+            and any(token in question for token in ["營收", "銷售"])
+            and any(token in question for token in ["庫存", "存貨"])
+        ):
+            return "business_group_revenue_inventory_ratio_bar"
+        return chart_key
+
     @staticmethod
     def _ranking_metric_from_question(question: str) -> str:
         lowered = question.lower()
@@ -1008,17 +1448,18 @@ class ChartAgent(BaseDomainAgent):
     @classmethod
     def _select_chart_key(cls, question: str) -> str:
         lowered = question.lower()
+        requested_type = cls._requested_chart_type(question)
         has_platform = cls._chart_key_has_any(question, ["平台", "平臺", "GG-"]) or "platform" in lowered
-        has_group = cls._chart_key_has_any(question, ["事業群", "群組"]) or "group" in lowered
-        has_product_line = cls._chart_key_has_any(question, ["五大產品線", "產品線"]) or "product line" in lowered
+        has_group = cls._chart_key_has_any(question, ["事業群", "群組", "BU"]) or any(token in lowered for token in ["group", "business unit", "bu"])
+        has_product_line = cls._chart_key_has_any(question, ["產品線", "產品線"]) or "product line" in lowered
         has_business_group = has_group or has_platform
         asks_current_month = cls._chart_key_has_any(question, ["本月", "最新月份", "最新月", "當月"]) or any(
             token in lowered for token in ["current month", "latest month"]
         )
 
         if has_product_line:
-            if cls._chart_key_has_any(question, ["health_score", "健康分數", "表現", "排名", "排行"]) or any(
-                token in lowered for token in ["health_score", "health score", "ranking", "rank"]
+            if cls._chart_key_has_any(question, ["health_score", "健康分數", "表現"]) or any(
+                token in lowered for token in ["health_score", "health score"]
             ):
                 return "product_line_health_score_bar"
             if cls._chart_key_has_any(question, ["比值", "最低", "最弱", "較差", "最差", "表現差", "偏弱", "效率"]) or any(
@@ -1026,12 +1467,12 @@ class ChartAgent(BaseDomainAgent):
             ):
                 return "product_line_revenue_inventory_ratio_bar"
             if cls._chart_key_has_any(question, ["庫存", "存貨", "金額"]) or "inventory" in lowered:
-                return "product_line_inventory_bar"
-            return "product_line_revenue_bar"
+                return "product_line_inventory_pie" if requested_type == "pie" else "product_line_inventory_bar"
+            return "product_line_revenue_pie" if requested_type == "pie" else "product_line_revenue_bar"
 
         if has_business_group:
-            if cls._chart_key_has_any(question, ["health_score", "健康分數", "表現", "排名", "排行"]) or any(
-                token in lowered for token in ["health_score", "health score", "ranking", "rank"]
+            if cls._chart_key_has_any(question, ["health_score", "健康分數", "表現"]) or any(
+                token in lowered for token in ["health_score", "health score"]
             ):
                 return "business_group_health_score_bar"
             if cls._chart_key_has_any(question, ["比值", "最低", "最弱", "較差", "最差", "表現差", "偏弱", "效率"]) or any(
@@ -1039,9 +1480,9 @@ class ChartAgent(BaseDomainAgent):
             ):
                 return "business_group_revenue_inventory_ratio_bar"
             if cls._chart_key_has_any(question, ["庫存", "存貨", "金額"]) or "inventory" in lowered:
-                return "business_group_inventory_bar"
+                return "business_group_inventory_pie" if requested_type == "pie" else "business_group_inventory_bar"
             if cls._chart_key_has_any(question, ["營收", "銷售"]) or any(token in lowered for token in ["revenue", "sales"]):
-                return "business_group_revenue_bar"
+                return "business_group_revenue_pie" if requested_type == "pie" else "business_group_revenue_bar"
 
         if cls._chart_key_has_any(question, ["異常", "風險", "警訊"]) or any(
             token in lowered for token in ["anomaly", "risk", "warning"]
@@ -1082,7 +1523,7 @@ class ChartAgent(BaseDomainAgent):
             return "monthly_inventory_qty_trend"
         if cls._chart_key_has_any(question, ["庫存", "存貨", "金額"]) or "inventory" in lowered:
             return "monthly_inventory_amount_trend"
-        return "monthly_revenue_trend"
+        return "overall_revenue_trend_line"
 
     @staticmethod
     def _requested_chart_type(question: str) -> str | None:
@@ -1093,7 +1534,7 @@ class ChartAgent(BaseDomainAgent):
             return "area"
         if any(token in question for token in ["長條圖", "柱狀圖", "條圖"]) or "bar" in lowered:
             return "bar"
-        if any(token in question for token in ["折線圖", "線圖"]) or "line" in lowered:
+        if any(token in question for token in ["折線圖", "線圖", "趨勢"]) or "line" in lowered:
             return "line"
         return None
 
@@ -1161,6 +1602,7 @@ class MultiAgentAssistant:
         request_id: str,
         use_llm_planner: bool | None = None,
         use_llm_rewriter: bool | None = None,
+        use_llm_writer: bool | None = None,
     ) -> None:
         self.context = context
         self.request_id = request_id
@@ -1178,8 +1620,15 @@ class MultiAgentAssistant:
             if use_llm_rewriter is not None
             else os.getenv("USE_LLM_REWRITER", "false").strip().lower() == "true"
         )
+        self.use_llm_writer = (
+            use_llm_writer
+            if use_llm_writer is not None
+            else os.getenv("USE_LLM_WRITER", "false").strip().lower() == "true"
+        )
         self.llm_planner = LLMToolPlanner(request_id)
         self.llm_rewriter = LLMAnswerRewriter(request_id)
+        self.llm_evidence_writer = LLMEvidenceWriter(request_id)
+        self.writer_validator = WriterValidator()
         self.agents = {
             "sales": SalesAgent(self.toolbox, self.llm_client, request_id),
             "inventory": InventoryAgent(self.toolbox, self.llm_client, request_id),
@@ -1232,10 +1681,10 @@ class MultiAgentAssistant:
             "existing_capabilities": [
                 "Excel data loading and column validation",
                 "Date / numeric normalization",
-                "Real-data entity parsing for 新事業群 / 五大產品線 / HQBU",
+                "Real-data entity parsing for 事業群 / 產品線 / HQBU",
                 "Monthly trend aggregation",
                 "Group ranking aggregation",
-                "Revenue-inventory proxy ratio analysis when 新事業群 / 五大產品線 grain is aligned",
+                "Revenue-inventory proxy ratio analysis when 事業群 / 產品線 grain is aligned",
                 "Anomaly detection",
                 "Correlation analysis",
                 "Chart payload generation for frontend rendering",
@@ -1366,11 +1815,11 @@ class MultiAgentAssistant:
 
         if revenue_extremes:
             parts.append(
-                f"本月營收最高新事業群為 {revenue_extremes.get('max_platform')}（{format_number(revenue_extremes.get('max_value'))}），最低為 {revenue_extremes.get('min_platform')}（{format_number(revenue_extremes.get('min_value'))}）。"
+                f"本月營收最高事業群為 {revenue_extremes.get('max_platform')}（{format_number(revenue_extremes.get('max_value'))}），最低為 {revenue_extremes.get('min_platform')}（{format_number(revenue_extremes.get('min_value'))}）。"
             )
         if inventory_extremes:
             parts.append(
-                f"本月庫存金額最高新事業群為 {inventory_extremes.get('max_platform')}（{format_number(inventory_extremes.get('max_value'))}），最低為 {inventory_extremes.get('min_platform')}（{format_number(inventory_extremes.get('min_value'))}）。"
+                f"本月庫存金額最高事業群為 {inventory_extremes.get('max_platform')}（{format_number(inventory_extremes.get('max_value'))}），最低為 {inventory_extremes.get('min_platform')}（{format_number(inventory_extremes.get('min_value'))}）。"
             )
         if anomalies:
             anomaly = anomalies[0]
@@ -1387,6 +1836,8 @@ class MultiAgentAssistant:
                 "latest_month": None,
                 "revenue_extremes": {"max": None, "min": None},
                 "inventory_extremes": {"max": None, "min": None},
+                "product_line_revenue_extremes": {"max": None, "min": None},
+                "product_line_inventory_extremes": {"max": None, "min": None},
                 "anomalies": [],
                 "anomaly_count": 0,
             }
@@ -1404,6 +1855,12 @@ class MultiAgentAssistant:
             "latest_month": latest_month,
             "revenue_extremes": self._build_platform_extremes_v2(platform_month, COL_REVENUE),
             "inventory_extremes": self._build_platform_extremes_v2(platform_month, COL_INV_AMOUNT),
+            "product_line_revenue_extremes": self._build_entity_extremes_v2(
+                platform_month, "product_line_5", COL_REVENUE, "product_line_5"
+            ),
+            "product_line_inventory_extremes": self._build_entity_extremes_v2(
+                platform_month, "product_line_5", COL_INV_AMOUNT, "product_line_5"
+            ),
             "anomalies": [
                 {
                     "month": item.get(COL_MONTH),
@@ -1420,27 +1877,37 @@ class MultiAgentAssistant:
 
     @staticmethod
     def _build_platform_extremes_v2(df: pd.DataFrame, value_column: str) -> dict[str, Any]:
-        if df.empty or value_column not in df.columns or COL_PLATFORM not in df.columns:
+        return MultiAgentAssistant._build_entity_extremes_v2(df, COL_PLATFORM, value_column, "platform")
+
+    @staticmethod
+    def _build_entity_extremes_v2(
+        df: pd.DataFrame, label_column: str, value_column: str, output_key: str
+    ) -> dict[str, Any]:
+        if df.empty or value_column not in df.columns or label_column not in df.columns:
             return {"max": None, "min": None}
 
         grouped = (
-            df.groupby(COL_PLATFORM, as_index=False)[value_column]
+            df.groupby(label_column, as_index=False)[value_column]
             .sum(min_count=1)
-            .sort_values(value_column, ascending=False)
             .reset_index(drop=True)
         )
+        grouped = grouped[
+            grouped[value_column].notna()
+            & ~grouped[label_column].map(is_unmapped_entity)
+        ]
         if grouped.empty:
             return {"max": None, "min": None}
 
+        grouped = grouped.sort_values(value_column, ascending=False).reset_index(drop=True)
         max_row = grouped.iloc[0]
         min_row = grouped.iloc[-1]
         return {
             "max": {
-                "platform": max_row.get(COL_PLATFORM),
+                output_key: max_row.get(label_column),
                 "value": MultiAgentAssistant._coerce_number(max_row.get(value_column)),
             },
             "min": {
-                "platform": min_row.get(COL_PLATFORM),
+                output_key: min_row.get(label_column),
                 "value": MultiAgentAssistant._coerce_number(min_row.get(value_column)),
             },
         }
@@ -1469,12 +1936,12 @@ class MultiAgentAssistant:
 
         if revenue_max and revenue_min:
             parts.append(
-                f"新事業群營收以 {revenue_max.get('platform')} 最高，為 {format_number(revenue_max.get('value'))}；"
+                f"事業群營收以 {revenue_max.get('platform')} 最高，為 {format_number(revenue_max.get('value'))}；"
                 f"{revenue_min.get('platform')} 最低，為 {format_number(revenue_min.get('value'))}。"
             )
         if inventory_max and inventory_min:
             parts.append(
-                f"新事業群庫存以 {inventory_max.get('platform')} 最高，為 {format_number(inventory_max.get('value'))}；"
+                f"事業群庫存以 {inventory_max.get('platform')} 最高，為 {format_number(inventory_max.get('value'))}；"
                 f"{inventory_min.get('platform')} 最低，為 {format_number(inventory_min.get('value'))}。"
             )
 
@@ -1482,7 +1949,7 @@ class MultiAgentAssistant:
         if anomalies:
             lead = anomalies[0]
             parts.append(
-                f"目前最需要關注的異常出現在 {lead.get('platform') or '未標示新事業群'}，"
+                f"目前最需要關注的異常出現在 {lead.get('platform') or '未標示事業群'}，"
                 f"原因為 {lead.get('reason') or lead.get('type') or '未提供'}，"
                 f"訊號值為 {format_number(lead.get('signal'))}。"
             )
@@ -1546,10 +2013,15 @@ class MultiAgentAssistant:
     # -------------------------------------------------------------------------
     def answer(self, question: str) -> dict[str, Any]:
         self.logger.info("Received question: %s", question)
+        direct_listing_response = self._maybe_answer_year_entity_listing(question)
+        if direct_listing_response is not None:
+            return direct_listing_response
         routing = self._run_question_understanding(question)
         task_profile = build_task_profile(question, routing)
+        canonical_task_profile = CanonicalTaskProfile.from_task_profile(task_profile, routing)
         answer_plan = build_answer_plan(task_profile, routing)
-        self._apply_phase8a_answer_plan_hints(routing, task_profile)
+        self._apply_phase8a_answer_plan_hints(routing, task_profile, answer_plan)
+        routing = self._maybe_apply_llm_planner(question, routing, task_profile, answer_plan, canonical_task_profile)
         self.logger.info(
             "phase8a.plan task_family=%s answer_style=%s primary_tools=%s",
             task_profile.task_family,
@@ -1590,6 +2062,7 @@ class MultiAgentAssistant:
             )
 
         domain_results = self._execute_domain_agents(question, routing)
+        evidence_contracts = self._log_evidence_contracts(domain_results, canonical_task_profile)
         self.logger.info("answer_generation.start path=standard")
         contract = build_answer_contract(
             request_id=self.request_id,
@@ -1599,6 +2072,13 @@ class MultiAgentAssistant:
             toolbox=self.toolbox,
             task_profile=task_profile,
             answer_plan=answer_plan,
+        )
+        self._maybe_run_llm_writer_shadow(
+            question=question,
+            canonical_task_profile=canonical_task_profile,
+            evidence_contracts=evidence_contracts,
+            contract=contract,
+            task_profile=task_profile,
         )
         contract = self._maybe_rewrite_answer_contract(question, contract)
         self.logger.info(
@@ -1621,16 +2101,6 @@ class MultiAgentAssistant:
     def _run_question_understanding(self, question: str) -> RoutingDecision:
         self.logger.info("question_understanding.start question=%s", question)
         routing = self._plan_and_route(question)
-        if self.use_llm_planner:
-            planning = self._try_llm_tool_plan(question)
-            if planning.ok and planning.plan is not None:
-                routing = self._merge_llm_tool_plan(question, routing, planning.plan)
-            else:
-                self.logger.info(
-                    "llm_planner.fallback reason=%s error=%s",
-                    planning.fallback_reason,
-                    planning.error,
-                )
         self._apply_implicit_latest_month_filter(routing)
         self.logger.info(
             "question_understanding.done question_type=%s domains=%s intents=%s filters=%s subtasks=%s",
@@ -1642,47 +2112,126 @@ class MultiAgentAssistant:
         )
         return routing
 
-    def _try_llm_tool_plan(self, question: str) -> LLMPlanningResult:
+    def _maybe_apply_llm_planner(
+        self,
+        question: str,
+        routing: RoutingDecision,
+        task_profile: TaskProfile,
+        answer_plan: AnswerPlan,
+        canonical_task_profile: CanonicalTaskProfile,
+    ) -> RoutingDecision:
+        deterministic_tool_count = len(list(answer_plan.primary_tools or []) + list(answer_plan.supporting_tools or []))
+        if not self.use_llm_planner:
+            self.logger.info(
+                "llm_planner.trace canonical_task_family=%s planner_called=false planner_valid=false planner_fallback_reason=disabled planner_tool_count=0 deterministic_tool_count=%s",
+                canonical_task_profile.task_family,
+                deterministic_tool_count,
+            )
+            return routing
+
+        allowed_tools = build_allowed_tool_names_for_task_family(canonical_task_profile.task_family)
+        planning = self._try_llm_tool_plan(
+            question,
+            allowed_tool_names=allowed_tools,
+            canonical_task_family=canonical_task_profile.task_family,
+            canonical_task_profile=canonical_task_profile,
+            deterministic_answer_plan=answer_plan,
+        )
+        planner_tool_count = len(planning.plan.tools) if planning.ok and planning.plan is not None else 0
+        validation = {"valid": False, "reason": planning.fallback_reason or planning.error or "planner_unavailable", "violations": []}
+        if planning.ok and planning.plan is not None:
+            validation = PlanValidator().validate(
+                canonical_task_profile,
+                planning.plan,
+                deterministic_answer_plan=answer_plan,
+            )
+            if validation["valid"]:
+                self.logger.info(
+                    "llm_planner.trace canonical_task_family=%s planner_called=true planner_valid=true planner_fallback_reason=none planner_tool_count=%s deterministic_tool_count=%s",
+                    canonical_task_profile.task_family,
+                    planner_tool_count,
+                    deterministic_tool_count,
+                )
+                return self._merge_llm_tool_plan(question, routing, planning.plan)
+            self.logger.info("llm_planner.reject reason=%s violations=%s", validation["reason"], validation.get("violations"))
+
+        fallback_reason = str(validation.get("reason") or planning.fallback_reason or planning.error or "llm_planner_invalid_output")
+        self.logger.info(
+            "llm_planner.trace canonical_task_family=%s planner_called=true planner_valid=false planner_fallback_reason=%s planner_tool_count=%s deterministic_tool_count=%s",
+            canonical_task_profile.task_family,
+            fallback_reason,
+            planner_tool_count,
+            deterministic_tool_count,
+        )
+        self.logger.info(
+            "llm_planner.fallback reason=%s error=%s",
+            fallback_reason,
+            planning.error,
+        )
+        return routing
+
+    def _try_llm_tool_plan(
+        self,
+        question: str,
+        *,
+        allowed_tool_names: list[str] | None = None,
+        canonical_task_family: str | None = None,
+        canonical_task_profile: CanonicalTaskProfile | None = None,
+        deterministic_answer_plan: AnswerPlan | None = None,
+    ) -> LLMPlanningResult:
         self.logger.info("llm_planner.start question=%s", question)
-        return self.llm_planner.plan_question(question, self.llm_client)
+        return self.llm_planner.plan_question(
+            question,
+            self.llm_client,
+            allowed_tool_names=allowed_tool_names,
+            canonical_task_family=canonical_task_family,
+            canonical_task_profile=canonical_task_profile,
+            deterministic_answer_plan=deterministic_answer_plan,
+        )
 
     @staticmethod
-    def _apply_phase8a_answer_plan_hints(routing: RoutingDecision, task_profile: TaskProfile) -> None:
+    def _apply_phase8a_answer_plan_hints(
+        routing: RoutingDecision,
+        task_profile: TaskProfile,
+        answer_plan: AnswerPlan | None = None,
+    ) -> None:
         task_family = task_profile.task_family
-        planned_tools = list(getattr(routing, "planned_tools", []))
-        domains = list(getattr(routing, "domains", []))
+        answer_plan = answer_plan or AnswerPlan()
+        time_scope = getattr(task_profile, "time_scope", {}) or {}
+        target_entity = getattr(task_profile, "target_entity", {}) or {}
+        parent_entity = getattr(task_profile, "parent_entity", {}) or {}
+        planned_tools = list(answer_plan.primary_tools) + list(answer_plan.supporting_tools)
 
-        if task_family == "cross_section_compare":
-            domains.append("financial")
-            planned_tools.extend(["get_entity_cross_section_comparison", "get_entity_performance_snapshot", "get_anomalies"])
-        elif task_family in {"latest_month_platform_summary", "latest_month_entity_summary"}:
-            domains.append("financial")
-            planned_tools.extend(["get_entity_performance_snapshot", "get_inventory_turnover_proxy"])
-        elif task_family == "performance_assessment":
-            domains.append("financial")
-            planned_tools.extend(["get_entity_performance_snapshot", "get_inventory_turnover_proxy", "get_anomalies"])
-        elif task_family == "ranking":
-            domains.append("financial")
-            planned_tools.extend(["get_entity_metric_ranking"])
-        elif task_family == "period_pair_compare":
-            domains.append("sales")
-            planned_tools.extend(["get_entity_period_pair_comparison(revenue)"])
-            time_scope = getattr(task_profile, "time_scope", {}) or {}
-            setattr(routing, "period_a", time_scope.get("period_a"))
-            setattr(routing, "period_b", time_scope.get("period_b"))
-            setattr(routing, "period_pair", [time_scope.get("period_a"), time_scope.get("period_b")])
-        elif task_family == "time_compare":
-            domains.append("sales")
-            planned_tools.extend(["get_yoy_mom_breakdown(revenue)", "get_contribution_analysis(revenue)"])
-        elif task_family == "forecast_unsupported":
-            domains = []
+        if task_family == "forecast_unsupported":
+            domains: list[str] = []
             planned_tools = []
             routing.requires_limitations = True
+        elif task_family == "chart_request":
+            domains = ["chart"]
+            routing.answer_strategy = "chart"
+            routing.question_type = "chart"
+        else:
+            domains = ["financial"]
 
-        parent_entity = getattr(task_profile, "parent_entity", {}) or {}
         if parent_entity.get("dimension") == "business_group" and parent_entity.get("value"):
             routing.parent_filter = {"business_group": parent_entity["value"]}
+        if target_entity.get("dimension") == "business_group" and target_entity.get("value"):
+            routing.filters.platform = str(target_entity["value"])
+        single_month = time_scope.get("single_month") or time_scope.get("month")
+        if single_month and time_scope.get("mode") in {"single_month", "latest_month"}:
+            routing.filters.month = str(single_month)
 
+        routing.task_family = task_family
+        routing.target_entity = target_entity
+        routing.time_scope = time_scope
+        routing.metric = (getattr(task_profile, "metrics", []) or [None])[0]
+        routing.object_dimension = target_entity.get("dimension") if target_entity.get("dimension") not in {None, "overall"} else routing.object_dimension
+        routing.period_a = time_scope.get("period_a")
+        routing.period_b = time_scope.get("period_b")
+        routing.period_pair = [time_scope.get("period_a"), time_scope.get("period_b")] if time_scope.get("period_a") and time_scope.get("period_b") else None
+        routing.start_month = time_scope.get("start_month")
+        routing.end_month = time_scope.get("end_month")
+        routing.recent_n = time_scope.get("recent_n")
         routing.domains = list(dict.fromkeys(domain for domain in domains if domain))
         routing.planned_tools = list(dict.fromkeys(tool for tool in planned_tools if tool))
 
@@ -1692,32 +2241,26 @@ class MultiAgentAssistant:
         fallback_routing: RoutingDecision,
         plan: ToolPlan,
     ) -> RoutingDecision:
-        merged_answer_strategy = self._planner_answer_strategy(plan, fallback_routing)
-        merged_object_dimension = self.llm_planner._suggest_object_dimension(plan) or fallback_routing.object_dimension
-        merged_domains = plan.domains or fallback_routing.domains
-        merged_intents = [plan.question_type] if plan.question_type not in {"overview", "data_quality"} else fallback_routing.intents
-        merged_warnings = list(fallback_routing.warnings)
-        if plan.unsupported_reason:
-            merged_warnings.append(plan.unsupported_reason)
-        merged_subtasks = list(fallback_routing.subtasks) or ["使用 LLM 規劃的工具組合執行 deterministic analysis。"]
-        if not merged_subtasks:
-            merged_subtasks = ["使用 LLM 規劃的工具組合執行 deterministic analysis。"]
-
         merged = RoutingDecision(
             question=question,
-            question_type=plan.question_type if plan.question_type != "unsupported" else fallback_routing.question_type,
-            intents=merged_intents,
-            domains=merged_domains,
+            question_type=fallback_routing.question_type,
+            intents=list(fallback_routing.intents),
+            domains=list(fallback_routing.domains),
             filters=fallback_routing.filters,
-            object_dimension=merged_object_dimension,
-            subtasks=merged_subtasks,
-            warnings=list(dict.fromkeys(merged_warnings)),
+            object_dimension=fallback_routing.object_dimension,
+            subtasks=list(fallback_routing.subtasks) or ["使用 LLM 規劃的工具組合執行 deterministic analysis。"],
+            warnings=list(dict.fromkeys([*fallback_routing.warnings, *( [plan.unsupported_reason] if plan.unsupported_reason else [])])),
             business_question_type=fallback_routing.business_question_type,
-            kpi_lenses=fallback_routing.kpi_lenses,
-            answer_strategy=merged_answer_strategy,
+            kpi_lenses=list(fallback_routing.kpi_lenses),
+            answer_strategy=fallback_routing.answer_strategy,
             planned_tools=self.llm_planner.materialize_tools(plan),
             planning_source="llm_planner",
-            requires_limitations=plan.requires_limitations,
+            requires_limitations=fallback_routing.requires_limitations or plan.requires_limitations,
+            parent_filter=dict(getattr(fallback_routing, "parent_filter", {}) or {}),
+            target_entity=dict(getattr(fallback_routing, "target_entity", {}) or {}),
+            time_scope=dict(getattr(fallback_routing, "time_scope", {}) or {}),
+            metric=getattr(fallback_routing, "metric", None),
+            task_family=getattr(fallback_routing, "task_family", None),
         )
         self.logger.info(
             "llm_planner.done question_type=%s domains=%s tools=%s",
@@ -1790,14 +2333,14 @@ class MultiAgentAssistant:
                 "總覽回答只整理目前已載入資料與工具能力，未逐題展開分析。",
             ],
             "suggested_followups": [
-                "請指定月份、新事業群或五大產品線，進一步做營收或庫存分析。",
+                "請指定月份、事業群或產品線，進一步做營收或庫存分析。",
                 "請直接詢問風險、趨勢或圖表需求。",
             ],
             "display_blocks": {
                 "headline": "目前可先從桌面與手機版分析工作台查看最新月份摘要、圖表與風險訊號。",
                 "key_observations": [
                     "目前支援營收、庫存、財務 proxy、異常、資料品質與圖表分析。",
-                    "如需深入分析，請指定月份、新事業群或五大產品線。",
+                    "如需深入分析，請指定月份、事業群或產品線。",
                 ],
                 "table": None,
                 "limitations": [
@@ -1860,6 +2403,67 @@ class MultiAgentAssistant:
             "answer_strategy": routing.answer_strategy,
         }
 
+
+    def _log_evidence_contracts(
+        self,
+        domain_results: list[DomainResult],
+        canonical_task_profile: CanonicalTaskProfile,
+    ) -> list[Any]:
+        try:
+            contracts = EvidenceContractBuilder().build_evidence_contracts(domain_results, canonical_task_profile)
+        except Exception as exc:
+            self.logger.info("evidence_contracts.failed reason=%s", exc)
+            return []
+        evidence_types = [contract.evidence_type for contract in contracts]
+        unsupported = [contract.source_tool for contract in contracts if contract.evidence_type == "unsupported_tool_output"]
+        self.logger.info(
+            "evidence_contracts.built count=%s evidence_types=%s unsupported_tool_outputs=%s",
+            len(contracts),
+            evidence_types,
+            unsupported,
+        )
+        return contracts
+
+    def _maybe_run_llm_writer_shadow(
+        self,
+        *,
+        question: str,
+        canonical_task_profile: CanonicalTaskProfile,
+        evidence_contracts: list[Any],
+        contract: dict[str, Any],
+        task_profile: TaskProfile,
+    ) -> None:
+        if not self.use_llm_writer:
+            return
+        request = EvidenceWriteRequest(
+            original_question=question,
+            canonical_task_profile=canonical_task_profile.to_dict(),
+            evidence_contracts=evidence_contracts,
+            deterministic_display_blocks=contract.get("display_blocks") or {},
+            required_limitations=list(contract.get("limitations") or []),
+            answer_style=getattr(task_profile, "answer_style", "concise") or "concise",
+        )
+        write_result = self.llm_evidence_writer.write(request, self.llm_client)
+        if not write_result.ok:
+            self.logger.info(
+                "llm_writer.shadow writer_called=true writer_valid=false writer_fallback_reason=%s writer_violations=%s",
+                write_result.error or "llm_writer_unavailable",
+                [write_result.error] if write_result.error else [],
+            )
+            return
+        validation = self.writer_validator.validate(
+            canonical_task_profile,
+            evidence_contracts,
+            write_result.output,
+            deterministic_display_blocks=contract.get("display_blocks") or {},
+        )
+        self.logger.info(
+            "llm_writer.shadow writer_called=true writer_valid=%s writer_fallback_reason=%s writer_violations=%s",
+            validation["valid"],
+            "none" if validation["valid"] else validation["reason"],
+            validation.get("violations", []),
+        )
+
     def _build_response_payload(
         self,
         *,
@@ -1885,6 +2489,146 @@ class MultiAgentAssistant:
             response["project_summary"] = project_summary
         self.logger.info("response_assembly.done domain_results=%s", len(domain_results))
         return response
+
+    def _maybe_answer_year_entity_listing(self, question: str) -> dict[str, Any] | None:
+        year = self._extract_year_token(question)
+        lowered = question.lower()
+        if year is None:
+            return None
+        if not any(token in question for token in ["???", "????"]) and "business group" not in lowered and "group" not in lowered:
+            return None
+        if not any(token in question for token in ["??", "??", "??", "??"]) and "list" not in lowered and "show" not in lowered:
+            return None
+
+        routing = RoutingDecision(
+            question=question,
+            question_type="query",
+            intents=["data_listing"],
+            domains=[],
+            filters=QueryFilters(),
+            object_dimension="business_group",
+            subtasks=[f"?? {year} ???????????"],
+            warnings=[],
+            business_question_type="year_entity_listing",
+            kpi_lenses=["revenue_scale", "inventory_efficiency"],
+            answer_strategy="year_entity_listing",
+        )
+        contract = self._build_year_entity_listing_contract(year=year, routing=routing)
+        self.logger.info("answer_generation.done answer_type=%s", contract.get("answer_type"))
+        return self._build_response_payload(routing=routing, contract=contract, domain_results=[])
+
+    def _build_year_entity_listing_contract(self, *, year: str, routing: RoutingDecision) -> dict[str, Any]:
+        df = self.context.artifacts.platform_monthly_analysis.copy()
+        if df.empty or COL_MONTH not in df.columns:
+            answer = f"目前沒有可供列出的 {year} 年事業群資料。"
+            limitations = ["目前 platform_monthly_analysis 無可用資料，因此無法整理年度事業群清單。"]
+            return {
+                "request_id": self.request_id,
+                "answer_type": "year_entity_listing",
+                "answer": answer,
+                "evidence": [],
+                "tools_used": ["platform_monthly_analysis"],
+                "data_scope": {"year": year, "filters": asdict(routing.filters)},
+                "limitations": limitations,
+                "suggested_followups": [f"要不要改查 {year} 各事業群營收排行？"],
+                "display_blocks": {"headline": answer, "key_observations": [], "table": None, "limitations": limitations},
+            }
+
+        entity_column = "business_group" if "business_group" in df.columns else (COL_GROUP_CODE if COL_GROUP_CODE in df.columns else COL_PLATFORM)
+        working = df[df[COL_MONTH].astype(str).str.startswith(f"{year}-")].copy()
+        if entity_column in working.columns:
+            working[entity_column] = working[entity_column].fillna("未對應").astype(str).str.strip().replace({"": "未對應"})
+        if working.empty:
+            answer = f"目前資料中沒有 {year} 年的事業群資料。"
+            limitations = [f"現有月份範圍內找不到 {year} 年資料，因此無法整理該年度事業群清單。"]
+            return {
+                "request_id": self.request_id,
+                "answer_type": "year_entity_listing",
+                "answer": answer,
+                "evidence": [],
+                "tools_used": ["platform_monthly_analysis"],
+                "data_scope": {"year": year, "filters": asdict(routing.filters)},
+                "limitations": limitations,
+                "suggested_followups": ["要不要改查目前資料實際涵蓋的年份與月份？"],
+                "display_blocks": {"headline": answer, "key_observations": [], "table": None, "limitations": limitations},
+            }
+
+        months = sorted(working[COL_MONTH].dropna().astype(str).unique().tolist())
+        agg_spec: dict[str, str] = {COL_MONTH: "nunique"}
+        for column in [COL_REVENUE, COL_INV_AMOUNT, COL_INV_QTY]:
+            if column in working.columns:
+                agg_spec[column] = "sum"
+        grouped = working.groupby(entity_column, dropna=False).agg(agg_spec).reset_index().rename(columns={COL_MONTH: "months_covered"})
+        sort_column = COL_REVENUE if COL_REVENUE in grouped.columns else (COL_INV_AMOUNT if COL_INV_AMOUNT in grouped.columns else "months_covered")
+        grouped = grouped.sort_values(sort_column, ascending=False).reset_index(drop=True)
+
+        rows: list[dict[str, Any]] = []
+        for _, row in grouped.iterrows():
+            rows.append({
+                "business_group": str(row.get(entity_column) or "未對應"),
+                "months_covered": int(row.get("months_covered") or 0),
+                "revenue": float(row.get(COL_REVENUE) or 0) if COL_REVENUE in grouped.columns else None,
+                "inventory_amount": float(row.get(COL_INV_AMOUNT) or 0) if COL_INV_AMOUNT in grouped.columns else None,
+                "inventory_qty": float(row.get(COL_INV_QTY) or 0) if COL_INV_QTY in grouped.columns else None,
+            })
+
+        lines = [
+            f"已整理 {year} 年事業群資料，共 {len(rows)} 個事業群，月份涵蓋 {months[0]} 到 {months[-1]}。",
+            "",
+        ]
+        for index, row in enumerate(rows[:12], start=1):
+            revenue_text = format_number(row["revenue"]) if row["revenue"] is not None else "N/A"
+            inventory_amount_text = format_number(row["inventory_amount"]) if row["inventory_amount"] is not None else "N/A"
+            inventory_qty_text = format_number(row["inventory_qty"], decimals=0) if row["inventory_qty"] is not None else "N/A"
+            lines.append(
+                f"{index}. {row['business_group']}：營收 {revenue_text}，庫存金額 {inventory_amount_text}，庫存 QTY {inventory_qty_text}，涵蓋月份數 {row['months_covered']}。"
+            )
+        answer = "\n".join(lines)
+
+        top_revenue = max(rows, key=lambda item: item.get("revenue") or float('-inf')) if rows and any(item.get("revenue") is not None for item in rows) else None
+        top_inventory = max(rows, key=lambda item: item.get("inventory_amount") or float('-inf')) if rows and any(item.get("inventory_amount") is not None for item in rows) else None
+        limitations = [
+            "這裡是按月份彙總後的事業群清單，屬於管理分析視角，不是逐筆交易明細。",
+            "目前問題中的 2025 會被解讀為年度範圍篩選；若要比較單月，建議直接指定 2025-01 這類月份。",
+        ]
+        key_observations = [f"{year} 年共涵蓋 {len(months)} 個月份、{len(rows)} 個事業群。"]
+        if top_revenue is not None:
+            key_observations.append(f"全年累積營收最高的是 {top_revenue['business_group']}，營收 {format_number(top_revenue['revenue'])}。")
+        if top_inventory is not None:
+            key_observations.append(f"全年累積庫存金額最高的是 {top_inventory['business_group']}，庫存金額 {format_number(top_inventory['inventory_amount'])}。")
+
+        evidence = [{"summary": f"year={year} months={len(months)} business_groups={len(rows)}", "details": {"months": months, "rows": rows[:12]}}]
+        return {
+            "request_id": self.request_id,
+            "answer_type": "year_entity_listing",
+            "answer": answer,
+            "evidence": evidence,
+            "tools_used": ["platform_monthly_analysis"],
+            "data_scope": {
+                "year": year,
+                "filters": asdict(routing.filters),
+                "available_months": months,
+                "latest_month": months[-1] if months else None,
+                "business_group_count": len(rows),
+            },
+            "limitations": limitations,
+            "suggested_followups": [
+                f"要不要改看 {year} 各事業群營收排行？",
+                f"要不要比較 {year} 與 {int(year)+1} 的事業群變化？",
+                f"要不要只列出 {year} 庫存金額最高的前五個事業群？",
+            ],
+            "display_blocks": {
+                "headline": f"已整理 {year} 年事業群資料，共 {len(rows)} 個事業群。",
+                "key_observations": key_observations,
+                "table": {"rows": rows[:12]},
+                "limitations": limitations,
+            },
+        }
+
+    @staticmethod
+    def _extract_year_token(question: str) -> str | None:
+        match = re.search(r"(20\d{2})", question)
+        return match.group(1) if match else None
 
     # Detailed routing implementation retained as a dedicated layer so the
     # public answer() path reads like an enterprise analysis pipeline.
@@ -2011,9 +2755,9 @@ class MultiAgentAssistant:
         if filters.month:
             scope_text.append(f"月份 {filters.month}")
         if filters.platform:
-            scope_text.append(f"新事業群 {filters.platform}")
+            scope_text.append(f"事業群 {filters.platform}")
         if filters.group_code:
-            scope_text.append(f"新事業群 {filters.group_code}")
+            scope_text.append(f"事業群 {filters.group_code}")
         scope_suffix = f"（{' / '.join(scope_text)}）" if scope_text else ""
 
         lens_text = "、".join(lens.label for lens in profile.kpi_lenses) or "既有分析指標"
@@ -2132,7 +2876,7 @@ class MultiAgentAssistant:
         if "financial" in domains and not self.context.supported_domains.get("financial"):
             warnings.append("目前 financial 只能提供營收/庫存代理指標分析，無法直接回答完整財報問題。")
         if any(token in question for token in ["產品", "商品", "SKU"]) and not filters.platform and not filters.group_code:
-            warnings.append("目前資料沒有明確產品/SKU 維度，系統會先以現有新事業群、五大產品線與月份層級做近似分析。")
+            warnings.append("目前資料沒有明確產品/SKU 維度，系統會先以現有事業群、產品線與月份層級做近似分析。")
 
         subtasks = self._build_subtasks(domains, question_type, filters)
         return RoutingDecision(
@@ -2151,9 +2895,9 @@ class MultiAgentAssistant:
         if filters.month:
             scope_text.append(f"月份 {filters.month}")
         if filters.platform:
-            scope_text.append(f"新事業群 {filters.platform}")
+            scope_text.append(f"事業群 {filters.platform}")
         if filters.group_code:
-            scope_text.append(f"新事業群 {filters.group_code}")
+            scope_text.append(f"事業群 {filters.group_code}")
         scope_suffix = f"（{' / '.join(scope_text)}）" if scope_text else ""
 
         task_map = {
@@ -2170,9 +2914,9 @@ class MultiAgentAssistant:
 
     @staticmethod
     def _infer_object_dimension(question: str, lowered: str) -> str | None:
-        if any(token in question for token in ["五大產品線", "產品線"]) or "product line" in lowered:
+        if any(token in question for token in ["產品線", "產品線"]) or "product line" in lowered:
             return "product_line_5"
-        if any(token in question for token in ["新事業群", "事業群"]) or "business group" in lowered or "group" in lowered:
+        if any(token in question for token in ["事業群", "事業群"]) or "business group" in lowered or "group" in lowered:
             return "business_group"
         if any(token in question for token in ["平台", "平臺"]) or "platform" in lowered:
             return "business_group"
@@ -2308,7 +3052,7 @@ class MultiAgentAssistant:
         )
 
     def _extract_group_code(self, question: str) -> str | None:
-        direct = re.search(r"(?:新事業群|事業群代碼)\s*[:：]?\s*(\d+)", question)
+        direct = re.search(r"(?:事業群|事業群代碼)\s*[:：]?\s*(\d+)", question)
         if direct:
             return direct.group(1)
 

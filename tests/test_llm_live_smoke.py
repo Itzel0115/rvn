@@ -117,7 +117,7 @@ class LLMLiveSmokeTest(unittest.TestCase):
             },
         )
         rows = run_live_smoke(
-            questions=["最新月份營收最高的新事業群是誰？"],
+            questions=["最新月份營收最高的事業群是誰？"],
             llm_client=_FakeLLMClient([planner_response]),
             planner_only=True,
         )

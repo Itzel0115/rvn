@@ -74,7 +74,7 @@ def build_display_blocks_from_roles(
 
     display_limitations = list(limitations)
     if _has_unmapped_entity(evidence_items):
-        display_limitations.append("部分資料列的新事業群或五大產品線為未對應，已作為資料品質限制處理。")
+        display_limitations.append("部分資料列的事業群或產品線為未對應，已作為資料品質限制處理。")
 
     return DisplayBlocks(
         headline=headline,
@@ -90,10 +90,32 @@ def _build_headline(task_profile: Any | None, primary: list[Any], supporting: li
         return _forecast_unsupported_headline(task_profile)
     if not primary:
         return "結論：目前沒有足夠的 primary evidence 可以形成管理結論。"
+    if task_family == "entity_month_table_lookup":
+        return _entity_month_table_headline(primary, compare=False)
+    if task_family == "metric_lookup":
+        return _metric_lookup_headline(primary)
+    if task_family == "entity_period_pair_table_lookup":
+        return _entity_period_pair_table_headline(primary)
+    if task_family == "entity_multi_month_table_lookup":
+        return _entity_multi_month_table_headline(primary)
+    if task_family == "entity_period_pair_metric_lookup":
+        return _entity_period_pair_value_headline(primary)
     if task_family in {"latest_month_platform_summary", "latest_month_entity_summary"}:
         return _latest_month_platform_summary_headline(primary, supporting)
     if task_family == "period_pair_compare":
         return _period_pair_headline(primary)
+    if task_family == "entity_time_series":
+        return _entity_time_series_headline(primary)
+    if task_family == "overall_trend_analysis":
+        return _overall_time_series_headline(primary)
+    if task_family == "entity_trend_comparison":
+        return _entity_trend_comparison_headline(primary)
+    if task_family == "metric_relationship_analysis":
+        return _metric_relationship_headline(primary)
+    if task_family == "contribution_analysis":
+        return _entity_contribution_headline(primary)
+    if task_family == "parent_child_drilldown":
+        return _parent_child_drilldown_headline(primary)
     if task_family == "cross_section_compare":
         return _cross_section_headline(task_profile, primary)
     if task_family == "performance_assessment":
@@ -104,9 +126,98 @@ def _build_headline(task_profile: Any | None, primary: list[Any], supporting: li
         return _diagnosis_headline(primary)
     if task_family == "risk_scan":
         return _risk_headline(primary)
-    if task_family == "ranking":
+    if task_family == "entity_ranking":
         return _ranking_headline(primary)
     return _fallback_headline(primary[0])
+
+
+def _entity_month_table_headline(primary: list[Any], *, compare: bool) -> str:
+    evidence = _first_evidence(primary, "entity_month_table")
+    if not evidence:
+        return "結論：目前缺少單月 entity table evidence。"
+    details = getattr(evidence, "details", {}) or {}
+    rows = details.get("rows") or []
+    summary = details.get("summary") or {}
+    month = details.get("month")
+    entity_label = details.get("entity_label") or "entity"
+    metric_label = details.get("metric_label") or details.get("metric") or "指標"
+    row_count = summary.get("row_count", len(rows))
+    top_entity = summary.get("top_entity")
+    lowest_entity = summary.get("lowest_entity")
+    if compare:
+        if top_entity and lowest_entity:
+            return f"結論：{month} 各{entity_label}{metric_label}比較下，{metric_label}最高的是 {top_entity}，最低的是 {lowest_entity}。"
+        return f"結論：已比較 {month} 各{entity_label}{metric_label}資料，共 {row_count} 筆。"
+    if top_entity:
+        return f"結論：已列出 {month} 各{entity_label}{metric_label}資料，共 {row_count} 筆；{metric_label}最高的是 {top_entity}。"
+    return f"結論：已列出 {month} 各{entity_label}{metric_label}資料，共 {row_count} 筆。"
+
+
+def _entity_period_pair_table_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "entity_period_pair_table")
+    if not evidence:
+        return "結論：目前缺少兩個指定月份的 entity table evidence。"
+    details = getattr(evidence, "details", {}) or {}
+    summary = details.get("summary") or {}
+    rows = details.get("rows") or []
+    metric_label = details.get("metric_label") or details.get("metric") or "指標"
+    entity_label = details.get("entity_label") or "entity"
+    top = summary.get("top_entity_period_b")
+    if top:
+        return (
+            f"結論：已列出 {details.get('period_a')} 與 {details.get('period_b')} 各{entity_label}{metric_label}資料，"
+            f"共 {summary.get('row_count', len(rows))} 筆；{details.get('period_b')} 最高的是 {top}。"
+        )
+    return f"結論：已列出 {details.get('period_a')} 與 {details.get('period_b')} 各{entity_label}{metric_label}資料，共 {summary.get('row_count', len(rows))} 筆。"
+
+
+def _entity_multi_month_table_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "entity_multi_month_table")
+    if not evidence:
+        return "結論：目前缺少指定月份區間的 entity table evidence。"
+    details = getattr(evidence, "details", {}) or {}
+    summary = details.get("summary") or {}
+    rows = details.get("rows") or []
+    return (
+        f"結論：已列出 {details.get('start_month')} 至 {details.get('end_month')} 各{details.get('entity_label', 'entity')}"
+        f"{details.get('metric_label', details.get('metric'))}資料，共 {summary.get('row_count', len(rows))} 筆。"
+    )
+
+
+def _entity_period_pair_value_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "entity_period_pair_value")
+    if not evidence:
+        return "結論：目前缺少指定 entity 的兩期資料。"
+    details = getattr(evidence, "details", {}) or {}
+    metric_label = details.get("metric_label") or details.get("metric") or "指標"
+    change = details.get("change")
+    if change is None:
+        return (
+            f"結論：已查詢 {details.get('entity_value')} 在 {details.get('period_a')} 與 {details.get('period_b')} 的{metric_label}；"
+            "其中至少一期目前沒有可用數值。"
+        )
+    direction = "增加" if float(change) > 0 else ("下降" if float(change) < 0 else "持平")
+    return (
+        f"結論：{details.get('entity_value')} {details.get('period_b')} {metric_label}相較 {details.get('period_a')} {direction} "
+        f"{_format_number(abs(change or 0))}。"
+    )
+
+
+def _metric_lookup_headline(primary: list[Any]) -> str:
+    lookup = _first_evidence(primary, "entity_metric_lookup")
+    if not lookup:
+        return _fallback_headline(primary[0]) if primary else "結論：目前缺少指定查詢資料。"
+    details = getattr(lookup, "details", {}) or {}
+    value = details.get("value")
+    if value is None:
+        return (
+            f"結論：目前找不到 {details.get('month')} {details.get('entity_label', 'entity')} "
+            f"{details.get('entity_value')} 的{details.get('metric_label', details.get('metric'))}資料。"
+        )
+    return (
+        f"結論：{details.get('month')} {details.get('entity_label', 'entity')} {details.get('entity_value')} "
+        f"的{details.get('metric_label', details.get('metric'))}為 {_format_number(value)}。"
+    )
 
 
 def _forecast_unsupported_headline(task_profile: Any | None) -> str:
@@ -123,7 +234,7 @@ def _forecast_unsupported_headline(task_profile: Any | None) -> str:
 def _latest_month_platform_summary_headline(primary: list[Any], supporting: list[Any]) -> str:
     snapshot = _first_evidence(primary, "entity_performance_snapshot") or _first_evidence(primary, "platform_performance_snapshot")
     details = getattr(snapshot, "details", {}) if snapshot else {}
-    entity_label = details.get("entity_label") or "新事業群"
+    entity_label = details.get("entity_label") or "事業群"
     rows = _metric_rows([snapshot]) if snapshot else _metric_rows(primary)
     if not rows:
         return f"結論：最新月份各{entity_label}摘要目前缺少可投影的 scorecard evidence。"
@@ -162,7 +273,91 @@ def _period_pair_headline(primary: list[Any]) -> str:
     return f"結論：{period_b} {metric}相較 {period_a} {direction_text} {_format_number(abs(change or 0))}{pct_text}。"
 
 
+def _entity_time_series_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "entity_time_series")
+    if not evidence:
+        return "結論：目前缺少指定 entity 的各月資料。"
+    details = getattr(evidence, "details", {}) or {}
+    summary = details.get("summary") or {}
+    rows = details.get("rows") or []
+    start_month = rows[0].get("month") if rows else "起始月份"
+    end_month = rows[-1].get("month") if rows else "結束月份"
+    direction = {"up": "上升", "down": "下降", "flat": "持平"}.get(summary.get("direction"), "變化")
+    return (
+        f"結論：{details.get('entity_value')}各月{details.get('metric_label', details.get('metric'))}"
+        f"在 {start_month} 至 {end_month} 期間呈現{direction}；最新月份 "
+        f"{summary.get('latest_month')} 為 {_format_number(summary.get('latest_value'))}。"
+    )
+
+
+def _overall_time_series_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "overall_time_series")
+    if not evidence:
+        return "結論：目前缺少整體各月資料。"
+    details = getattr(evidence, "details", {}) or {}
+    rows = details.get("rows") or []
+    summary = details.get("summary") or {}
+    start_month = rows[0].get("month") if rows else "起始月份"
+    end_month = rows[-1].get("month") if rows else "結束月份"
+    direction = {"up": "上升", "down": "下降", "flat": "持平"}.get(summary.get("direction"), "變化")
+    return (
+        f"結論：整體{details.get('metric_label', details.get('metric'))}在 {start_month} 至 {end_month} 期間呈現{direction}，"
+        f"最新月份 {summary.get('latest_month')} 為 {_format_number(summary.get('latest_value'))}。"
+    )
+
+
+def _entity_trend_comparison_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "entity_trend_comparison")
+    if not evidence:
+        return "結論：目前缺少跨 entity 趨勢比較資料。"
+    details = getattr(evidence, "details", {}) or {}
+    summary = details.get("summary") or {}
+    top_entity = summary.get("top_growth_entity")
+    top_pct = summary.get("top_growth_pct")
+    return (
+        f"結論：近月{details.get('metric_label', details.get('metric'))}成長較明顯的"
+        f"{details.get('entity_label', 'entity')}是 {top_entity}，變化率為 {_format_number(top_pct)}。"
+    )
+
+
+def _metric_relationship_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "metric_relationship")
+    if not evidence:
+        return "結論：目前缺少營收與庫存關係資料。"
+    details = getattr(evidence, "details", {}) or {}
+    rows = details.get("rows") or []
+    label = rows[0].get("relationship_label") if rows else "mixed"
+    return f"結論：目前可觀察到{details.get('entity_label', 'entity')}存在營收與庫存背離訊號，例如 {label}。"
+
+
+def _entity_contribution_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "entity_contribution_analysis")
+    if not evidence:
+        return "結論：目前缺少 contribution 分析資料。"
+    details = getattr(evidence, "details", {}) or {}
+    summary = details.get("summary") or {}
+    return (
+        f"結論：{details.get('period_b')} 相較 {details.get('period_a')} 的"
+        f"{details.get('metric_label', details.get('metric'))}變化主要由 {summary.get('top_contributor')} 貢獻，"
+        f"變化為 {_format_number(summary.get('top_change'))}。"
+    )
+
+
+def _parent_child_drilldown_headline(primary: list[Any]) -> str:
+    evidence = _first_evidence(primary, "parent_child_drilldown") or _first_evidence(primary, "entity_performance_snapshot")
+    if not evidence:
+        return "結論：目前缺少 parent-child drilldown 資料。"
+    details = getattr(evidence, "details", {}) or {}
+    summary = details.get("summary") or {}
+    weakest = summary.get("weakest_entity")
+    parent = (details.get("parent_filter") or {}).get("business_group") or "指定事業群"
+    return f"結論：在 {parent} 底下，{weakest} 產品線表現較弱 / 庫存壓力較高。"
+
+
 def _cross_section_headline(task_profile: Any | None, primary: list[Any]) -> str:
+    table = _first_evidence(primary, "entity_month_table")
+    if table:
+        return _entity_month_table_headline(primary, compare=True)
     rows = _metric_rows(primary)
     month = _profile_month(task_profile) or _first_value(rows, "month") or "目前期間"
     if not rows:
@@ -174,7 +369,7 @@ def _cross_section_headline(task_profile: Any | None, primary: list[Any]) -> str
     if not (top_revenue and top_inventory and weakest_ratio):
         return "目前沒有足夠證據形成完整橫向比較。"
 
-    entity_label = next((row.get("entity_label") for row in rows if row.get("entity_label")), "新事業群")
+    entity_label = next((row.get("entity_label") for row in rows if row.get("entity_label")), "事業群")
     weakest_text = (
         "未對應資料列"
         if weakest_ratio and is_unmapped_entity(weakest_ratio.get("platform"))
@@ -193,7 +388,7 @@ def _performance_headline(task_profile: Any | None, primary: list[Any], supporti
     if snapshot:
         details = getattr(snapshot, "details", {}) or {}
         summary = details.get("summary") or {}
-        entity_label = details.get("entity_label") or "新事業群"
+        entity_label = details.get("entity_label") or "事業群"
         rows = _metric_rows([snapshot])
         if polarity in {"best", "strong"}:
             best_platform = summary.get("best_entity") or summary.get("best_platform")
@@ -313,7 +508,7 @@ def _ranking_headline(primary: list[Any]) -> str:
     if ranking:
         details = getattr(ranking, "details", {}) or {}
         month = details.get("month") or "最新月份"
-        label = details.get("entity_label") or "新事業群"
+        label = details.get("entity_label") or "事業群"
         metric_label = details.get("metric_label") or details.get("metric") or "指標"
         direction_text = "最低" if details.get("sort_direction") == "ascending" else "最高"
         top_entity = details.get("top_entity")
@@ -364,7 +559,7 @@ def _observation_text(item: Any) -> str:
     evidence_type = getattr(item, "evidence_type", "")
     if evidence_type == "entity_performance_snapshot":
         summary = details.get("summary") or {}
-        label = details.get("entity_label") or "新事業群"
+        label = details.get("entity_label") or "事業群"
         best = summary.get("best_entity")
         weakest = summary.get("weakest_entity")
         if is_unmapped_entity(best):
@@ -379,11 +574,23 @@ def _observation_text(item: Any) -> str:
             f"主要風險為 {details.get('primary_risk', 'N/A')}。"
         )
     if evidence_type in {"entity_cross_section", "entity_cross_section_comparison"}:
-        label = details.get("entity_label") or "新事業群"
+        label = details.get("entity_label") or "事業群"
         rows = details.get("rows") or []
         return f"{label}橫向比較目前有 {len(rows)} 筆可投影列，請搭配表格查看營收、庫存與 proxy。"
+    if evidence_type == "entity_metric_lookup":
+        return (
+            f"{details.get('month')} {details.get('entity_label', 'entity')} {details.get('entity_value')} "
+            f"的{details.get('metric_label', details.get('metric'))}為 {_format_number(details.get('value'))}。"
+        )
+    if evidence_type == "entity_month_table":
+        summary = details.get("summary") or {}
+        return (
+            f"{details.get('month')} 各{details.get('entity_label', 'entity')}"
+            f"{details.get('metric_label', details.get('metric'))}資料共 {summary.get('row_count', len(details.get('rows') or []))} 筆；"
+            f"最高的是 {summary.get('top_entity', 'N/A')}。"
+        )
     if evidence_type == "entity_metric_ranking":
-        label = details.get("entity_label") or "新事業群"
+        label = details.get("entity_label") or "事業群"
         metric_label = details.get("metric_label") or details.get("metric") or "指標"
         rows = details.get("rows") or []
         top_rows = [
@@ -394,6 +601,33 @@ def _observation_text(item: Any) -> str:
         if any(is_unmapped_entity(row.get("entity_value")) for row in rows):
             suffix += "；未對應資料列已作為資料品質限制處理"
         return f"{label}{metric_label}排名：{suffix}。"
+    if evidence_type == "entity_time_series":
+        summary = details.get("summary") or {}
+        return (
+            f"{details.get('entity_value')} 在 {summary.get('latest_month')} 的"
+            f"{details.get('metric_label', details.get('metric'))}為 {_format_number(summary.get('latest_value'))}。"
+        )
+    if evidence_type == "overall_time_series":
+        summary = details.get("summary") or {}
+        return (
+            f"整體在 {summary.get('latest_month')} 的"
+            f"{details.get('metric_label', details.get('metric'))}為 {_format_number(summary.get('latest_value'))}。"
+        )
+    if evidence_type == "entity_trend_comparison":
+        summary = details.get("summary") or {}
+        return (
+            f"{details.get('entity_label', 'entity')}趨勢比較中，"
+            f"{summary.get('top_growth_entity')} 的變化較明顯。"
+        )
+    if evidence_type == "metric_relationship":
+        first = (details.get("rows") or [{}])[0]
+        return f"{details.get('entity_label', 'entity')}可觀察到 {first.get('relationship_label', 'mixed')} 關係。"
+    if evidence_type == "entity_contribution_analysis":
+        summary = details.get("summary") or {}
+        return f"{details.get('period_b')} 相較 {details.get('period_a')} 的主要貢獻者是 {summary.get('top_contributor')}。"
+    if evidence_type == "parent_child_drilldown":
+        summary = details.get("summary") or {}
+        return f"{summary.get('weakest_entity')} 是目前較需要注意的子層產品線。"
     if evidence_type == "platform_performance_snapshot":
         summary = details.get("summary") or {}
         best = summary.get("best_platform")
@@ -457,6 +691,142 @@ def _observation_text(item: Any) -> str:
 
 
 def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
+    entity_month_table = _first_evidence(primary_items, "entity_month_table")
+    if entity_month_table:
+        details = getattr(entity_month_table, "details", {}) or {}
+        entity_label = details.get("entity_label") or "entity"
+        metric_label = details.get("metric_label") or details.get("metric") or "value"
+        return {
+            "columns": [entity_label, metric_label, "revenue_amount", "inventory_amount", "inventory_qty", "data_presence_flag"],
+            "rows": [
+                {
+                    entity_label: row.get("entity_value"),
+                    metric_label: row.get("value"),
+                    "revenue_amount": row.get("revenue_amount"),
+                    "inventory_amount": row.get("inventory_amount"),
+                    "inventory_qty": row.get("inventory_qty"),
+                    "data_presence_flag": row.get("data_presence_flag"),
+                }
+                for row in (details.get("rows") or [])[:12]
+            ],
+        }
+
+    period_pair_table = _first_evidence(primary_items, "entity_period_pair_table")
+    if period_pair_table:
+        details = getattr(period_pair_table, "details", {}) or {}
+        entity_label = details.get("entity_label") or "entity"
+        metric_label = details.get("metric_label") or details.get("metric") or "value"
+        period_a = details.get("period_a") or "period_a"
+        period_b = details.get("period_b") or "period_b"
+        return {
+            "columns": [entity_label, f"{period_a} {metric_label}", f"{period_b} {metric_label}", "change", "change_pct", "data_presence_flag"],
+            "rows": [
+                {
+                    entity_label: row.get("entity_value"),
+                    f"{period_a} {metric_label}": row.get("value_a"),
+                    f"{period_b} {metric_label}": row.get("value_b"),
+                    "change": row.get("change"),
+                    "change_pct": row.get("change_pct"),
+                    "data_presence_flag": row.get("data_presence_flag"),
+                }
+                for row in (details.get("rows") or [])[:12]
+            ],
+        }
+
+    multi_month_table = _first_evidence(primary_items, "entity_multi_month_table")
+    if multi_month_table:
+        details = getattr(multi_month_table, "details", {}) or {}
+        entity_label = details.get("entity_label") or "entity"
+        metric_label = details.get("metric_label") or details.get("metric") or "value"
+        return {
+            "columns": ["month", entity_label, metric_label, "revenue_amount", "inventory_amount", "inventory_qty", "data_presence_flag"],
+            "rows": [
+                {
+                    "month": row.get("month"),
+                    entity_label: row.get("entity_value"),
+                    metric_label: row.get("value"),
+                    "revenue_amount": row.get("revenue_amount"),
+                    "inventory_amount": row.get("inventory_amount"),
+                    "inventory_qty": row.get("inventory_qty"),
+                    "data_presence_flag": row.get("data_presence_flag"),
+                }
+                for row in (details.get("rows") or [])[:12]
+            ],
+        }
+
+    period_pair_value = _first_evidence(primary_items, "entity_period_pair_value")
+    if period_pair_value:
+        details = getattr(period_pair_value, "details", {}) or {}
+        metric_label = details.get("metric_label") or details.get("metric") or "value"
+        return {
+            "columns": ["month", details.get("entity_label", "entity"), metric_label],
+            "rows": [
+                {"month": row.get("month"), details.get("entity_label", "entity"): details.get("entity_value"), metric_label: row.get("value")}
+                for row in (details.get("rows") or [])
+            ],
+        }
+
+    entity_series = _first_evidence(primary_items, "entity_time_series")
+    if entity_series:
+        details = getattr(entity_series, "details", {}) or {}
+        return {
+            "columns": ["month", details.get("metric_label", details.get("metric")), "mom_change", "mom_change_pct"],
+            "rows": (details.get("rows") or [])[:12],
+        }
+
+    overall_series = _first_evidence(primary_items, "overall_time_series")
+    if overall_series:
+        details = getattr(overall_series, "details", {}) or {}
+        return {
+            "columns": ["month", details.get("metric_label", details.get("metric")), "mom_change", "mom_change_pct"],
+            "rows": (details.get("rows") or [])[:12],
+        }
+
+    trend_comparison = _first_evidence(primary_items, "entity_trend_comparison")
+    if trend_comparison:
+        details = getattr(trend_comparison, "details", {}) or {}
+        return {
+            "columns": [details.get("entity_label", "entity"), "latest_month", "latest_value", "overall_change", "overall_change_pct"],
+            "rows": (details.get("entity_summaries") or [])[:8],
+        }
+
+    relationship = _first_evidence(primary_items, "metric_relationship")
+    if relationship:
+        details = getattr(relationship, "details", {}) or {}
+        return {
+            "columns": [details.get("entity_label", "entity"), "month", "previous_month", "relationship_label", "revenue_change", "inventory_change", "ratio_change"],
+            "rows": (details.get("rows") or [])[:8],
+        }
+
+    contribution = _first_evidence(primary_items, "entity_contribution_analysis")
+    if contribution:
+        details = getattr(contribution, "details", {}) or {}
+        return {
+            "columns": [details.get("entity_label", "entity"), "value_a", "value_b", "change", "change_pct", "contribution_pct"],
+            "rows": (details.get("rows") or [])[:8],
+        }
+
+    drilldown = _first_evidence(primary_items, "parent_child_drilldown")
+    if drilldown:
+        details = getattr(drilldown, "details", {}) or {}
+        entity_label = details.get("entity_label") or "五大產品線"
+        return {
+            "columns": ["month", entity_label, "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio", "health_score", "risk_score"],
+            "rows": [
+                {
+                    "month": row.get("month"),
+                    entity_label: row.get("entity_value"),
+                    "revenue": row.get("revenue"),
+                    "inventory_amount": row.get("inventory_amount"),
+                    "inventory_qty": row.get("inventory_qty"),
+                    "revenue_inventory_ratio": row.get("revenue_inventory_amount_ratio"),
+                    "health_score": row.get("health_score"),
+                    "risk_score": row.get("risk_score"),
+                }
+                for row in (details.get("rows") or [])[:8]
+            ],
+        }
+
     period_pair = _first_evidence(primary_items, "entity_period_pair_comparison") or _first_evidence(primary_items, "period_pair_metric_comparison")
     if period_pair:
         details = getattr(period_pair, "details", {}) or {}
@@ -473,7 +843,7 @@ def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
     ranking = _first_evidence(primary_items, "entity_metric_ranking")
     if ranking:
         details = getattr(ranking, "details", {}) or {}
-        entity_label = details.get("entity_label") or "新事業群"
+        entity_label = details.get("entity_label") or "事業群"
         metric_label = details.get("metric_label") or details.get("metric") or "value"
         return {
             "columns": ["rank", entity_label, metric_label, "health_score", "data_presence"],
@@ -494,7 +864,7 @@ def _project_table(primary_items: list[Any]) -> dict[str, Any] | None:
         return None
     score_columns = ["health_score", "risk_score", "performance_label"]
     has_scorecard = any(any(row.get(column) is not None for column in score_columns) for row in rows)
-    entity_label = next((row.get("entity_label") for row in rows if row.get("entity_label")), "新事業群")
+    entity_label = next((row.get("entity_label") for row in rows if row.get("entity_label")), "事業群")
     columns = ["month", entity_label, "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_ratio"]
     if has_scorecard:
         columns.extend(score_columns)
@@ -528,6 +898,12 @@ def _metric_rows(items: list[Any]) -> list[dict[str, Any]]:
     for item in items:
         evidence_type = getattr(item, "evidence_type", "")
         details = getattr(item, "details", {}) or {}
+        if evidence_type == "entity_month_table":
+            for row in details.get("rows") or []:
+                mapped = _scorecard_metric_row(row, getattr(item, "source_tool", ""))
+                if mapped:
+                    rows.append(mapped)
+            continue
         if evidence_type in {"entity_performance_snapshot", "platform_performance_snapshot"}:
             for row in details.get("rows") or []:
                 mapped = _scorecard_metric_row(row, getattr(item, "source_tool", ""))
@@ -717,8 +1093,10 @@ def _platform(details: dict[str, Any]) -> str | None:
 def _metric_name(metric: Any) -> str:
     return {
         "revenue": "營收",
+        "revenue_amount": "營收",
         "inventory_amount": "庫存金額",
         "inventory_qty": "庫存數量",
+        "revenue_inventory_amount_ratio": "營收相對庫存效率",
     }.get(str(metric), "指標")
 
 

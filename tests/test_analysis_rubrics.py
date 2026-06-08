@@ -56,7 +56,7 @@ class AnalysisRubricsTest(unittest.TestCase):
         self.assertEqual(roles["contribution_analysis"], "background")
 
     def test_entity_cross_section_comparison_is_primary(self) -> None:
-        routing = self.assistant._plan_and_route("比較最新月份各五大產品線營收與庫存")
+        routing = self.assistant._plan_and_route("比較最新月份各產品線營收與庫存")
         profile = build_task_profile(routing.question, routing)
         plan = build_answer_plan(profile, routing)
         result = assign_evidence_roles(profile, plan, [_domain_result([_entity_cross_section_comparison()])])
@@ -73,8 +73,49 @@ class AnalysisRubricsTest(unittest.TestCase):
         roles = {item.evidence_type: item.role for item in result.evidence}
         self.assertEqual(roles["entity_period_pair_comparison"], "primary")
 
+    def test_entity_time_series_is_primary(self) -> None:
+        routing = self.assistant._plan_and_route("比較 3通路方案 各月營收")
+        profile = build_task_profile(routing.question, routing)
+        plan = build_answer_plan(profile, routing)
+        result = assign_evidence_roles(profile, plan, [_domain_result([_entity_time_series()])])
+
+        roles = {item.evidence_type: item.role for item in result.evidence}
+        self.assertEqual(roles["entity_time_series"], "primary")
+
+    def test_overall_time_series_is_primary(self) -> None:
+        routing = self.assistant._plan_and_route("總體營收趨勢如何？")
+        profile = build_task_profile(routing.question, routing)
+        plan = build_answer_plan(profile, routing)
+        result = assign_evidence_roles(profile, plan, [_domain_result([_overall_time_series()])])
+
+        roles = {item.evidence_type: item.role for item in result.evidence}
+        self.assertEqual(roles["overall_time_series"], "primary")
+
+    def test_metric_relationship_and_contribution_are_primary_for_new_families(self) -> None:
+        relationship_routing = self.assistant._plan_and_route("有沒有營收下降但庫存上升的事業群？")
+        relationship_profile = build_task_profile(relationship_routing.question, relationship_routing)
+        relationship_plan = build_answer_plan(relationship_profile, relationship_routing)
+        relationship_result = assign_evidence_roles(
+            relationship_profile,
+            relationship_plan,
+            [_domain_result([_metric_relationship(), _platform_ratio()])],
+        )
+        relationship_roles = {item.evidence_type: item.role for item in relationship_result.evidence}
+        self.assertEqual(relationship_roles["metric_relationship"], "primary")
+
+        contribution_routing = self.assistant._plan_and_route("2026-01 比 2025-12 成長主要來自哪個事業群？")
+        contribution_profile = build_task_profile(contribution_routing.question, contribution_routing)
+        contribution_plan = build_answer_plan(contribution_profile, contribution_routing)
+        contribution_result = assign_evidence_roles(
+            contribution_profile,
+            contribution_plan,
+            [_domain_result([_entity_contribution_analysis()])],
+        )
+        contribution_roles = {item.evidence_type: item.role for item in contribution_result.evidence}
+        self.assertEqual(contribution_roles["entity_contribution_analysis"], "primary")
+
     def test_entity_metric_ranking_is_primary_for_ranking(self) -> None:
-        routing = self.assistant._plan_and_route("最新月份營收最高的新事業群是誰？")
+        routing = self.assistant._plan_and_route("最新月份營收最高的事業群是誰？")
         profile = build_task_profile(routing.question, routing)
         plan = build_answer_plan(profile, routing)
         result = assign_evidence_roles(profile, plan, [_domain_result([_entity_metric_ranking(), _inventory_amount_ranking()])])
@@ -84,12 +125,12 @@ class AnalysisRubricsTest(unittest.TestCase):
         self.assertEqual(roles["platform_ranking"], "background")
 
     def test_time_compare_makes_contribution_primary(self) -> None:
-        routing = self.assistant._plan_and_route("8 \u6708\u76f8\u8f03 7 \u6708\u71df\u6536\u8b8a\u5316\u4e3b\u8981\u7531\u8ab0\u8ca2\u737b")
+        routing = self.assistant._plan_and_route("2026-01 比 2025-12 成長主要來自哪個事業群？")
         profile = build_task_profile(routing.question, routing)
         plan = build_answer_plan(profile, routing)
-        result = assign_evidence_roles(profile, plan, [_domain_result([_contribution()])])
+        result = assign_evidence_roles(profile, plan, [_domain_result([_entity_contribution_analysis()])])
 
-        self.assertEqual(result.evidence[0].evidence_type, "contribution_analysis")
+        self.assertEqual(result.evidence[0].evidence_type, "entity_contribution_analysis")
         self.assertEqual(result.evidence[0].role, "primary")
 
     def test_diagnosis_makes_root_cause_candidates_primary(self) -> None:
@@ -216,13 +257,13 @@ def _entity_cross_section_comparison() -> dict:
         "month": "2026-02",
         "dimension": "product_line_5",
         "entity_dimension": "product_line_5",
-        "entity_label": "五大產品線",
+        "entity_label": "產品線",
         "rows": [
             {
                 "month": "2026-02",
                 "entity_value": "Server",
                 "entity_dimension": "product_line_5",
-                "entity_label": "五大產品線",
+                "entity_label": "產品線",
                 "revenue_amount": 100.0,
                 "inventory_amount": 200.0,
                 "inventory_qty": 10.0,
@@ -245,7 +286,7 @@ def _entity_period_pair_comparison() -> dict:
         "period_b": "2026-02",
         "dimension": "business_group",
         "entity_dimension": "business_group",
-        "entity_label": "新事業群",
+        "entity_label": "事業群",
         "overall": {"value_a": 100.0, "value_b": 80.0, "change": -20.0, "change_pct": -0.2},
         "breakdown": [],
     }
@@ -257,7 +298,7 @@ def _entity_metric_ranking() -> dict:
         "source_tool": "get_entity_metric_ranking",
         "month": "2026-02",
         "entity_dimension": "business_group",
-        "entity_label": "新事業群",
+        "entity_label": "事業群",
         "metric": "revenue_amount",
         "metric_label": "營收",
         "sort_direction": "descending",
@@ -272,6 +313,72 @@ def _entity_metric_ranking() -> dict:
                 "data_presence_flag": "both",
             }
         ],
+    }
+
+
+def _entity_time_series() -> dict:
+    return {
+        "evidence_type": "entity_time_series",
+        "source_tool": "get_entity_time_series",
+        "entity_dimension": "business_group",
+        "entity_label": "事業群",
+        "entity_value": "3通路方案",
+        "metric": "revenue_amount",
+        "metric_label": "營收",
+        "rows": [
+            {"month": "2025-12", "value": 80.0, "mom_change": 5.0, "mom_change_pct": 0.0667},
+            {"month": "2026-01", "value": 100.0, "mom_change": 20.0, "mom_change_pct": 0.25},
+        ],
+        "summary": {"latest_month": "2026-01", "latest_value": 100.0, "direction": "up"},
+    }
+
+
+def _overall_time_series() -> dict:
+    return {
+        "evidence_type": "overall_time_series",
+        "source_tool": "get_overall_time_series",
+        "metric": "revenue_amount",
+        "metric_label": "營收",
+        "rows": [
+            {"month": "2025-12", "value": 100.0, "mom_change": None, "mom_change_pct": None},
+            {"month": "2026-01", "value": 110.0, "mom_change": 10.0, "mom_change_pct": 0.1},
+        ],
+        "summary": {"latest_month": "2026-01", "latest_value": 110.0, "direction": "up"},
+    }
+
+
+def _metric_relationship() -> dict:
+    return {
+        "evidence_type": "metric_relationship",
+        "source_tool": "get_revenue_inventory_relationship",
+        "entity_dimension": "business_group",
+        "entity_label": "事業群",
+        "rows": [
+            {
+                "entity_value": "2技宸",
+                "month": "2026-02",
+                "previous_month": "2026-01",
+                "relationship_label": "revenue_down_inventory_up",
+            }
+        ],
+        "summary": {"relationship_counts": {"revenue_down_inventory_up": 1}},
+    }
+
+
+def _entity_contribution_analysis() -> dict:
+    return {
+        "evidence_type": "entity_contribution_analysis",
+        "source_tool": "get_entity_contribution_analysis",
+        "entity_dimension": "business_group",
+        "entity_label": "事業群",
+        "metric": "revenue_amount",
+        "metric_label": "營收",
+        "period_a": "2025-12",
+        "period_b": "2026-01",
+        "rows": [
+            {"entity_value": "3通路方案", "change": 20.0, "contribution_pct": 0.6, "direction": "up"},
+        ],
+        "summary": {"top_contributor": "3通路方案", "top_change": 20.0},
     }
 
 

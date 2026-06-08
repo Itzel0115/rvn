@@ -11,7 +11,7 @@ class RouterTest(unittest.TestCase):
         cls.assistant = build_stubbed_assistant("test-router")
 
     def test_business_group_summary_routes_to_financial(self) -> None:
-        routing = self.assistant._plan_and_route("請整理最新月份各新事業群的營收與庫存重點")
+        routing = self.assistant._plan_and_route("請整理最新月份各事業群的營收與庫存重點")
 
         self.assertEqual(routing.question_type, "summary")
         self.assertEqual(routing.answer_strategy, "latest_month_entity_summary")
@@ -19,7 +19,7 @@ class RouterTest(unittest.TestCase):
         self.assertEqual(routing.object_dimension, "business_group")
 
     def test_product_line_comparison_routes_to_financial(self) -> None:
-        routing = self.assistant._plan_and_route("比較最新月份各五大產品線營收與庫存")
+        routing = self.assistant._plan_and_route("比較最新月份各產品線營收與庫存")
 
         self.assertEqual(routing.question_type, "comparison")
         self.assertEqual(routing.domains, ["financial"])

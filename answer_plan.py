@@ -38,7 +38,7 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
     if task_family == "period_pair_compare":
         return AnswerPlan(
             primary_tools=["get_entity_period_pair_comparison"],
-            supporting_tools=[],
+            supporting_tools=["get_period_pair_metric_comparison"],
             background_tools=["get_data_coverage"],
             forbidden_primary_tools=["get_metric_table(platform_monthly)", "get_platform_ranking(inventory_amount)"],
             max_key_observations=3,
@@ -48,6 +48,102 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
                 "mode": "heuristic_display_projection",
                 "headline_source": "explicit_period_pair_difference",
             },
+        )
+
+    if task_family == "entity_period_pair_table_lookup":
+        return AnswerPlan(
+            primary_tools=["get_entity_period_pair_table"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_entity_period_pair_comparison", "get_period_pair_metric_comparison", "get_entity_month_table"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_period_pair_table"},
+        )
+
+    if task_family == "entity_multi_month_table_lookup":
+        return AnswerPlan(
+            primary_tools=["get_entity_multi_month_table"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_entity_period_pair_comparison", "get_period_pair_metric_comparison", "get_entity_month_table"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_multi_month_table"},
+        )
+
+    if task_family == "entity_period_pair_metric_lookup":
+        return AnswerPlan(
+            primary_tools=["get_entity_period_pair_value"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_entity_period_pair_comparison", "get_period_pair_metric_comparison", "get_entity_month_table"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_period_pair_value"},
+        )
+
+    if task_family == "entity_time_series":
+        return AnswerPlan(
+            primary_tools=["get_entity_time_series"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_yoy_mom_breakdown", "get_contribution_analysis(revenue)"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_time_series"},
+        )
+
+    if task_family == "overall_trend_analysis":
+        return AnswerPlan(
+            primary_tools=["get_overall_time_series"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_entity_period_pair_comparison", "get_contribution_analysis(revenue)"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "overall_time_series"},
+        )
+
+    if task_family == "entity_trend_comparison":
+        return AnswerPlan(
+            primary_tools=["get_entity_trend_comparison"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_entity_period_pair_comparison", "get_yoy_mom_breakdown"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_trend_comparison"},
+        )
+
+    if task_family == "metric_relationship_analysis":
+        return AnswerPlan(
+            primary_tools=["get_revenue_inventory_relationship"],
+            supporting_tools=["get_entity_performance_snapshot"],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_root_cause_candidates", "get_contribution_analysis(revenue)"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "metric_relationship_analysis"},
+        )
+
+    if task_family == "contribution_analysis":
+        return AnswerPlan(
+            primary_tools=["get_entity_contribution_analysis"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_yoy_mom_breakdown", "get_overall_time_series"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_contribution_analysis"},
         )
 
     if task_family == "forecast_unsupported":
@@ -65,19 +161,46 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
             },
         )
 
-    if task_family == "cross_section_compare":
+    if task_family == "parent_child_drilldown":
         return AnswerPlan(
-            primary_tools=["get_entity_cross_section_comparison", "get_entity_performance_snapshot"],
-            supporting_tools=["get_anomalies"],
+            primary_tools=["get_entity_performance_snapshot"],
+            supporting_tools=["get_inventory_turnover_proxy"],
             background_tools=["get_data_coverage"],
-            forbidden_primary_tools=["get_contribution_analysis(revenue)"],
+            forbidden_primary_tools=["get_contribution_analysis(revenue)", "get_yoy_mom_breakdown"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "parent_child_drilldown"},
+        )
+
+    if task_family == "entity_month_table_lookup":
+        return AnswerPlan(
+            primary_tools=["get_entity_month_table"],
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_entity_period_pair_comparison", "get_overall_time_series", "get_entity_time_series"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "entity_month_table"},
+        )
+
+    if task_family == "cross_section_compare":
+        metrics = list(getattr(task_profile, "metrics", []) or [])
+        time_scope = getattr(task_profile, "time_scope", {}) or {}
+        single_metric = len(metrics) == 1 and time_scope.get("mode") in {"single_month", "latest_month"}
+        return AnswerPlan(
+            primary_tools=["get_entity_month_table"] if single_metric else ["get_entity_cross_section_comparison", "get_entity_performance_snapshot"],
+            supporting_tools=[] if single_metric else ["get_anomalies"],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_contribution_analysis(revenue)", "get_entity_period_pair_comparison", "get_overall_time_series"],
             max_key_observations=3,
             requires_table=True,
             display_debug_findings=False,
             conclusion_policy={
                 "mode": "heuristic_display_projection",
                 "headline_source": "same_month_entity_comparison",
-                "must_not_use": ["mom_contribution_as_headline"],
+                "must_not_use": ["mom_contribution_as_headline", "latest_month_if_explicit_month"],
             },
         )
 
@@ -97,7 +220,45 @@ def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:
             },
         )
 
-    if task_family == "ranking":
+    if task_family == "risk_scan":
+        return AnswerPlan(
+            primary_tools=["get_revenue_inventory_relationship"],
+            supporting_tools=["get_anomalies", "get_inventory_turnover_proxy"],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=["get_root_cause_candidates"],
+            max_key_observations=3,
+            requires_table=True,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "risk_scan"},
+        )
+
+    if task_family == "metric_lookup":
+        target_entity = getattr(task_profile, "target_entity", {}) or {}
+        primary_tools = ["get_entity_metric_value"] if target_entity.get("value") else ["get_metric_table"]
+        return AnswerPlan(
+            primary_tools=primary_tools,
+            supporting_tools=[],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=[],
+            max_key_observations=3,
+            requires_table=False,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "metric_lookup"},
+        )
+
+    if task_family == "chart_request":
+        return AnswerPlan(
+            primary_tools=["get_chart_payload"],
+            supporting_tools=["get_chart_table"],
+            background_tools=["get_data_coverage"],
+            forbidden_primary_tools=[],
+            max_key_observations=3,
+            requires_table=False,
+            display_debug_findings=False,
+            conclusion_policy={"mode": "heuristic_display_projection", "headline_source": "chart_request"},
+        )
+
+    if task_family == "entity_ranking":
         target_dimension = (getattr(task_profile, "target_entity", {}) or {}).get("dimension")
         if target_dimension in {"business_group", "product_line_5", "platform"}:
             return AnswerPlan(

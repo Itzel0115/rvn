@@ -93,12 +93,24 @@ function buildMeta(message) {
   };
 }
 
-function formatCellValue(value) {
+function isPercentColumn(column) {
+  return String(column || "").toLowerCase().includes("pct");
+}
+
+function formatCellValue(value, column) {
   if (value === null || value === undefined || value === "") {
     return TEXT.noData;
   }
 
   if (typeof value === "number") {
+    if (isPercentColumn(column)) {
+      return new Intl.NumberFormat("zh-TW", {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        style: "percent",
+      }).format(value);
+    }
+
     return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(value);
   }
 
@@ -124,7 +136,7 @@ function DisplayTable({ table }) {
           {table.rows.map((row, rowIndex) => (
             <tr key={`display-row-${rowIndex}`}>
               {table.columns.map((column) => (
-                <td key={`${column}-${rowIndex}`}>{formatCellValue(row[column])}</td>
+                <td key={`${column}-${rowIndex}`}>{formatCellValue(row[column], column)}</td>
               ))}
             </tr>
           ))}

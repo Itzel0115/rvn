@@ -49,27 +49,45 @@ export function getExecutiveHeadline(summary, fallback = "目前尚未載入摘�
   return summary?.latest_month_analysis || fallback;
 }
 
+function getEntityName(item) {
+  return item?.platform || item?.product_line_5 || item?.product_line || item?.entity || item?.name;
+}
+
+function getEntityMetricValue(item) {
+  return item?.value ?? item?.revenue ?? item?.inventory_amount;
+}
+
+function hasMetricValue(value) {
+  return value !== null && value !== undefined && value !== "" && !Number.isNaN(Number(value));
+}
+
 export function formatPlatformMetric(item, options = {}) {
   const fallback = options.fallback ?? "-";
-  if (!item?.platform) {
+  const entityName = getEntityName(item);
+  const rawValue = getEntityMetricValue(item);
+  if (!entityName || !hasMetricValue(rawValue)) {
     return fallback;
   }
 
-  const rawValue = item.value ?? item.revenue ?? item.inventory_amount;
-  return `${item.platform} · ${formatMetricValue(rawValue, options)}`;
+  return `${entityName} · ${formatMetricValue(rawValue, options)}`;
 }
 
 export function formatPlatformValue(item, options = {}) {
-  return item?.platform || options.fallback || "-";
+  return getEntityName(item) || options.fallback || "-";
 }
 
 export function formatPlatformHelper(label, item, options = {}) {
-  if (!item?.platform) {
-    return label;
+  const entityName = getEntityName(item);
+  if (!entityName) {
+    return label || options.fallback || "-";
   }
 
-  const rawValue = item.value ?? item.revenue ?? item.inventory_amount;
-  return `${label} · ${item.platform} · ${formatMetricValue(rawValue, options)}`;
+  const rawValue = getEntityMetricValue(item);
+  if (!hasMetricValue(rawValue)) {
+    return label || options.fallback || "-";
+  }
+
+  return `${label} · ${entityName} · ${formatMetricValue(rawValue, options)}`;
 }
 
 export function buildKpiItems(summary, copy = {}, options = {}) {
@@ -79,6 +97,7 @@ export function buildKpiItems(summary, copy = {}, options = {}) {
   const recentPeriod = recentSnapshot.recent_period || {};
   const latestMonth = getLatestMonthLabel(summary, copy.noData || "-");
   const anomalies = asList(dashboardSnapshot.anomalies);
+  const revenueProductLineExtremes = dashboardSnapshot.product_line_revenue_extremes || {};
 
   const mode = options.mode || "desktop";
   if (mode === "mobile") {
@@ -148,9 +167,9 @@ export function buildKpiItems(summary, copy = {}, options = {}) {
       }),
     },
     {
-      label: copy.topInventoryPlatformLabel,
-      value: formatPlatformMetric(dashboardSnapshot.inventory_extremes?.max, { fallback: copy.noData || "-" }),
-      helper: formatPlatformHelper(copy.minInventoryPlatformLabel, dashboardSnapshot.inventory_extremes?.min, {
+      label: copy.topRevenueProductLineLabel || copy.topInventoryPlatformLabel,
+      value: formatPlatformMetric(revenueProductLineExtremes.max, { fallback: copy.noData || "-" }),
+      helper: formatPlatformHelper(copy.minRevenueProductLineLabel, revenueProductLineExtremes.min, {
         fallback: copy.noData || "-",
       }),
     },
@@ -163,6 +182,8 @@ export function buildSnapshotItems(summary, copy = {}, options = {}) {
 
   const revenueMax = dashboardSnapshot.revenue_extremes?.max;
   const inventoryMax = dashboardSnapshot.inventory_extremes?.max;
+  const revenueProductLineExtremes = dashboardSnapshot.product_line_revenue_extremes || {};
+  const revenueProductLineMax = revenueProductLineExtremes.max;
 
   if (mode === "mobile") {
     return [
@@ -174,9 +195,9 @@ export function buildSnapshotItems(summary, copy = {}, options = {}) {
         }),
       },
       {
-        label: copy.topInventoryPlatformLabel,
-        value: formatPlatformValue(inventoryMax, { fallback: copy.noData || "-" }),
-        helper: formatMetricValue(inventoryMax?.value ?? inventoryMax?.inventory_amount, {
+        label: copy.topRevenueProductLineLabel || copy.topInventoryPlatformLabel,
+        value: formatPlatformValue(revenueProductLineMax, { fallback: copy.noData || "-" }),
+        helper: formatMetricValue(revenueProductLineMax?.value ?? revenueProductLineMax?.revenue, {
           fallback: copy.noData || "-",
         }),
       },
@@ -192,9 +213,9 @@ export function buildSnapshotItems(summary, copy = {}, options = {}) {
       }),
     },
     {
-      label: copy.topInventoryPlatformLabel,
-      value: formatPlatformMetric(inventoryMax, { fallback: copy.noData || "-" }),
-      helper: formatPlatformHelper(copy.minInventoryPlatformLabel, dashboardSnapshot.inventory_extremes?.min, {
+      label: copy.topRevenueProductLineLabel || copy.topInventoryPlatformLabel,
+      value: formatPlatformMetric(revenueProductLineMax, { fallback: copy.noData || "-" }),
+      helper: formatPlatformHelper(copy.minRevenueProductLineLabel, revenueProductLineExtremes.min, {
         fallback: copy.noData || "-",
       }),
     },

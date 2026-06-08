@@ -127,9 +127,11 @@ REVENUE_KEYWORDS = ["revenue", "sales", "sell", "營收", "銷售"]
 INVENTORY_KEYWORDS = ["inventory", "stock", "qty", "庫存", "存貨", "金額", "數量"]
 EFFICIENCY_KEYWORDS = ["ratio", "efficiency", "營收/庫存", "庫存/營收", "效率", "週轉", "周轉", "proxy"]
 PLATFORM_KEYWORDS = ["platform", "平台", "平臺", "gg-"]
-GROUP_KEYWORDS = ["group", "business group", "新事業群", "事業群", "群組"]
+GROUP_KEYWORDS = ["group", "business group", "business unit", "BU", "bu", "新事業群", "事業群", "群組"]
 PRODUCT_LINE_KEYWORDS = ["product line", "product_line", "產品線", "五大產品線", "哪個產品線"]
 MONTH_KEYWORDS = ["month", "months", "月份", "本月", "最新月份", "最新月", "latest month", "current month"]
+LOOKUP_KEYWORDS = ["列出", "顯示", "查詢", "查看", "看一下", "告訴我", "多少", "是多少", "資料", "數據"]
+OVERALL_KEYWORDS = ["總體", "整體", "overall", "全部"]
 
 
 def classify_business_question(question: str) -> BusinessQuestionProfile:
@@ -151,6 +153,40 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
             warnings=["目前系統尚未納入預測模型、訂單、出貨、價格或市場需求資料，不能直接預測未來月份。"],
         )
 
+    if _is_parent_child_drilldown_question(text):
+        return BusinessQuestionProfile(
+            question_type="comparison",
+            intents=["parent_child_drilldown", "performance"],
+            domains=["financial"],
+            kpi_lenses=[KPI_LENSES["inventory_efficiency"], KPI_LENSES["overall_health"]],
+            object_dimension="product_line_5",
+            answer_strategy="parent_child_drilldown",
+            needs_chart=needs_chart,
+        )
+
+    if _is_contribution_question(text, lowered):
+        return BusinessQuestionProfile(
+            question_type="comparison",
+            intents=["contribution_analysis", "comparison"],
+            domains=["financial"],
+            kpi_lenses=kpi_lenses or [KPI_LENSES["revenue_growth"]],
+            object_dimension=object_dimension,
+            answer_strategy="contribution_analysis",
+            needs_chart=needs_chart,
+        )
+
+    if _is_proxy_anomaly_question(text, lowered):
+        return BusinessQuestionProfile(
+            question_type="risk",
+            intents=["metric_relationship_analysis", "risk", "anomaly"],
+            domains=["financial"],
+            kpi_lenses=[KPI_LENSES["inventory_efficiency"], KPI_LENSES["risk_anomaly"]],
+            object_dimension=object_dimension,
+            answer_strategy="metric_relationship_analysis",
+            needs_chart=needs_chart,
+            warnings=["這類問題目前只能用營收與庫存的代理異常訊號回答，不能直接判定根本原因。"],
+        )
+
     if _is_latest_month_platform_summary(text, lowered):
         dimension = object_dimension or "business_group"
         return BusinessQuestionProfile(
@@ -165,6 +201,52 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
             ],
             object_dimension=dimension,
             answer_strategy="latest_month_entity_summary",
+            needs_chart=needs_chart,
+        )
+
+    if _is_entity_time_series_question(text, lowered):
+        return BusinessQuestionProfile(
+            question_type="trend",
+            intents=["entity_time_series", "trend"],
+            domains=["financial"],
+            kpi_lenses=kpi_lenses or _default_trend_lenses(text, lowered),
+            object_dimension=object_dimension,
+            answer_strategy="entity_time_series",
+            needs_chart=needs_chart,
+        )
+
+    if _is_overall_trend_question(text, lowered, object_dimension):
+        return BusinessQuestionProfile(
+            question_type="trend",
+            intents=["overall_trend_analysis", "trend"],
+            domains=["financial"],
+            kpi_lenses=kpi_lenses or _default_trend_lenses(text, lowered),
+            object_dimension="overall",
+            answer_strategy="overall_trend_analysis",
+            needs_chart=needs_chart,
+        )
+
+    if _is_entity_trend_comparison_question(text, lowered, object_dimension):
+        return BusinessQuestionProfile(
+            question_type="trend",
+            intents=["entity_trend_comparison", "trend"],
+            domains=["financial"],
+            kpi_lenses=kpi_lenses or _default_trend_lenses(text, lowered),
+            object_dimension=object_dimension or "business_group",
+            answer_strategy="entity_trend_comparison",
+            needs_chart=needs_chart,
+        )
+
+
+    if _is_single_month_all_entity_table_question(text, lowered, object_dimension):
+        is_compare = _contains_any(text, lowered, COMPARISON_KEYWORDS)
+        return BusinessQuestionProfile(
+            question_type="comparison" if is_compare else "query",
+            intents=["cross_section_compare", "comparison"] if is_compare else ["entity_month_table_lookup", "metric_lookup"],
+            domains=["financial"],
+            kpi_lenses=kpi_lenses or _default_table_lenses(text, lowered),
+            object_dimension=object_dimension,
+            answer_strategy="comparison" if is_compare else "entity_month_table_lookup",
             needs_chart=needs_chart,
         )
 
@@ -195,18 +277,6 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
             domains=[],
             object_dimension=object_dimension,
             answer_strategy="overview",
-        )
-
-    if _is_proxy_anomaly_question(text, lowered):
-        return BusinessQuestionProfile(
-            question_type="diagnosis",
-            intents=["diagnosis", "risk", "anomaly"],
-            domains=["sales", "inventory", "financial"],
-            kpi_lenses=[KPI_LENSES["overall_health"], KPI_LENSES["risk_anomaly"]],
-            object_dimension=object_dimension,
-            answer_strategy="diagnosis",
-            needs_chart=needs_chart,
-            warnings=["這類問題目前只能用營收與庫存的代理異常訊號回答，不能直接判定根本原因。"],
         )
 
     if needs_chart and not (
@@ -300,9 +370,12 @@ def classify_business_question(question: str) -> BusinessQuestionProfile:
         )
 
     if kpi_lenses:
+        intents = ["metric_query"]
+        if _contains_any(text, lowered, LOOKUP_KEYWORDS):
+            intents.append("metric_lookup")
         return BusinessQuestionProfile(
             question_type="query",
-            intents=["metric_query"],
+            intents=intents,
             domains=_domains_for_lenses(kpi_lenses),
             kpi_lenses=kpi_lenses,
             object_dimension=object_dimension,
@@ -372,10 +445,62 @@ def _is_latest_month_platform_summary(text: str, lowered: str) -> bool:
     return has_platform and has_latest and has_summary and (has_revenue_inventory or has_operation)
 
 
+def _is_parent_child_drilldown_question(text: str) -> bool:
+    return any(token in text for token in ["底下", "下面"]) and any(token in text for token in ["產品線", "五大產品線"])
+
+
+def _is_contribution_question(text: str, lowered: str) -> bool:
+    return any(token in lowered or token in text for token in ["contribution", "contributed", "contribute", "貢獻", "主要來自", "帶動", "造成"])
+
+
+def _is_entity_time_series_question(text: str, lowered: str) -> bool:
+    return any(token in lowered or token in text for token in ["各月", "每月", "近"]) and any(token in lowered or token in text for token in REVENUE_KEYWORDS + INVENTORY_KEYWORDS)
+
+
+def _is_overall_trend_question(text: str, lowered: str, object_dimension: str | None) -> bool:
+    return (object_dimension == "overall" or _contains_any(text, lowered, OVERALL_KEYWORDS)) and _contains_any(text, lowered, TREND_KEYWORDS)
+
+
+def _is_entity_trend_comparison_question(text: str, lowered: str, object_dimension: str | None) -> bool:
+    return object_dimension in {"business_group", "product_line_5"} and _contains_any(text, lowered, TREND_KEYWORDS) and any(
+        token in text for token in ["各新事業群", "各事業群", "各產品線", "各五大產品線", "近"]
+    )
+
+
+def _is_single_month_all_entity_table_question(text: str, lowered: str, object_dimension: str | None) -> bool:
+    if object_dimension not in {"business_group", "product_line_5"}:
+        return False
+    if not _extract_single_month(text):
+        return False
+    has_all_entity = any(token in text for token in ["各事業群", "各新事業群", "各BU", "各 BU", "各產品線", "各五大產品線"])
+    has_trigger = _contains_any(text, lowered, LOOKUP_KEYWORDS + COMPARISON_KEYWORDS)
+    has_metric_or_data = _contains_any(text, lowered, REVENUE_KEYWORDS + INVENTORY_KEYWORDS) or any(token in text for token in ["資料", "數據"])
+    return has_all_entity and has_trigger and has_metric_or_data
+
+
+def _extract_single_month(text: str) -> str | None:
+    match = re.search(r"(20\d{2})\s*[-/\u5e74]?\s*(1[0-2]|0?[1-9])\s*(?:\u6708)?", text)
+    return f"{match.group(1)}-{int(match.group(2)):02d}" if match else None
+
+
+def _default_table_lenses(text: str, lowered: str) -> list[KpiLens]:
+    lenses: list[KpiLens] = []
+    if _contains_any(text, lowered, REVENUE_KEYWORDS):
+        lenses.append(KPI_LENSES["revenue_scale"])
+    if _contains_any(text, lowered, INVENTORY_KEYWORDS):
+        lenses.append(KPI_LENSES["inventory_efficiency"])
+    return lenses or [KPI_LENSES["revenue_scale"]]
+
+
 def _extract_period_pair(text: str) -> tuple[str, str] | None:
-    months: list[str] = []
-    for match in re.finditer(r"(20\d{2})\s*[-/\u5e74]?\s*(0?[1-9]|1[0-2])\s*(?:\u6708)?", text):
-        months.append(f"{match.group(1)}-{int(match.group(2)):02d}")
+    month_matches = [
+        {
+            "month": f"{match.group(1)}-{int(match.group(2)):02d}",
+            "span": match.span(),
+        }
+        for match in re.finditer(r"(20\d{2})\s*[-/\u5e74]?\s*(1[0-2]|0?[1-9])\s*(?:\u6708)?", text)
+    ]
+    months = [item["month"] for item in month_matches]
     if len(months) < 2:
         for match in re.finditer(r"(?<!\d)(1[0-2]|0?[1-9])\s*\u6708", text):
             months.append(f"2024-{int(match.group(1)):02d}")
@@ -397,6 +522,12 @@ def _extract_period_pair(text: str) -> tuple[str, str] | None:
         "\u5dee\u591a\u5c11",
     ]
     if any(token in text or token in text.lower() for token in pair_tokens):
+        if len(month_matches) >= 2:
+            first = month_matches[0]
+            second = month_matches[1]
+            connector = text[first["span"][1] : second["span"][0]]
+            if "比" in connector and not any(token in connector for token in ["與", "和", "以及", "跟"]):
+                return second["month"], first["month"]
         return unique_months[0], unique_months[1]
     return None
 
@@ -436,6 +567,8 @@ def _is_performance_weakness_question(text: str, lowered: str, object_dimension:
 
 
 def _detect_object_dimension(text: str, lowered: str) -> str | None:
+    if _contains_any(text, lowered, OVERALL_KEYWORDS):
+        return "overall"
     if _contains_any(text, lowered, PRODUCT_LINE_KEYWORDS):
         return "product_line_5"
     if _contains_any(text, lowered, GROUP_KEYWORDS):

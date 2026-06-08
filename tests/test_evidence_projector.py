@@ -14,11 +14,11 @@ class EvidenceProjectorTest(unittest.TestCase):
         blocks = build_display_blocks_from_roles(
             _profile("latest_month_entity_summary", requires_table=True),
             _plan(requires_table=True),
-            _rubric([_entity_snapshot("business_group", "新事業群")]),
+            _rubric([_entity_snapshot("business_group", "事業群")]),
             [],
         )
 
-        self.assertIn("新事業群", blocks["headline"])
+        self.assertIn("事業群", blocks["headline"])
         self.assertNotIn("各平台", blocks["headline"])
         self.assertIsNotNone(blocks["table"])
 
@@ -26,25 +26,60 @@ class EvidenceProjectorTest(unittest.TestCase):
         blocks = build_display_blocks_from_roles(
             _profile("cross_section_compare", requires_table=True, time_scope={"month": "2026-02"}),
             _plan(requires_table=True),
-            _rubric([_entity_snapshot("product_line_5", "五大產品線")]),
+            _rubric([_entity_snapshot("product_line_5", "產品線")]),
             [],
         )
 
-        self.assertIn("五大產品線", blocks["headline"])
+        self.assertIn("產品線", blocks["headline"])
         self.assertIn("health_score", blocks["table"]["columns"])
+
+    def test_entity_time_series_headline_preserves_named_entity(self) -> None:
+        blocks = build_display_blocks_from_roles(
+            _profile("entity_time_series", requires_table=True),
+            _plan(requires_table=True),
+            _rubric([_series_item("entity_time_series", {"entity_value": "3通路方案", "entity_label": "事業群"})]),
+            [],
+        )
+
+        self.assertIn("3通路方案", blocks["headline"])
+        self.assertIn("2026-01", blocks["headline"])
+        self.assertIsNotNone(blocks["table"])
+
+    def test_overall_trend_headline_uses_overall_wording(self) -> None:
+        blocks = build_display_blocks_from_roles(
+            _profile("overall_trend_analysis", requires_table=True),
+            _plan(requires_table=True),
+            _rubric([_series_item("overall_time_series", {})]),
+            [],
+        )
+
+        self.assertIn("整體營收", blocks["headline"])
+        self.assertIn("2026-01", blocks["headline"])
+
+    def test_contribution_headline_preserves_period_pair(self) -> None:
+        blocks = build_display_blocks_from_roles(
+            _profile("contribution_analysis", requires_table=True),
+            _plan(requires_table=True),
+            _rubric([_contribution_item()]),
+            [],
+        )
+
+        self.assertIn("2026-01", blocks["headline"])
+        self.assertIn("2025-12", blocks["headline"])
+        self.assertIn("3通路方案", blocks["headline"])
 
     def test_key_observations_are_limited(self) -> None:
         blocks = build_display_blocks_from_roles(
             _profile("performance_assessment", polarity="best"),
             _plan(max_key_observations=1),
-            _rubric([_entity_snapshot("business_group", "新事業群"), _entity_row("次要")]),
+            _rubric([_entity_snapshot("business_group", "事業群"), _entity_row("次要")]),
             [],
         )
 
         self.assertLessEqual(len(blocks["key_observations"]), 1)
 
     def test_unmapped_entity_is_displayed_as_data_quality_limitation(self) -> None:
-        unmapped = _entity_snapshot("business_group", "新事業群")
+        unmapped = _entity_snapshot("business_group", "事業群")
         rows = unmapped.details["rows"]
         rows[0]["entity_value"] = "未對應"
         rows[0]["platform"] = "未對應"
@@ -67,6 +102,20 @@ class EvidenceProjectorTest(unittest.TestCase):
 
         self.assertIn("build_display_blocks_from_roles", source)
         self.assertNotIn("_build_role_based_display_blocks(", source)
+
+    def test_phase10f_period_pair_table_projects_headline_and_table(self) -> None:
+        blocks = build_display_blocks_from_roles(
+            _profile("entity_period_pair_table_lookup", requires_table=True),
+            _plan(requires_table=True),
+            _rubric([_period_pair_table_item()]),
+            [],
+        )
+
+        self.assertIn("2025-02", blocks["headline"])
+        self.assertIn("2025-03", blocks["headline"])
+        self.assertIn("產品線", blocks["headline"])
+        self.assertIsNotNone(blocks["table"])
+        self.assertIn("change", blocks["table"]["columns"])
 
 
 def _profile(task_family: str, **overrides) -> SimpleNamespace:
@@ -123,8 +172,85 @@ def _entity_row(name: str) -> EvidenceItemWithRole:
         evidence_type="entity_performance_row",
         source_tool="get_entity_performance_snapshot",
         summary=name,
-        details=_row(name, "新事業群", "business_group", 0.5, 1, 1, 1),
+        details=_row(name, "事業群", "business_group", 0.5, 1, 1, 1),
         display_priority=2,
+        reason="test",
+    )
+
+
+def _series_item(evidence_type: str, overrides: dict[str, object]) -> EvidenceItemWithRole:
+    details = {
+        "metric": "revenue_amount",
+        "metric_label": "營收",
+        "rows": [
+            {"month": "2025-12", "value": 100.0, "mom_change": None, "mom_change_pct": None},
+            {"month": "2026-01", "value": 120.0, "mom_change": 20.0, "mom_change_pct": 0.2},
+        ],
+        "summary": {
+            "latest_month": "2026-01",
+            "latest_value": 120.0,
+            "peak_month": "2026-01",
+            "lowest_month": "2025-12",
+            "overall_change": 20.0,
+            "overall_change_pct": 0.2,
+            "direction": "up",
+        },
+        "limitations": ["歷史描述，不做 forecast。"],
+    }
+    details.update(overrides)
+    return EvidenceItemWithRole(
+        role="primary",
+        evidence_type=evidence_type,
+        source_tool="test",
+        summary="series",
+        details=details,
+        display_priority=1,
+        reason="test",
+    )
+
+
+def _contribution_item() -> EvidenceItemWithRole:
+    return EvidenceItemWithRole(
+        role="primary",
+        evidence_type="entity_contribution_analysis",
+        source_tool="get_entity_contribution_analysis",
+        summary="contribution",
+        details={
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "revenue_amount",
+            "metric_label": "營收",
+            "period_a": "2025-12",
+            "period_b": "2026-01",
+            "rows": [{"entity_value": "3通路方案", "change": 20.0, "contribution_pct": 0.6, "direction": "up"}],
+            "summary": {"top_contributor": "3通路方案", "top_change": 20.0},
+            "limitations": ["描述性 contribution。"],
+        },
+        display_priority=1,
+        reason="test",
+    )
+
+
+def _period_pair_table_item() -> EvidenceItemWithRole:
+    return EvidenceItemWithRole(
+        role="primary",
+        evidence_type="entity_period_pair_table",
+        source_tool="get_entity_period_pair_table",
+        summary="period pair table",
+        details={
+            "period_a": "2025-02",
+            "period_b": "2025-03",
+            "entity_dimension": "product_line_5",
+            "entity_label": "產品線",
+            "metric": "inventory_amount",
+            "metric_label": "庫存金額",
+            "rows": [
+                {"entity_value": "Server", "value_a": 100.0, "value_b": 120.0, "change": 20.0, "change_pct": 0.2, "data_presence_flag": "inventory_only"},
+            ],
+            "summary": {"row_count": 1, "top_entity_period_b": "Server"},
+            "limitations": [],
+        },
+        display_priority=1,
         reason="test",
     )
 

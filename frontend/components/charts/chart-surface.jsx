@@ -35,7 +35,8 @@ const VARIANT_CONFIG = {
     emptyClassName: "chart-empty",
     emptyTitleClassName: "chart-empty-title",
     palette: ["#1f6feb", "#ff6b35", "#0f9d58", "#8e44ad", "#c0392b", "#1b7f8c", "#e0a100"],
-    margin: { top: 16, right: 16, left: 0, bottom: 8 },
+    margin: { top: 16, right: 18, left: 24, bottom: 8 },
+    yAxisWidth: 88,
     gridStroke: "rgba(9, 33, 71, 0.12)",
     axisTick: { fill: "#5f6b7f", fontSize: 12 },
     legendProps: {},
@@ -62,7 +63,8 @@ const VARIANT_CONFIG = {
     emptyClassName: "mobile-exec-chart-empty",
     emptyTitleClassName: "mobile-exec-chart-empty-title",
     palette: ["#2563eb", "#f97316", "#16a34a", "#7c3aed", "#dc2626", "#0891b2", "#ca8a04"],
-    margin: { top: 14, right: 10, left: -14, bottom: 0 },
+    margin: { top: 14, right: 8, left: 12, bottom: 0 },
+    yAxisWidth: 72,
     gridStroke: "rgba(15, 23, 42, 0.1)",
     axisTick: { fill: "#64748b", fontSize: 11 },
     legendProps: { wrapperStyle: { fontSize: 11 } },
@@ -108,13 +110,60 @@ function buildPieData(data, seriesName, palette) {
   }));
 }
 
+function formatAxisValue(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return value ?? "-";
+  }
+
+  const abs = Math.abs(number);
+  if (abs >= 100000000) {
+    return `${formatShortUnit(number, 100000000)}億`;
+  }
+  if (abs >= 10000) {
+    return `${formatShortUnit(number, 10000)}萬`;
+  }
+
+  return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(number);
+}
+
+function formatShortUnit(value, divisor) {
+  const scaled = Number(value) / divisor;
+  const abs = Math.abs(scaled);
+  const maximumFractionDigits = abs >= 100 ? 0 : abs >= 10 ? 1 : 2;
+  return new Intl.NumberFormat("zh-TW", { maximumFractionDigits }).format(scaled);
+}
+
+function formatTooltipValue(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return value ?? "-";
+  }
+  return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(number);
+}
+
 function buildTooltipProps(config, includeCursor = false) {
+  const tooltipProps = {
+    formatter: (value, name) => [formatTooltipValue(value), name],
+    ...config.tooltipProps,
+  };
+
   return includeCursor
     ? {
         cursor: config.tooltipCursor,
-        ...config.tooltipProps,
+        ...tooltipProps,
       }
-    : config.tooltipProps;
+    : tooltipProps;
+}
+
+function buildYAxisProps(config) {
+  return {
+    tick: config.axisTick,
+    axisLine: false,
+    tickLine: false,
+    tickFormatter: formatAxisValue,
+    width: config.yAxisWidth,
+  };
 }
 
 export function SharedChartSurface({ payload, variant = "desktop" }) {
@@ -136,11 +185,11 @@ export function SharedChartSurface({ payload, variant = "desktop" }) {
   return (
     <div className={config.containerClassName}>
       <ResponsiveContainer width="100%" height="100%">
-        {chartType === "bar" ? (
+        {chartType === "bar" || chartType === "grouped_bar" ? (
           <BarChart data={data} margin={config.margin}>
             <CartesianGrid strokeDasharray="3 3" stroke={config.gridStroke} vertical={false} />
             <XAxis dataKey="label" tick={config.axisTick} axisLine={false} tickLine={false} />
-            <YAxis tick={config.axisTick} axisLine={false} tickLine={false} />
+            <YAxis {...buildYAxisProps(config)} />
             <Tooltip {...buildTooltipProps(config, true)} />
             <Legend {...config.legendProps} />
             {payload.series.map((item, index) => (
@@ -156,7 +205,7 @@ export function SharedChartSurface({ payload, variant = "desktop" }) {
           <AreaChart data={data} margin={config.margin}>
             <CartesianGrid strokeDasharray="3 3" stroke={config.gridStroke} vertical={false} />
             <XAxis dataKey="label" tick={config.axisTick} axisLine={false} tickLine={false} />
-            <YAxis tick={config.axisTick} axisLine={false} tickLine={false} />
+            <YAxis {...buildYAxisProps(config)} />
             <Tooltip {...buildTooltipProps(config)} />
             <Legend {...config.legendProps} />
             {payload.series.map((item, index) => (
@@ -194,7 +243,7 @@ export function SharedChartSurface({ payload, variant = "desktop" }) {
           <LineChart data={data} margin={config.margin}>
             <CartesianGrid strokeDasharray="3 3" stroke={config.gridStroke} vertical={false} />
             <XAxis dataKey="label" tick={config.axisTick} axisLine={false} tickLine={false} />
-            <YAxis tick={config.axisTick} axisLine={false} tickLine={false} />
+            <YAxis {...buildYAxisProps(config)} />
             <Tooltip {...buildTooltipProps(config)} />
             <Legend {...config.legendProps} />
             {payload.series.map((item, index) => (

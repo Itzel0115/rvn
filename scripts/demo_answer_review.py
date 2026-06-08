@@ -16,31 +16,7 @@ from tests.support import build_stubbed_assistant
 REPORT_DIR = PROJECT_ROOT / "eval"
 CSV_FILE = REPORT_DIR / "demo_answer_review_results.csv"
 MD_FILE = REPORT_DIR / "demo_answer_review.md"
-
-DEMO_REVIEW_QUESTIONS = [
-    "請整理最新月份各新事業群的營收與庫存重點",
-    "請分析哪個新事業群表現較佳",
-    "請分析哪個新事業群表現較差",
-    "比較最新月份各五大產品線營收與庫存",
-    "哪個產品線庫存壓力較高？",
-    "請畫最新月份各新事業群營收圖",
-    "請畫五大產品線 health_score 排名",
-    "2026年1月以及2026年2月營收有什麼區別？",
-    "最新月份營收最高的新事業群是誰？",
-    "最新月份庫存最高的新事業群是誰？",
-    "哪個新事業群營收相對庫存效率較弱？",
-    "哪個五大產品線營收最高？",
-    "哪個五大產品線庫存最高？",
-    "目前資料涵蓋哪些月份？",
-    "下個月營收會不會改善？",
-    "為什麼某新事業群營收下降？",
-    "最近有什麼營運風險？",
-    "請比較新事業群與五大產品線的重點",
-    "哪個新事業群需要優先注意？",
-    "請產生主管摘要",
-    "哪個新事業群營收相對庫存效率最高？",
-    "哪個新事業群營收相對庫存效率最低？",
-]
+CASE_FILE = PROJECT_ROOT / "eval" / "questions_answer.jsonl"
 
 ROOT_CAUSE_QUESTION_HINTS = ("為什麼", "原因", "root cause", "why")
 ROOT_CAUSE_CLAIM_PATTERNS = (
@@ -53,6 +29,22 @@ ROOT_CAUSE_CLAIM_PATTERNS = (
     "root cause confirmed",
 )
 FORECAST_QUESTION_HINTS = ("下個月", "下月", "forecast", "預測")
+TABLE_COLUMN_EXPECTATIONS = {
+    "列出 2025/09 與 2025/10 產品線的庫存": ["產品線", "2025-09 庫存金額", "2025-10 庫存金額", "change", "change_pct"],
+    "列出 2025/11 與 2025/12 產品線的庫存": ["產品線", "2025-11 庫存金額", "2025-12 庫存金額", "change", "change_pct"],
+    "列出 2025/02 與 2025/03 產品線的庫存": ["產品線", "2025-02 庫存金額", "2025-03 庫存金額", "change", "change_pct"],
+    "列出 2025年2月和2025年3月各事業群營收": ["事業群", "2025-02 營收", "2025-03 營收", "change", "change_pct"],
+}
+EXTRA_TABLE_COLUMN_CASES = [
+    {
+        "question": question,
+        "must_include": [],
+        "must_not_include": ["2026-02", "2026-01"],
+        "table_expected": True,
+        "chart_expected": False,
+    }
+    for question in TABLE_COLUMN_EXPECTATIONS
+]
 
 
 def main() -> None:
@@ -61,9 +53,10 @@ def main() -> None:
         use_llm_planner=False,
         use_llm_rewriter=False,
     )
+    cases = load_cases()
     rows = [
-        review_response(index, question, assistant.answer(question))
-        for index, question in enumerate(DEMO_REVIEW_QUESTIONS, start=1)
+        review_response(index, case, assistant.answer(str(case["question"])))
+        for index, case in enumerate(cases, start=1)
     ]
     write_csv(rows)
     write_markdown(rows)
@@ -78,7 +71,18 @@ def main() -> None:
         raise SystemExit(1)
 
 
-def review_response(case_id: int, question: str, response: dict[str, Any]) -> dict[str, str]:
+def load_cases() -> list[dict[str, Any]]:
+    cases = [json.loads(line) for line in CASE_FILE.read_text(encoding="utf-8").splitlines() if line.strip()]
+    existing_questions = {str(case.get("question")) for case in cases}
+    cases.extend(case for case in EXTRA_TABLE_COLUMN_CASES if str(case["question"]) not in existing_questions)
+    return cases
+
+
+DEMO_REVIEW_QUESTIONS = [str(case["question"]) for case in load_cases()]
+
+
+def review_response(case_id: int, case: dict[str, Any], response: dict[str, Any]) -> dict[str, str]:
+    question = str(case["question"])
     contract = response.get("answer_contract", {}) or {}
     task_profile = response.get("task_profile", {}) or {}
     answer_plan = response.get("answer_plan", {}) or {}
@@ -107,6 +111,11 @@ def review_response(case_id: int, question: str, response: dict[str, Any]) -> di
         "unmapped_headline_guardrail": _unmapped_headline_ok(headline),
         "forecast_unsupported": _forecast_ok(question, contract, task_profile),
         "root_cause_no_confirmed_claim": _root_cause_ok(question, visible_text),
+        "must_include": all(str(token) in visible_text for token in case.get("must_include", [])),
+        "must_not_include": all(str(token) not in visible_text for token in case.get("must_not_include", [])),
+        "table_expected": _table_expectation_ok(case, table),
+        "table_expected_columns": _expected_table_columns_ok(question, table_columns),
+        "chart_expected": _chart_expectation_ok(case, charts),
         "ranking_answer_has_entity_metric_evidence": _ranking_answer_ok(
             question=question,
             task_profile=task_profile,
@@ -245,9 +254,33 @@ def _evidence_details(item: dict[str, Any]) -> dict[str, Any]:
 def _is_ranking_question(question: str, task_profile: dict[str, Any], contract: dict[str, Any]) -> bool:
     task_family = task_profile.get("task_family")
     answer_type = contract.get("answer_type")
-    if task_family != "ranking" and answer_type != "ranking":
+    if task_family != "entity_ranking" and answer_type != "ranking":
         return False
     return any(token in question for token in ["最高", "最低", "排名", "排行", "哪個"])
+
+
+def _table_expectation_ok(case: dict[str, Any], table: dict[str, Any]) -> bool:
+    expected = case.get("table_expected")
+    if expected is None:
+        return True
+    has_table = bool((table or {}).get("rows"))
+    return has_table is bool(expected)
+
+
+def _expected_table_columns_ok(question: str, columns: list[Any]) -> bool:
+    expected = TABLE_COLUMN_EXPECTATIONS.get(question)
+    if not expected:
+        return True
+    column_texts = {str(column) for column in columns}
+    return all(column in column_texts for column in expected)
+
+
+def _chart_expectation_ok(case: dict[str, Any], charts: list[dict[str, Any]]) -> bool:
+    expected = case.get("chart_expected")
+    if expected is None:
+        return True
+    has_chart = bool(charts)
+    return has_chart is bool(expected)
 
 
 def write_csv(rows: list[dict[str, str]]) -> None:

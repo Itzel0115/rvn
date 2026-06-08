@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   ChevronDown,
@@ -67,11 +67,23 @@ function LegacyMessageBubble({ message }) {
   );
 }
 
-function formatMobileCell(value) {
+function isPercentColumn(column) {
+  return String(column || "").toLowerCase().includes("pct");
+}
+
+function formatMobileCell(value, column) {
   if (value === null || value === undefined || value === "") {
     return "-";
   }
   if (typeof value === "number") {
+    if (isPercentColumn(column)) {
+      return new Intl.NumberFormat("zh-TW", {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        style: "percent",
+      }).format(value);
+    }
+
     return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(value);
   }
   return String(value);
@@ -123,7 +135,7 @@ function MessageBubble({ message }) {
               {table.rows.map((row, rowIndex) => (
                 <tr key={`mobile-display-row-${rowIndex}`}>
                   {table.columns.map((column) => (
-                    <td key={`${column}-${rowIndex}`}>{formatMobileCell(row[column])}</td>
+                    <td key={`${column}-${rowIndex}`}>{formatMobileCell(row[column], column)}</td>
                   ))}
                 </tr>
               ))}
@@ -157,6 +169,23 @@ export function MobileConsole() {
   const [busy, setBusy] = useState(false);
   const [chartBusy, setChartBusy] = useState(false);
   const [error, setError] = useState("");
+  const messageThreadRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      const thread = messageThreadRef.current;
+      if (thread) {
+        thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
+        return;
+      }
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [messages, busy, drawerOpen]);
 
   const latestMonth = getLatestMonthLabel(summary, "-");
   const dashboardSnapshot = summary?.dashboard_snapshot || {};
@@ -189,8 +218,9 @@ export function MobileConsole() {
         summary,
         {
           noData: "-",
-          topRevenuePlatformLabel: "營收最高新事業群",
-          topInventoryPlatformLabel: "庫存最高新事業群",
+          topRevenuePlatformLabel: "營收最高事業群",
+          topRevenueProductLineLabel: "營收最高產品線",
+          topInventoryPlatformLabel: "庫存最高事業群",
         },
         { mode: "mobile" },
       ),
@@ -430,10 +460,11 @@ export function MobileConsole() {
             ))}
           </div>
 
-          <div className="mobile-exec-message-thread">
+          <div className="mobile-exec-message-thread" ref={messageThreadRef}>
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
+            <div ref={messagesEndRef} aria-hidden="true" />
           </div>
 
           <form

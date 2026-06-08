@@ -15,15 +15,15 @@ class Phase9BDemoReadinessTest(unittest.TestCase):
         self.assertGreaterEqual(len(DEMO_REVIEW_QUESTIONS), 20)
 
     def test_performance_weakness_headline_uses_business_group_wording(self) -> None:
-        response = self.assistant.answer("請分析哪個新事業群表現較差")
+        response = self.assistant.answer("請分析哪個事業群表現較差")
         display = response["answer_contract"]["display_blocks"]
 
-        self.assertIn("新事業群", display["headline"])
+        self.assertIn("事業群", display["headline"])
         self.assertNotIn("平台", display["headline"])
         self.assertLessEqual(len(display.get("key_observations") or []), 3)
 
     def test_cross_section_table_columns_do_not_use_platform_label(self) -> None:
-        response = self.assistant.answer("比較最新月份各五大產品線營收與庫存")
+        response = self.assistant.answer("比較最新月份各產品線營收與庫存")
         table = response["answer_contract"]["display_blocks"].get("table") or {}
         columns = [str(column) for column in table.get("columns") or []]
 
@@ -31,7 +31,7 @@ class Phase9BDemoReadinessTest(unittest.TestCase):
         self.assertNotIn("平台", "".join(columns))
 
     def test_chart_titles_do_not_use_platform_wording(self) -> None:
-        response = self.assistant.answer("請畫最新月份各新事業群營收圖")
+        response = self.assistant.answer("請畫最新月份各事業群營收圖")
         charts = [
             evidence
             for result in response.get("domain_results") or []

@@ -14,10 +14,27 @@ export async function proxyPythonJson(path, init = {}) {
     cache: "no-store",
   });
 
-  const payload = await response.json().catch(() => ({}));
+  const rawText = await response.text();
+  const payload = parsePythonJson(rawText);
   if (!response.ok) {
     const error = payload?.error || `Python API request failed: ${response.status}`;
     throw new Error(error);
   }
   return payload;
+}
+
+function parsePythonJson(rawText) {
+  if (!rawText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    const sanitized = rawText
+      .replace(/\bNaN\b/g, "null")
+      .replace(/\b-Infinity\b/g, "null")
+      .replace(/\bInfinity\b/g, "null");
+    return JSON.parse(sanitized);
+  }
 }

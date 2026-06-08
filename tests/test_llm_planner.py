@@ -6,11 +6,17 @@ from llm_planner import (
     LLMToolPlanner,
     PROMPT_MODE_FULL,
     PROMPT_MODE_SLIM,
+    PlannedToolCall,
+    ToolPlan,
     allowed_tools_registry_payload,
     build_compact_tool_registry,
     select_planner_tool_subset,
+    validate_llm_plan_against_canonical_task_profile,
 )
+from answer_plan import build_answer_plan
 from ollama_client import OllamaCallResult
+from business_question_classifier import classify_business_question
+from task_profile import build_task_profile
 from tests.support import build_stubbed_assistant
 
 
@@ -86,9 +92,7 @@ class LLMPlannerTest(unittest.TestCase):
             data={
                 "question_type": "unsupported",
                 "domains": [],
-                "tools": [
-                    {"tool_name": "get_data_coverage", "args": {}, "reason": "coverage"},
-                ],
+                "tools": [],
                 "answer_mode": "unsupported",
                 "requires_limitations": True,
                 "unsupported_reason": "Forecasting is out of scope.",
@@ -96,7 +100,7 @@ class LLMPlannerTest(unittest.TestCase):
         )
         result = planner.plan_question("Will next month revenue improve?", llm)
         self.assertTrue(result.ok)
-        self.assertTrue(all(call.tool_name != "forecast" for call in result.plan.tools))
+        self.assertEqual(result.plan.tools, [])
 
     def test_why_question_requires_limitations_true(self) -> None:
         planner = LLMToolPlanner("test-llm-planner")
@@ -185,6 +189,7 @@ class LLMPlannerTest(unittest.TestCase):
         planner = LLMToolPlanner("test-llm-planner")
         llm = FakePlannerLLM(
             data={
+                "task_family": "entity_ranking",
                 "question_type": "ranking",
                 "domains": ["sales"],
                 "tools": [
@@ -199,9 +204,104 @@ class LLMPlannerTest(unittest.TestCase):
                 "unsupported_reason": None,
             }
         )
-        result = planner.plan_question("最新月份營收最高的新事業群是誰？", llm)
+        result = planner.plan_question("最新月份營收最高的事業群是誰？", llm)
         self.assertTrue(result.ok)
         self.assertEqual(result.plan.tools[0].tool_name, "get_entity_metric_ranking")
+
+    def test_canonical_validation_rejects_date_mismatch(self) -> None:
+        question = "比較 2025 年 12 月與 2026 年 1 月營收差別"
+        routing = classify_business_question(question)
+        profile = build_task_profile(question, routing)
+        answer_plan = build_answer_plan(profile, routing)
+        plan = ToolPlan(
+            task_family="period_pair_compare",
+            question_type="comparison",
+            domains=["financial"],
+            tools=[
+                PlannedToolCall(
+                    tool_name="get_entity_period_pair_comparison",
+                    args={"entity_dimension": "business_group", "metric": "revenue", "period_a": "2025-01", "period_b": "2026-01"},
+                    reason="bad dates",
+                )
+            ],
+            answer_mode="comparison",
+            requires_limitations=True,
+        )
+
+        ok, reason = validate_llm_plan_against_canonical_task_profile(plan, profile, answer_plan)
+        self.assertFalse(ok)
+        self.assertEqual(reason, "date_mismatch:period_a")
+
+    def test_canonical_validation_rejects_entity_loss_for_entity_series(self) -> None:
+        question = "比較 3通路方案 各月營收"
+        routing = classify_business_question(question)
+        profile = build_task_profile(question, routing)
+        answer_plan = build_answer_plan(profile, routing)
+        plan = ToolPlan(
+            task_family="entity_time_series",
+            question_type="trend",
+            domains=["financial"],
+            tools=[
+                PlannedToolCall(
+                    tool_name="get_entity_time_series",
+                    args={"entity_dimension": "business_group", "entity_value": "其他方案", "metric": "revenue_amount"},
+                    reason="lost entity",
+                )
+            ],
+            answer_mode="trend",
+            requires_limitations=True,
+        )
+
+        ok, reason = validate_llm_plan_against_canonical_task_profile(plan, profile, answer_plan)
+        self.assertFalse(ok)
+        self.assertEqual(reason, "entity_value_mismatch")
+
+    def test_canonical_validation_rejects_forecast_becoming_supported(self) -> None:
+        question = "下個月營收會不會改善？"
+        routing = classify_business_question(question)
+        profile = build_task_profile(question, routing)
+        answer_plan = build_answer_plan(profile, routing)
+        plan = ToolPlan(
+            task_family="forecast_unsupported",
+            question_type="comparison",
+            domains=["financial"],
+            tools=[PlannedToolCall(tool_name="get_entity_time_series", args={}, reason="bad")],
+            answer_mode="comparison",
+            requires_limitations=True,
+        )
+
+        ok, reason = validate_llm_plan_against_canonical_task_profile(plan, profile, answer_plan)
+        self.assertFalse(ok)
+        self.assertEqual(reason, "forecast_became_supported")
+
+    def test_bad_llm_plan_falls_back_to_deterministic_period_pair_answer(self) -> None:
+        bad_llm = FakePlannerLLM(
+            data={
+                "task_family": "period_pair_compare",
+                "question_type": "comparison",
+                "domains": ["financial"],
+                "tools": [
+                    {
+                        "tool_name": "get_entity_period_pair_comparison",
+                        "args": {"entity_dimension": "business_group", "metric": "revenue", "period_a": "2025-01", "period_b": "2026-01"},
+                        "reason": "bad dates",
+                    }
+                ],
+                "answer_mode": "comparison",
+                "requires_limitations": True,
+                "unsupported_reason": None,
+            }
+        )
+        question = "比較 2025 年 12 月與 2026 年 1 月營收差別"
+        deterministic = build_stubbed_assistant("test-planner-control", use_llm_planner=False).answer(question)
+        with_llm = build_stubbed_assistant("test-planner-fallback", use_llm_planner=True, llm_client=bad_llm).answer(question)
+
+        self.assertEqual(
+            with_llm["answer_contract"]["display_blocks"]["headline"],
+            deterministic["answer_contract"]["display_blocks"]["headline"],
+        )
+        self.assertEqual(with_llm["task_profile"]["time_scope"]["period_a"], "2025-12")
+        self.assertEqual(with_llm["task_profile"]["time_scope"]["period_b"], "2026-01")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BarChart3,
   Bot,
@@ -39,7 +39,7 @@ const TEXT = {
   structuredReport: "結構化回覆",
   promptLabel: "輸入分析需求",
   promptPlaceholder:
-    "例如：比較最新月份各新事業群營收與庫存、畫出五大產品線營收長條圖，或觀察哪個新事業群最近異常最多。",
+    "例如：比較最新月份各事業群營收與庫存、畫出產品線營收長條圖，或觀察哪個事業群最近異常最多。",
   metaIdle: "可直接提問、要求重畫圖表，或在下方資料觀察區做自訂比較。",
   metaBusy: "正在協調 Agent 分析並整理結果…",
   send: "送出分析",
@@ -57,36 +57,38 @@ const TEXT = {
   currentMonthAnomalies: "本月異常訊號",
   noCurrentMonthAnomalies: "本月未偵測到異常訊號",
   monthOverMonth: "月增率",
-  minRevenuePlatform: "本月最低營收新事業群",
-  minInventoryPlatform: "本月最低庫存新事業群",
+  minRevenuePlatform: "本月最低營收事業群",
+  minRevenueProductLine: "本月最低營收產品線",
+  minInventoryPlatform: "本月最低庫存事業群",
   statCurrentRevenue: "最新月份總營收",
   statCurrentInventory: "最新月份總庫存",
   statRecentRevenue: "近三月累積營收",
   statRecentInventory: "近三月累積庫存",
-  statTopRevenuePlatform: "本月最高營收新事業群",
-  statTopInventoryPlatform: "本月最高庫存新事業群",
+  statTopRevenuePlatform: "本月最高營收事業群",
+  statTopRevenueProductLine: "本月最高營收產品線",
+  statTopInventoryPlatform: "本月最高庫存事業群",
   observationTitle: "資料觀察區",
-  observationSubtitle: "依時間、新事業群、五大產品線與指標組合，自行切換比較視角。",
+  observationSubtitle: "依月份、事業群、產品線與指標組合，自行切換比較視角。",
   observationApply: "更新觀察",
   observationLoading: "正在整理觀察表…",
   observationEmpty: "目前條件下沒有可供比較的資料。",
-  observationMessageDefault: "可自由切換維度與比較條件，觀察各月份、新事業群或五大產品線表現。",
+  observationMessageDefault: "可自由切換維度與比較條件，觀察各月份、事業群或產品線表現。",
   observationRowDimension: "觀察維度",
   observationMetric: "比較指標",
   observationCompareMode: "比較方式",
   observationCurrentMonth: "當期月份",
   observationCompareMonth: "比較月份",
-  observationPlatform: "新事業群篩選",
-  observationGroup: "事業群篩選",
-  allPlatforms: "全部新事業群",
-  allGroups: "全部事業群",
+  observationBusinessGroupFilter: "事業群篩選",
+  observationProductLineFilter: "產品線篩選",
+  allBusinessGroups: "全部事業群",
+  allProductLines: "全部產品線",
 };
 
 const QUICK_PROMPTS = [
-  "請比較最新月份各新事業群營收與庫存差異",
-  "請列出最近三個月最顯著的異常訊號",
-  "幫我畫最新月份各新事業群營收長條圖並附表格",
-  "請整理目前最值得關注的事業群觀察重點",
+  "請整理最新月份各事業群的營收與庫存重點",
+  "比較最新月份各產品線營收與庫存",
+  "畫出 2025年2月各事業群營收圓餅圖",
+  "列出 3通路方案 2026/2 營收",
 ];
 
 const INITIAL_SYSTEM_MESSAGE = {
@@ -188,6 +190,65 @@ function buildWelcomeMessage(summary) {
   };
 }
 
+const DEFAULT_COMPARE_MODES = [{ value: "previous_period", label: "前一期比較" }];
+
+function normalizeObservationDimension(value) {
+  if (value === "month") return "month";
+  if (value === "product_line" || value === "product_line_5") return "product_line_5";
+  return "business_group";
+}
+
+function getComparisonOptions(options, rowDimension) {
+  const modes = options?.compare_modes?.length ? options.compare_modes : DEFAULT_COMPARE_MODES;
+  const normalizedDimension = normalizeObservationDimension(rowDimension);
+  if (normalizedDimension === "month") {
+    const previousOnly = modes.filter((item) => item.value === "previous_period");
+    return previousOnly.length ? previousOnly : modes.slice(0, 1);
+  }
+  return modes;
+}
+
+function getValidCompareMode(options, rowDimension, compareMode) {
+  const modes = getComparisonOptions(options, rowDimension);
+  return modes.some((item) => item.value === compareMode) ? compareMode : modes[0]?.value || "previous_period";
+}
+
+function getObservationFilterConfig(rowDimension) {
+  const normalizedDimension = normalizeObservationDimension(rowDimension);
+  if (normalizedDimension === "product_line_5") {
+    return {
+      stateKey: "product_line_5",
+      label: TEXT.observationProductLineFilter,
+      allLabel: TEXT.allProductLines,
+      optionsKey: "product_lines",
+    };
+  }
+
+  return {
+    stateKey: "platform",
+    label: TEXT.observationBusinessGroupFilter,
+    allLabel: TEXT.allBusinessGroups,
+    optionsKey: "business_groups",
+  };
+}
+
+function getObservationFilterOptions(options, rowDimension) {
+  const config = getObservationFilterConfig(rowDimension);
+  if (config.optionsKey === "product_lines") {
+    return options?.product_lines || [];
+  }
+  return options?.business_groups || options?.platforms || [];
+}
+
+function syncPreviousCompareMonth(selection, options) {
+  if (selection.compare_mode !== "previous_period" || !options?.compare_month_pairs?.length) {
+    return selection;
+  }
+
+  const matched = options.compare_month_pairs.find((item) => item.current_month === selection.current_month);
+  return { ...selection, compare_month: matched?.compare_month || selection.compare_month };
+}
+
 function buildObservationSelection(options, current = {}) {
   const months = options?.months || [];
   const comparePairs = options?.compare_month_pairs || [];
@@ -196,30 +257,34 @@ function buildObservationSelection(options, current = {}) {
     comparePairs.find((item) => item.current_month === latestMonth)?.compare_month ||
     months.at(-2) ||
     "";
+  const rowDimension = normalizeObservationDimension(current.row_dimension || "business_group");
 
   return {
-    row_dimension: current.row_dimension || "platform",
+    row_dimension: rowDimension,
     metric: current.metric || "revenue",
-    compare_mode: current.compare_mode || "previous_period",
+    compare_mode: getValidCompareMode(options, rowDimension, current.compare_mode || "previous_period"),
     current_month: current.current_month || latestMonth,
     compare_month: current.compare_month || previousMonth,
     platform: current.platform || "",
     group_code: current.group_code || "",
+    product_line_5: current.product_line_5 || current.product_line || "",
   };
 }
 
 function buildObservationPayload(selection) {
+  const rowDimension = normalizeObservationDimension(selection.row_dimension);
+  const compareMode = selection.compare_mode || "previous_period";
+  const usesBusinessGroupFilter = rowDimension === "business_group" || rowDimension === "month";
+
   return {
-    row_dimension: selection.row_dimension,
+    row_dimension: rowDimension,
     metric: selection.metric,
-    compare_mode: selection.compare_mode,
-    current_month: selection.row_dimension === "month" ? null : selection.current_month || null,
-    compare_month:
-      selection.row_dimension === "month" || selection.compare_mode !== "custom_month"
-        ? null
-        : selection.compare_month || null,
-    platform: selection.platform || null,
-    group_code: selection.group_code || null,
+    compare_mode: compareMode,
+    current_month: selection.current_month || null,
+    compare_month: rowDimension === "month" || compareMode !== "custom_month" ? null : selection.compare_month || null,
+    platform: usesBusinessGroupFilter ? selection.platform || null : null,
+    group_code: usesBusinessGroupFilter ? selection.group_code || null : null,
+    product_line_5: rowDimension === "product_line_5" ? selection.product_line_5 || null : null,
   };
 }
 
@@ -282,6 +347,21 @@ export function InsightConsole() {
   const [observationSelection, setObservationSelection] = useState(null);
   const [observationResult, setObservationResult] = useState(null);
   const [observationBusy, setObservationBusy] = useState(false);
+  const messageThreadRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      const thread = messageThreadRef.current;
+      if (thread) {
+        thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
+        return;
+      }
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [messages, busy]);
 
   async function fetchObservationTable(selection) {
     if (!selection) return;
@@ -472,27 +552,23 @@ export function InsightConsole() {
 
       const next = { ...current, [field]: value };
 
-      if (field === "row_dimension" && value === "month") {
-        next.compare_mode = "previous_period";
-      }
-
-      if (field === "current_month" && observationOptions?.compare_month_pairs?.length) {
-        const matched = observationOptions.compare_month_pairs.find((item) => item.current_month === value);
-        if (matched && next.compare_mode === "previous_period") {
-          next.compare_month = matched.compare_month;
-        }
+      if (field === "row_dimension") {
+        next.row_dimension = normalizeObservationDimension(value);
+        next.platform = "";
+        next.group_code = "";
+        next.product_line_5 = "";
+        next.compare_mode = getValidCompareMode(observationOptions, next.row_dimension, next.compare_mode);
       }
 
       if (field === "compare_mode") {
-        if (value === "previous_period" && observationOptions?.compare_month_pairs?.length) {
-          const matched = observationOptions.compare_month_pairs.find(
-            (item) => item.current_month === next.current_month,
-          );
-          next.compare_month = matched?.compare_month || next.compare_month;
-        }
-        if (value === "none") {
+        next.compare_mode = getValidCompareMode(observationOptions, next.row_dimension, value);
+        if (next.compare_mode === "none") {
           next.compare_month = "";
         }
+      }
+
+      if (field === "current_month" || field === "compare_mode" || field === "row_dimension") {
+        return syncPreviousCompareMonth(next, observationOptions);
       }
 
       return next;
@@ -514,8 +590,10 @@ export function InsightConsole() {
       recentRevenueLabel: TEXT.statRecentRevenue,
       recentInventoryLabel: TEXT.statRecentInventory,
       topRevenuePlatformLabel: TEXT.statTopRevenuePlatform,
+      topRevenueProductLineLabel: TEXT.statTopRevenueProductLine,
       topInventoryPlatformLabel: TEXT.statTopInventoryPlatform,
       minRevenuePlatformLabel: TEXT.minRevenuePlatform,
+      minRevenueProductLineLabel: TEXT.minRevenueProductLine,
       minInventoryPlatformLabel: TEXT.minInventoryPlatform,
     },
     { mode: "desktop" },
@@ -526,8 +604,10 @@ export function InsightConsole() {
     {
       noData: TEXT.noData,
       topRevenuePlatformLabel: TEXT.statTopRevenuePlatform,
+      topRevenueProductLineLabel: TEXT.statTopRevenueProductLine,
       topInventoryPlatformLabel: TEXT.statTopInventoryPlatform,
       minRevenuePlatformLabel: TEXT.minRevenuePlatform,
+      minRevenueProductLineLabel: TEXT.minRevenueProductLine,
       minInventoryPlatformLabel: TEXT.minInventoryPlatform,
     },
     { mode: "desktop" },
@@ -535,9 +615,12 @@ export function InsightConsole() {
 
   const executiveHeadline = getExecutiveHeadline(summary, TEXT.emptySummary);
 
-  const canChooseMonth = observationSelection?.row_dimension !== "month";
+  const observationRowDimension = normalizeObservationDimension(observationSelection?.row_dimension);
+  const comparisonOptions = getComparisonOptions(observationOptions, observationRowDimension);
+  const filterConfig = getObservationFilterConfig(observationRowDimension);
+  const filterOptions = getObservationFilterOptions(observationOptions, observationRowDimension);
   const showCompareMonth =
-    canChooseMonth && observationSelection?.compare_mode === "custom_month";
+    observationRowDimension !== "month" && observationSelection?.compare_mode === "custom_month";
 
   return (
     <main className="product-shell">
@@ -594,10 +677,11 @@ export function InsightConsole() {
             </div>
           </div>
 
-          <div className="message-thread">
+          <div className="message-thread" ref={messageThreadRef}>
             {messages.map((message) => (
               <MessageCard key={message.id} message={message} />
             ))}
+            <div ref={messagesEndRef} aria-hidden="true" />
           </div>
 
           <form
@@ -732,7 +816,7 @@ export function InsightConsole() {
                 <ul className="anomaly-list">
                   {dashboardSnapshot.anomalies.map((item, index) => (
                     <li key={`${item.month}-${item.platform}-${item.type}-${index}`}>
-                      <strong>{item.platform || "未標示新事業群"}</strong>
+                      <strong>{item.platform || "未標示事業群"}</strong>
                       <span>{item.reason || item.type || TEXT.noData}</span>
                       <em>{formatCompactNumber(item.signal, { maximumFractionDigits: 2 })}</em>
                     </li>
@@ -768,7 +852,7 @@ export function InsightConsole() {
           <label className="observation-field">
             <span>{TEXT.observationRowDimension}</span>
             <select
-              value={observationSelection?.row_dimension || "platform"}
+              value={observationSelection?.row_dimension || "business_group"}
               onChange={(event) => updateObservationSelection("row_dimension", event.target.value)}
             >
               {(observationOptions?.row_dimensions || []).map((item) => (
@@ -798,9 +882,8 @@ export function InsightConsole() {
             <select
               value={observationSelection?.compare_mode || "previous_period"}
               onChange={(event) => updateObservationSelection("compare_mode", event.target.value)}
-              disabled={!canChooseMonth}
             >
-              {(observationOptions?.compare_modes || []).map((item) => (
+              {comparisonOptions.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
                 </option>
@@ -808,21 +891,19 @@ export function InsightConsole() {
             </select>
           </label>
 
-          {canChooseMonth ? (
-            <label className="observation-field">
-              <span>{TEXT.observationCurrentMonth}</span>
-              <select
-                value={observationSelection?.current_month || ""}
-                onChange={(event) => updateObservationSelection("current_month", event.target.value)}
-              >
-                {(observationOptions?.months || []).map((month) => (
-                  <option key={month} value={month}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+          <label className="observation-field">
+            <span>{TEXT.observationCurrentMonth}</span>
+            <select
+              value={observationSelection?.current_month || ""}
+              onChange={(event) => updateObservationSelection("current_month", event.target.value)}
+            >
+              {(observationOptions?.months || []).map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {showCompareMonth ? (
             <label className="observation-field">
@@ -841,34 +922,20 @@ export function InsightConsole() {
           ) : null}
 
           <label className="observation-field">
-            <span>{TEXT.observationPlatform}</span>
+            <span>{filterConfig.label}</span>
             <select
-              value={observationSelection?.platform || ""}
-              onChange={(event) => updateObservationSelection("platform", event.target.value)}
+              value={observationSelection?.[filterConfig.stateKey] || ""}
+              onChange={(event) => updateObservationSelection(filterConfig.stateKey, event.target.value)}
             >
-              <option value="">{TEXT.allPlatforms}</option>
-              {(observationOptions?.platforms || []).map((platform) => (
-                <option key={platform} value={platform}>
-                  {platform}
+              <option value="">{filterConfig.allLabel}</option>
+              {filterOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
                 </option>
               ))}
             </select>
           </label>
 
-          <label className="observation-field">
-            <span>{TEXT.observationGroup}</span>
-            <select
-              value={observationSelection?.group_code || ""}
-              onChange={(event) => updateObservationSelection("group_code", event.target.value)}
-            >
-              <option value="">{TEXT.allGroups}</option>
-              {(observationOptions?.groups || []).map((group) => (
-                <option key={group.group_code} value={group.group_code}>
-                  {group.group_name} ({group.group_code})
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <div className="observation-board">

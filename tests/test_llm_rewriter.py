@@ -25,14 +25,14 @@ class LLMRewriterTest(unittest.TestCase):
             deterministic_answer=(
                 "目前尚無法直接判斷營收變化的根本原因。"
                 "2024-08 營收相較 2024-07 下降 215.00。"
-                "GG-02 / 新事業群 1 的庫存效率 proxy 偏弱。"
+                "GG-02 / 事業群 1 的庫存效率 proxy 偏弱。"
             ),
             answer_contract={
                 "answer_type": "diagnosis",
                 "answer": (
                     "目前尚無法直接判斷營收變化的根本原因。"
                     "2024-08 營收相較 2024-07 下降 215.00。"
-                    "GG-02 / 新事業群 1 的庫存效率 proxy 偏弱。"
+                    "GG-02 / 事業群 1 的庫存效率 proxy 偏弱。"
                 ),
             },
             evidence=[
@@ -55,8 +55,10 @@ class LLMRewriterTest(unittest.TestCase):
             data={
                 "rewritten_answer": (
                     "目前尚無法直接判斷營收變化的根本原因。"
-                    "依現有資料，2024-08 營收相較 2024-07 下降 215.00，且 GG-02 / 新事業群 1 的庫存效率 proxy 偏弱。"
-                    "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位，且此 proxy 為非正式周轉指標。"
+                    "2024-08 營收相較 2024-07 下降 215.00。"
+                    "GG-02 / 事業群 1 的庫存效率 proxy 偏弱。"
+                    "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位。"
+                    "此為營收與庫存資料推導的 proxy，非正式周轉指標。"
                 )
             }
         )
@@ -109,12 +111,41 @@ class LLMRewriterTest(unittest.TestCase):
     def test_missing_limitation_is_rejected(self) -> None:
         llm = FakeRewriteLLM(
             data={
-                "rewritten_answer": "2024-08 營收相較 2024-07 下降 215.00，GG-02 / 新事業群 1 的庫存效率 proxy 偏弱。"
+                "rewritten_answer": "2024-08 營收相較 2024-07 下降 215.00，GG-02 / 事業群 1 的庫存效率 proxy 偏弱。"
             }
         )
         result = self.rewriter.rewrite(self.request, llm)
         self.assertFalse(result.ok)
         self.assertTrue(any("missing_limitation" in violation for violation in result.violations))
+
+    def test_missing_month_is_rejected(self) -> None:
+        llm = FakeRewriteLLM(
+            data={
+                "rewritten_answer": (
+                    "目前尚無法直接判斷營收變化的根本原因。"
+                    "營收相較前期下降 215.00。"
+                    "GG-02 / 事業群 1 的庫存效率 proxy 偏弱。"
+                    "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位，且此 proxy 為非正式周轉指標。"
+                )
+            }
+        )
+        result = self.rewriter.rewrite(self.request, llm)
+        self.assertFalse(result.ok)
+        self.assertTrue(any("missing_months" in violation for violation in result.violations))
+
+    def test_entity_rename_is_rejected(self) -> None:
+        llm = FakeRewriteLLM(
+            data={
+                "rewritten_answer": (
+                    "目前尚無法直接判斷營收變化的根本原因。"
+                    "依現有資料，2024-08 營收相較 2024-07 下降 215.00，且 GG-99 / 事業群 9 的庫存效率 proxy 偏弱。"
+                    "資料尚未包含訂單、出貨、價格、客戶與市場需求等欄位，且此 proxy 為非正式周轉指標。"
+                )
+            }
+        )
+        result = self.rewriter.rewrite(self.request, llm)
+        self.assertFalse(result.ok)
+        self.assertTrue(any("new_entities" in violation for violation in result.violations))
 
     def test_validation_failure_falls_back_to_original_answer(self) -> None:
         bad_llm = FakeRewriteLLM(
@@ -133,15 +164,13 @@ class LLMRewriterTest(unittest.TestCase):
         )
 
     def test_successful_rewrite_only_replaces_answer_field(self) -> None:
-        good_llm = FakeRewriteLLM(
-            data={
-                "rewritten_answer": (
-                    "依目前已載入真實資料，營收最高的新事業群為 1網通+技鋼，數值為 250,265,866,304。"
-                )
-            }
-        )
         deterministic = build_stubbed_assistant("test-rewriter-success-control").answer(
             "Which business group has the highest revenue?"
+        )
+        # Keep facts byte-for-byte intact and only make a harmless style change so the stricter
+        # rewriter validator can prove it replaces only the answer field.
+        good_llm = FakeRewriteLLM(
+            data={"rewritten_answer": deterministic["answer_contract"]["answer"] + "。"}
         )
         rewritten = build_stubbed_assistant(
             "test-rewriter-success",
