@@ -14,6 +14,12 @@ class AnswerPlan:
     requires_table: bool = False
     display_debug_findings: bool = False
     conclusion_policy: dict[str, Any] = field(default_factory=dict)
+    semantic_requirement_id: str | None = None
+    required_primary_evidence: list[str] = field(default_factory=list)
+    required_supporting_evidence: list[str] = field(default_factory=list)
+    optional_counter_evidence: list[str] = field(default_factory=list)
+    required_limitations: list[str] = field(default_factory=list)
+    partial_completion_rule: dict[str, Any] = field(default_factory=dict)
 
 
 def build_answer_plan(task_profile: Any, routing: Any) -> AnswerPlan:

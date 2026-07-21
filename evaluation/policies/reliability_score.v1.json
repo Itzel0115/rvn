@@ -1,0 +1,15 @@
+{
+  "schema_version": "reliability-score.v1",
+  "execution_backed_weight": 0.9,
+  "synthetic_grader_weight": 0.1,
+  "execution_components": {
+    "task_success": 0.2,
+    "evidence_quality": 0.2,
+    "trajectory_correctness": 0.15,
+    "tool_correctness": 0.1,
+    "replanning_quality": 0.1,
+    "answer_grounding": 0.1,
+    "safety_compliance": 0.1,
+    "efficiency": 0.05
+  }
+}

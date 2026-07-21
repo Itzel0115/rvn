@@ -51,4 +51,4 @@ output/
 *.joblib
 *.parquet
 *.sqlite
-*.db
+*.dbconfig.py.bak_before_qat_20260608

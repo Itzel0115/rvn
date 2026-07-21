@@ -6,6 +6,9 @@ import re
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
+from observability import get_recorder
+from observability.redaction import hash_content
+
 
 MONTH_PATTERN = re.compile(r"20\d{2}[-/]\d{1,2}")
 NUMBER_PATTERN = re.compile(r"(?<![\w-])\d[\d,]*(?:\.\d+)?%?(?![\w-])")
@@ -60,6 +63,19 @@ GENERIC_ENTITY_TOKENS = {
 
 class WriterValidator:
     def validate(
+        self,
+        canonical_task_profile: Any,
+        evidence_contracts: list[Any],
+        writer_output: dict[str, Any],
+        deterministic_display_blocks: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with get_recorder().span("answer.writer_validate", attributes={"content_hash": hash_content(_writer_text(writer_output)), "content_length": len(_writer_text(writer_output))}) as span:
+            result = self._validate(canonical_task_profile, evidence_contracts, writer_output, deterministic_display_blocks)
+            if span is not None:
+                span.attributes.update({"validator_status": result.get("valid"), "violation_count": len(result.get("violations") or []), "fallback_used": result.get("fallback_to_deterministic")})
+            return result
+
+    def _validate(
         self,
         canonical_task_profile: Any,
         evidence_contracts: list[Any],

@@ -6,6 +6,16 @@ from typing import Any
 
 from entity_labels import resolve_entity_value, text_has_dimension_synonym
 
+# Controlled registry used by semantic coverage validation; update it when a new task family is emitted.
+ACTIVE_CANONICAL_TASK_TYPES = frozenset({
+    "latest_month_platform_summary", "latest_month_entity_summary", "period_pair_compare",
+    "entity_period_pair_table_lookup", "entity_multi_month_table_lookup", "entity_period_pair_metric_lookup",
+    "entity_time_series", "overall_trend_analysis", "entity_trend_comparison", "metric_relationship_analysis",
+    "contribution_analysis", "forecast_unsupported", "parent_child_drilldown", "entity_month_table_lookup",
+    "cross_section_compare", "performance_assessment", "risk_scan", "metric_lookup", "chart_request",
+    "entity_ranking", "time_compare", "data_quality", "diagnosis",
+})
+
 
 @dataclass(frozen=True)
 class TaskProfile:

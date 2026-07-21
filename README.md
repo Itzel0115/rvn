@@ -1,5 +1,25 @@
 # 去識別化營收與庫存分析專案
 
+## Stateful agent runtime
+
+The default assistant now checkpoints plans, step execution, evidence validation, and deterministic repair. Set `AGENT_RUNTIME_MODE=legacy` for the prior path. See [Phase 1 runtime documentation](docs/PHASE1_STATEFUL_AGENT_RUNTIME.md).
+
+Reproducible tests: `uv sync && uv run pytest -q`.
+
+## Proactive investigation and approval
+
+Phase 3 provides a one-shot proactive scan and a human approval gate: `uv run python -m proactive_workflow.cli scan`. It creates **NOT APPROVED** drafts and pending approvals only; it never auto-approves, publishes, emails, or modifies source Excel files. See [Phase 3 workflow](docs/PHASE3_PROACTIVE_INVESTIGATION.md), [approval policy](docs/HUMAN_APPROVAL_WORKFLOW.md), and [policy reference](docs/INVESTIGATION_POLICY_REFERENCE.md).
+
+Revision is explicit and hash-bound: `create-revision ID --revised-by "name" --instructions "..."` creates a new pending draft version; caller identities are not authenticated. Persistent trend detection and frontend inbox remain intentionally out of scope.
+
+## Semantic catalog and optional MCP
+
+Phase 2 adds a versioned semantic catalog plus an optional, read-only stdio MCP server. It is not required by the CLI, HTTP API, or either agent-runtime mode. Validate it with `uv run python -m semantic_layer.validation`; regenerate its checked-in reference with `uv run python -m semantic_layer.generate_reference`. See [Phase 2 documentation](docs/PHASE2_SEMANTIC_LAYER.md), [catalog reference](docs/SEMANTIC_CATALOG_REFERENCE.md), and [MCP server notes](docs/MCP_SERVER.md).
+
+
+
+
+
 這是一個可直接放入 Excel 檔後執行的通用 Python 分析框架，用來分析：
 
 - `data/inventory.xlsx`
@@ -119,3 +139,20 @@ ollama pull llama3.1:8b
 - `GG-04`：新品平台快速成長，適合測試強勁上升趨勢
 - `GG-05`：季節性高峰，適合測試波峰波谷
 - `GG-06`：營收下降但庫存仍高，適合測試風險提示
+
+## Phase 4: Local Traces and Reliability Evaluation
+
+Phase 4 adds optional local-only tracing and deterministic offline reliability evaluation. Content capture is disabled by default; never enable it in a company-data environment unless the privacy policy is reviewed.
+
+```bash
+uv run python -m observability.cli list-traces
+uv run python -m evaluation.cli validate-datasets
+uv run python -m evaluation.cli coverage
+uv run python -m evaluation.cli run --suite all
+uv run python -m evaluation.cli coverage --run-id EVAL_RUN
+uv run python -m evaluation.cli report EVAL_RUN
+uv run python -m evaluation.cli gate EVAL_RUN
+uv run python -m evaluation.cli compare BASELINE_RUN CANDIDATE_RUN
+```
+
+See [Phase 4 trajectory evaluation](docs/PHASE4_TRAJECTORY_EVALUATION.md), [observability and privacy](docs/OBSERVABILITY_AND_PRIVACY.md), and the [reliability scorecard](docs/AGENT_RELIABILITY_SCORECARD.md).

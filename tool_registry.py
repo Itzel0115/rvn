@@ -19,6 +19,18 @@ class ToolContract:
     output_evidence_type: str | None = None
     is_legacy: bool = False
     replacement_tool: str | None = None
+    read_only: bool = True
+    risk_level: str = "low"
+    input_schema: dict[str, Any] = field(default_factory=dict)
+    output_evidence_types: tuple[str, ...] = ()
+    supported_metric_ids: tuple[str, ...] = ()
+    supported_dimension_ids: tuple[str, ...] = ()
+    evidence_roles: tuple[str, ...] = ("primary",)
+    max_output_rows: int = 50
+    mcp_exposable: bool = False
+    mcp_name: str | None = None
+    requires_context: bool = True
+    known_limitations: tuple[str, ...] = ()
 
     @property
     def allowed_args(self) -> tuple[str, ...]:
@@ -44,6 +56,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
         supports_month=True,
         supports_parent_filter=True,
         output_evidence_type="entity_month_table",
+        mcp_exposable=True, mcp_name="get_entity_month_table", evidence_roles=("primary",),
     ),
     "get_entity_metric_value": ToolContract(
         tool_name="get_entity_metric_value",
@@ -101,17 +114,19 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
         supports_month=True,
         supports_parent_filter=True,
         output_evidence_type="entity_metric_ranking",
+        mcp_exposable=True, mcp_name="get_entity_metric_ranking", evidence_roles=("primary",),
     ),
     "get_entity_performance_snapshot": ToolContract(
         tool_name="get_entity_performance_snapshot",
-        description="Return deterministic entity performance scorecard.",
-        allowed_task_families=("latest_month_entity_summary", "cross_section_compare", "performance_assessment", "parent_child_drilldown"),
+        description="Return deterministic entity performance scorecard; relationship analyses may use it only as supporting context.",
+        allowed_task_families=("latest_month_entity_summary", "cross_section_compare", "performance_assessment", "parent_child_drilldown", "metric_relationship_analysis"),
         required_args=("entity_dimension",),
         optional_args=("dimension", "month", "parent_filter", "top_n"),
         supported_entity_dimensions=COMMON_ENTITY_DIMENSIONS,
         supports_month=True,
         supports_parent_filter=True,
         output_evidence_type="entity_performance_snapshot",
+        mcp_exposable=True, mcp_name="get_entity_performance_snapshot", evidence_roles=("supporting", "diagnostic"),
     ),
     "get_entity_cross_section_comparison": ToolContract(
         tool_name="get_entity_cross_section_comparison",
@@ -167,6 +182,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
         supported_entity_dimensions=("overall",),
         supported_metrics=("revenue_amount", "inventory_amount", "inventory_qty"),
         output_evidence_type="overall_time_series",
+        mcp_exposable=True, mcp_name="get_overall_time_series", evidence_roles=("primary",),
     ),
     "get_entity_trend_comparison": ToolContract(
         tool_name="get_entity_trend_comparison",
@@ -189,6 +205,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
         supports_month=True,
         supports_parent_filter=True,
         output_evidence_type="metric_relationship",
+        mcp_exposable=True, mcp_name="get_revenue_inventory_relationship", evidence_roles=("primary",),
     ),
     "get_entity_contribution_analysis": ToolContract(
         tool_name="get_entity_contribution_analysis",
@@ -225,6 +242,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
         description="Return available months, row counts, and supported domains.",
         allowed_task_families=("data_quality", "forecast_unsupported"),
         output_evidence_type="data_coverage",
+        mcp_exposable=True, mcp_name="get_data_coverage", evidence_roles=("diagnostic",), requires_context=True,
     ),
     "get_mapping_summary": ToolContract(
         tool_name="get_mapping_summary",

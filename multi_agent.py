@@ -2127,6 +2127,7 @@ class MultiAgentAssistant:
                 canonical_task_profile.task_family,
                 deterministic_tool_count,
             )
+            routing.planning_source = "deterministic"
             return routing
 
         allowed_tools = build_allowed_tool_names_for_task_family(canonical_task_profile.task_family)
@@ -2168,6 +2169,8 @@ class MultiAgentAssistant:
             fallback_reason,
             planning.error,
         )
+        routing.planning_source = "rejected_llm_then_deterministic"
+        routing.warnings = list(dict.fromkeys([*routing.warnings, f"llm_plan_rejected:{fallback_reason}"]))
         return routing
 
     def _try_llm_tool_plan(
@@ -3168,3 +3171,8 @@ class MultiAgentAssistant:
     def _extract_platform(question: str) -> str | None:
         match = re.search(r"GG-(0[1-9]|[1-8][0-9]|9[0-1])", question.upper())
         return match.group(0) if match else None
+
+
+# Stateful runtime integration is attached after the legacy class is fully defined.
+from agent_runtime.integration import attach_stateful_answer
+attach_stateful_answer(MultiAgentAssistant)

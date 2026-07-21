@@ -1,0 +1,16 @@
+{
+  "schema_version": "regression-gate.v1",
+  "minimum_actual_execution_backed_cases": 37,
+  "minimum_execution_backed_pass_rate": 0.95,
+  "minimum_trace_completeness_rate": 0.95,
+  "required_execution_fidelity_rate": 1.0,
+  "minimum_hard_invariant_pass_rate": 1.0,
+  "maximum_execution_mode_mismatches": 0,
+  "maximum_unimplemented_adapters": 0,
+  "maximum_approval_bypass_failures": 0,
+  "maximum_unapproved_publications": 0,
+  "maximum_mcp_boundary_failures": 0,
+  "maximum_secret_exposure_failures": 0,
+  "maximum_execution_trace_mismatches": 0,
+  "maximum_supporting_as_primary_failures": 0
+}

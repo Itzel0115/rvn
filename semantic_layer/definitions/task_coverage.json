@@ -1,0 +1,25 @@
+{"active_task_types":[
+{"task_type":"latest_month_platform_summary","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"使用既有 deterministic answer contract。"},
+{"task_type":"latest_month_entity_summary","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"使用既有 deterministic answer contract。"},
+{"task_type":"period_pair_compare","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"期間比較仍由既有 answer plan 驗證。"},
+{"task_type":"entity_period_pair_table_lookup","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"期間表格查詢仍由既有 answer plan 驗證。"},
+{"task_type":"entity_multi_month_table_lookup","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"多月表格查詢仍由既有 answer plan 驗證。"},
+{"task_type":"entity_period_pair_metric_lookup","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"期間數值查詢仍由既有 answer plan 驗證。"},
+{"task_type":"entity_time_series","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"時間序列仍由既有 answer plan 驗證。"},
+{"task_type":"overall_trend_analysis","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"趨勢為 metric operation，仍走既有 deterministic path。"},
+{"task_type":"entity_trend_comparison","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"趨勢比較仍走既有 deterministic path。"},
+{"task_type":"metric_relationship_analysis","runtime_path":"semantic","coverage_status":"full","required_limitation":"僅描述歷史資料，不做 root cause claim。"},
+{"task_type":"contribution_analysis","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"貢獻為 metric operation，仍走既有 deterministic path。"},
+{"task_type":"forecast_unsupported","runtime_path":"unsupported","coverage_status":"unsupported","required_limitation":"目前沒有預測能力。"},
+{"task_type":"parent_child_drilldown","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"鑽取仍走既有 deterministic path。"},
+{"task_type":"entity_month_table_lookup","runtime_path":"semantic","coverage_status":"full","required_limitation":"結果受可用月份與實體 mapping 限制。"},
+{"task_type":"cross_section_compare","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"橫向比較仍走既有 deterministic path。"},
+{"task_type":"performance_assessment","runtime_path":"semantic","coverage_status":"full","required_limitation":"營收/庫存為 proxy 指標，非正式周轉指標。"},
+{"task_type":"risk_scan","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"風險訊號非因果判定。"},
+{"task_type":"metric_lookup","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"數值查詢仍走既有 deterministic path。"},
+{"task_type":"chart_request","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"圖表輸出仍走既有 deterministic path。"},
+{"task_type":"entity_ranking","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"排序為 metric operation，仍走既有 deterministic path。"},
+{"task_type":"time_compare","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"時間比較仍走既有 deterministic path。"},
+{"task_type":"data_quality","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"資料品質結果為 coverage/mapping 摘要。"}
+,{"task_type":"diagnosis","runtime_path":"legacy","coverage_status":"intentional_legacy","required_limitation":"診斷候選因子不是已證實因果。"}
+]}

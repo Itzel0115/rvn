@@ -12,6 +12,12 @@ from analysis_tools import AnalysisToolbox, ObservationRequest, QueryFilters
 from config import OUTPUT_DIR
 from logging_utils import build_request_id, configure_logging, get_logger
 from multi_agent import MultiAgentAssistant
+from proactive_workflow.orchestrator import ProactiveWorkflowOrchestrator
+from proactive_workflow.store import SQLiteProactiveStore
+from proactive_workflow.models import to_dict
+from proactive_workflow.approval import decide
+from proactive_workflow.publisher import publish
+from proactive_workflow.revision import create_revision
 from utils import MessageCollector
 
 
@@ -332,6 +338,22 @@ class DemoApplication:
 
 APP = DemoApplication()
 
+def _proactive_service(application):
+    service = getattr(application, "_proactive_service", None)
+    if service is None:
+        store = SQLiteProactiveStore(OUTPUT_DIR / "state" / "proactive_workflow.sqlite3")
+        service = ProactiveWorkflowOrchestrator(application.context, lambda request_id: application._build_assistant(request_id), store, OUTPUT_DIR / "investigations")
+        application._proactive_service = service
+    return service
+
+def _proactive_candidates(application): return [to_dict(item) for item in _proactive_service(application).store.list_candidates()]
+def _proactive_investigations(application): return [to_dict(item) for item in _proactive_service(application).store.list_investigations()]
+def _proactive_approvals(application): return [to_dict(item) for item in _proactive_service(application).store.list_approvals()]
+DemoApplication.proactive_scan = lambda self, force=False: _proactive_service(self).scan(trigger_source="api", force_scan=force)
+DemoApplication.proactive_candidates = _proactive_candidates
+DemoApplication.proactive_investigations = _proactive_investigations
+DemoApplication.proactive_approvals = _proactive_approvals
+
 
 class DemoRequestHandler(BaseHTTPRequestHandler):
     server_version = "MultiAgentDemo/1.0"
@@ -378,6 +400,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/chart-catalog":
             self._send_json({"charts": APP.get_chart_catalog()})
             return
+        if parsed.path == "/api/investigations":
+            self._send_json({"investigations": APP.proactive_investigations()})
+            return
+        if parsed.path == "/api/investigation-candidates":
+            self._send_json({"candidates": APP.proactive_candidates()})
+            return
+        if parsed.path == "/api/approval-requests":
+            self._send_json({"approval_requests": APP.proactive_approvals()})
+            return
         if parsed.path == "/api/observe-options":
             self._send_json(APP.get_observation_options())
             return
@@ -385,7 +416,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/ask", "/api/chart", "/api/observe"}:
+        if parsed.path not in {"/api/ask", "/api/chart", "/api/observe", "/api/investigations/scan"} and not parsed.path.startswith("/api/approval-requests/"):
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown API path")
             return
 
@@ -393,7 +424,28 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length)
             payload = json.loads(raw_body.decode("utf-8"))
-            if parsed.path == "/api/ask":
+            if parsed.path.startswith("/api/approval-requests/"):
+                pieces = parsed.path.strip("/").split("/")
+                if len(pieces) != 4:
+                    self._send_json({"error": "Unknown approval action."}, status=HTTPStatus.NOT_FOUND); return
+                request = _proactive_service(APP).store.load_approval_request(pieces[2])
+                if not request:
+                    self._send_json({"error": "approval_not_found"}, status=HTTPStatus.NOT_FOUND); return
+                draft = _proactive_service(APP).store.load_draft(request.draft_id); run = _proactive_service(APP).store.load_investigation(request.investigation_id)
+                if not draft or not run: raise ValueError("approval_references_missing")
+                action = pieces[3]
+                if action == "create-revision":
+                    response = create_revision(_proactive_service(APP).store, request.approval_request_id, str(payload.get("revised_by", "")), str(payload.get("instructions", "")), OUTPUT_DIR / "investigations" / "drafts", "api_supplied")
+                elif action == "publish":
+                    record = publish(request, draft, run, OUTPUT_DIR / "investigations" / "drafts", OUTPUT_DIR / "investigations" / "approved", str(payload.get("publisher", "")))
+                    _proactive_service(APP).store.save_publication(record); response = to_dict(record)
+                else:
+                    decision = "request_revision" if action == "request-revision" else action
+                    decide(request, draft, run, decision, str(payload.get("approver", "")), payload.get("reason"), payload.get("instructions"), "api_supplied")
+                    _proactive_service(APP).store.save_draft(draft); _proactive_service(APP).store.save_approval_request(request); response = to_dict(request)
+            elif parsed.path == "/api/investigations/scan":
+                response = APP.proactive_scan(bool(payload.get("force", False)))
+            elif parsed.path == "/api/ask":
                 question = str(payload.get("question", "")).strip()
                 if not question:
                     self._send_json({"error": "Question is required."}, status=HTTPStatus.BAD_REQUEST)

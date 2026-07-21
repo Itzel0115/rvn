@@ -22,6 +22,10 @@ class CanonicalTaskProfile:
     metric: str | None
     chart_type: str | None
     answer_mode: str
+    resolved_metric_ids: list[str] = field(default_factory=list)
+    resolved_dimension_ids: list[str] = field(default_factory=list)
+    semantic_task_requirement_id: str | None = None
+    semantic_warnings: list[str] = field(default_factory=list)
     constraints: CanonicalConstraints = field(default_factory=CanonicalConstraints)
 
     @classmethod
@@ -52,6 +56,7 @@ class CanonicalTaskProfile:
             metric=metrics[0] if metrics else None,
             chart_type=chart_type,
             answer_mode=answer_mode,
+            **_semantic_references(metrics, target_entity, task_profile),
             constraints=CanonicalConstraints(
                 no_forecast=getattr(task_profile, "task_family", None) != "forecast_unsupported",
                 no_root_cause_claim=True,
@@ -76,6 +81,19 @@ class CanonicalTaskProfile:
         if self.task_family == "chart_request" and not self.chart_type:
             errors.append("missing_chart_type")
         return not errors, errors
+
+
+def _semantic_references(metrics: list[str], target_entity: dict[str, Any], task_profile: Any) -> dict[str, Any]:
+    try:
+        from semantic_layer import get_catalog
+        catalog = get_catalog()
+        resolved_metrics = [item.metric_id for metric in metrics if (item := catalog.resolve_metric(metric))]
+        dimension = target_entity.get("dimension")
+        resolved_dimensions = [dimension] if dimension and catalog.resolve_dimension(dimension) else []
+        requirement = catalog.get_task_requirement(str(getattr(task_profile, "task_family", "")))
+        return {"resolved_metric_ids": resolved_metrics, "resolved_dimension_ids": resolved_dimensions, "semantic_task_requirement_id": requirement.requirement_id if requirement else None, "semantic_warnings": []}
+    except (ImportError, ValueError, KeyError):
+        return {"resolved_metric_ids": [], "resolved_dimension_ids": [], "semantic_task_requirement_id": None, "semantic_warnings": ["semantic_catalog_unavailable"]}
 
 
 def from_task_profile(task_profile: Any, routing: Any | None = None) -> CanonicalTaskProfile:
