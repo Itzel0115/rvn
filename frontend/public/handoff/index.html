@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revenue Intelligence POC 營收與庫存 Agentic AI 分析系統交接｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="index.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="active" href="./">首頁</a>
+<a class="" href="overview.html">系統總覽</a>
+<a class="" href="question-journey.html">一題怎麼跑</a>
+<a class="" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="" href="operations.html">展示與操作</a>
+<a class="" href="maintenance.html">新增與修改</a>
+<a class="" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>Revenue Intelligence POC 營收與庫存 Agentic AI 分析系統交接</h1>
+      <p>先理解系統，再看一次問答、工具、安全邊界與修改配方。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#quick">快速入口</a><a class="page-toc-link" href="#path">10 分鐘路徑</a><a class="page-toc-link" href="#principles">核心原則</a><a class="page-toc-link" href="#urls">正式入口</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section id="quick">
+  <h2>交接開始</h2>
+  <p>使用者可以直接用中文詢問營收與庫存問題。Agent 會判斷問題、選擇受控分析工具、檢查證據是否足夠，再產生回答、表格與圖表。資料不足時，系統會嘗試合法的補充分析，或清楚說明目前無法完整回答。</p>
+  <div class="quick-grid">
+    <a class="quick-card" href="overview.html"><strong>第一次接觸系統</strong><span>先理解它能做什麼、資料怎麼進來、哪些邊界不能越過。</span></a>
+    <a class="quick-card" href="operations.html"><strong>我要現場展示</strong><span>照五分鐘 Demo 腳本開 Dashboard、問問題、看 Tool 與 health。</span></a>
+    <a class="quick-card" href="maintenance.html"><strong>我要接手修改</strong><span>從新增 Tool、KPI、問題類型三個配方開始。</span></a>
+  </div>
+</section>
+<section id="path">
+  <h2>10 分鐘最短閱讀路徑</h2>
+  <ol class="steps">
+    <li><a href="overview.html">系統總覽</a><span>知道支援能力與刻意不做的事。</span></li>
+    <li><a href="question-journey.html">一題怎麼跑</a><span>看懂一個問題如何變成工具執行與受限回答。</span></li>
+    <li><a href="tools.html">Tool 工具箱</a><span>查完整 ToolContract、參數、evidence 與測試。</span></li>
+    <li><a href="operations.html">展示與操作</a><span>照腳本實際啟動與展示。</span></li>
+  </ol>
+</section>
+<section id="principles">
+  <h2>系統核心原則</h2>
+  <div class="principle-grid">
+    <div><strong>Agent 負責規劃</strong><p>Agent 判斷現在該查什麼，不直接任意計算或讀檔。</p></div>
+    <div><strong>Tool 負責計算</strong><p>營收、庫存、趨勢、排名與圖表由 deterministic tools 執行。</p></div>
+    <div><strong>Registry 是邊界</strong><p>每個工具的 args、KPI、task family、evidence type 與 MCP exposure 都在 ToolContract 中定義。</p></div>
+    <div><strong>證據不足不硬湊</strong><p>Evidence Validator 會要求 primary evidence；合法補證失敗時回 partial 或 capability gap。</p></div>
+    <div><strong>主動洞察需人工核准</strong><p>Proactive draft 只有經 approval 與 publication gate 才能發布 artifact。</p></div>
+  </div>
+</section>
+<section id="urls">
+  <h2>正式網址與系統入口</h2>
+  <div class="url-list">
+    <div><span>Handoff URL</span><code data-url-template="handoff">由目前 host 產生</code></div>
+    <div><span>Dashboard URL</span><code data-url-template="dashboard">由目前 host 產生</code></div>
+    <div><span>Backend health URL</span><code data-url-template="health">由目前 host 產生</code></div>
+  </div>
+  <details><summary>工程細節</summary>
+    <p>Next.js 靜態 public route 會把 <code>frontend/public/handoff/index.html</code> 提供為 <code>/handoff/</code>；Frontend API proxy 由 <code>frontend/lib/python-api.js</code> 的 <code>PYTHON_API_BASE</code> 指到 Python backend。</p>
+  </details>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

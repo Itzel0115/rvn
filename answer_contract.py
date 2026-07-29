@@ -77,6 +77,10 @@ def build_answer_contract(
     coverage = toolbox.get_data_coverage()
     latest_month = coverage["months"][-1] if coverage.get("months") else None
     filters = asdict(routing.filters) if hasattr(routing, "filters") else {}
+    task_time_scope = getattr(task_profile, "time_scope", {}) if task_profile is not None else {}
+    if isinstance(task_time_scope, dict) and task_time_scope.get("mode") == "period_pair":
+        filters = dict(filters)
+        filters["month"] = None
     answer_type = (
         "unsupported"
         if unsupported_topics
@@ -142,6 +146,7 @@ def build_answer_contract(
             "question_type": getattr(routing, "question_type", "query"),
             "domains": list(getattr(routing, "domains", [])),
             "filters": filters,
+            "time_scope": task_time_scope if isinstance(task_time_scope, dict) else {},
             "available_months": coverage.get("months", []),
             "latest_month": latest_month,
             "supported_domains": coverage.get("supported_domains", {}),
@@ -304,6 +309,12 @@ def render_answer_contract(request_id: str, contract: dict[str, Any]) -> str:
     scope_parts: list[str] = []
     if data_scope:
         filters = data_scope.get("filters", {})
+        time_scope = data_scope.get("time_scope", {}) if isinstance(data_scope.get("time_scope", {}), dict) else {}
+        if time_scope.get("period_a") and time_scope.get("period_b"):
+            scope_parts.append(f"period_a={time_scope['period_a']}")
+            scope_parts.append(f"period_b={time_scope['period_b']}")
+        elif time_scope.get("mode") == "recent_n_months" and time_scope.get("recent_n"):
+            scope_parts.append(f"recent_n_months={time_scope['recent_n']}")
         if filters.get("month"):
             scope_parts.append(f"month={filters['month']}")
         if filters.get("platform"):
@@ -351,6 +362,24 @@ def _build_display_blocks(
     if task_family == "chart_request" or answer_type == "chart":
         return _build_chart_display_blocks(domain_results, answer, limitations)
 
+    if task_family == "metric_relationship_analysis" and getattr(task_profile, "time_scope", {}).get("mode") == "recent_n_months":
+        return _build_recent_relationship_display_blocks(task_profile, domain_results, limitations, max_items)
+    if task_family == "metric_relationship_analysis" and "inventory_qty" in ((getattr(task_profile, "task_requirements", {}) or {}).get("requested_metrics") or []):
+        return _build_relationship_cross_check_display_blocks(task_profile, domain_results, limitations, max_items)
+    if task_family == "performance_assessment":
+        blocks = _build_performance_assessment_display_blocks(task_profile, domain_results, limitations, max_items)
+        return blocks
+    if task_family == "risk_scan":
+        return _build_risk_scan_display_blocks(task_profile, domain_results, limitations, max_items)
+    if task_family == "cross_section_compare" and "proxy" in ((getattr(task_profile, "task_requirements", {}) or {}).get("requested_operations") or []) and _find_turnover_proxy_rows(domain_results):
+        return _build_risk_scan_display_blocks(task_profile, domain_results, limitations, max_items)
+    if task_family == "entity_period_pair_table_lookup" and _has_multimetric_period_pair_evidence(domain_results):
+        return _build_multimetric_period_pair_display_blocks(task_profile, domain_results, limitations, max_items)
+    if task_family == "entity_trend_comparison" and _is_management_risk_selection_task(task_profile):
+        return _build_management_risk_selection_display_blocks(task_profile, domain_results, limitations, max_items)
+    if task_family == "entity_trend_comparison" and _has_multimetric_trend_evidence(domain_results):
+        return _build_multimetric_trend_display_blocks(task_profile, domain_results, limitations, max_items)
+
     if rubric_result is not None:
         return build_display_blocks_from_roles(
             task_profile=task_profile,
@@ -358,10 +387,6 @@ def _build_display_blocks(
             rubric_result=rubric_result,
             limitations=limitations,
         )
-
-    if task_family == "performance_assessment":
-        blocks = _build_performance_assessment_display_blocks(task_profile, domain_results, limitations, max_items)
-        return blocks
     if task_family == "cross_section_compare":
         return _build_cross_section_compare_display_blocks(task_profile, domain_results, limitations, max_items)
     if task_family == "time_compare":
@@ -380,6 +405,457 @@ def _build_display_blocks(
         "table": None,
         "limitations": list(dict.fromkeys(limitations))[:3],
     }
+
+
+def _build_recent_relationship_display_blocks(
+    task_profile: Any,
+    domain_results: list[Any],
+    limitations: list[str],
+    max_items: int,
+) -> dict[str, Any]:
+    evidence_items = [item for result in domain_results for item in getattr(result, "evidence", [])]
+    trend_by_metric: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    relationship_rows: list[dict[str, Any]] = []
+    for item in evidence_items:
+        if item.get("source_tool") == "get_entity_trend_comparison":
+            metric = str(item.get("metric") or "")
+            grouped: dict[str, list[dict[str, Any]]] = {}
+            for row in item.get("rows") or []:
+                if isinstance(row, dict):
+                    grouped.setdefault(str(row.get("entity_value")), []).append(row)
+            for rows in grouped.values():
+                rows.sort(key=lambda row: str(row.get("month") or ""))
+            if metric:
+                trend_by_metric[metric] = grouped
+        elif item.get("source_tool") == "get_revenue_inventory_relationship":
+            relationship_rows = [row for row in item.get("rows") or [] if isinstance(row, dict)]
+
+    candidates: list[dict[str, Any]] = []
+    entities = set(trend_by_metric.get("revenue_amount", {})) & set(trend_by_metric.get("inventory_amount", {}))
+    for entity in sorted(entities):
+        revenue_rows = trend_by_metric["revenue_amount"].get(entity, [])
+        inventory_rows = trend_by_metric["inventory_amount"].get(entity, [])
+        qty_rows = trend_by_metric.get("inventory_qty", {}).get(entity, [])
+        if not (_is_consecutive_direction(revenue_rows, negative=True) and _is_consecutive_direction(inventory_rows, positive=True)):
+            continue
+        latest_revenue = _latest_non_null_change(revenue_rows)
+        latest_inventory = _latest_non_null_change(inventory_rows)
+        latest_qty = _latest_non_null_change(qty_rows)
+        candidates.append({
+            "entity_value": entity,
+            "latest_month": revenue_rows[-1].get("month") if revenue_rows else None,
+            "revenue_change": latest_revenue,
+            "inventory_amount_change": latest_inventory,
+            "inventory_qty_change": latest_qty,
+            "qty_consistent": latest_qty is not None and latest_qty > 0,
+            "severity": abs(float(latest_revenue or 0)) + abs(float(latest_inventory or 0)),
+        })
+    candidates.sort(key=lambda row: row.get("severity") or 0, reverse=True)
+
+    observations: list[str] = []
+    table_rows: list[dict[str, Any]] = []
+    if candidates:
+        top = candidates[0]
+        headline = f"最近 {getattr(task_profile, 'time_scope', {}).get('recent_n') or 3} 個月中，最異常的營收連降且庫存金額連升事業群是 {top.get('entity_value')}。"
+        observations.append(
+            f"{top.get('entity_value')} 最新月營收變化 {_format_number(top.get('revenue_change'))}，庫存金額變化 {_format_number(top.get('inventory_amount_change'))}。"
+        )
+        qty_text = "同向上升" if top.get("qty_consistent") else "未同向上升或資料不足"
+        observations.append(f"庫存 QTY 反證檢查：{qty_text}，最新月 QTY 變化 {_format_number(top.get('inventory_qty_change'))}。")
+        table_rows = candidates[:8]
+    else:
+        headline = "最近三個月未找到同時符合『營收連續下降且庫存金額連續上升』的事業群。"
+        downside_rows = [row for row in relationship_rows if row.get("revenue_change") is not None and row.get("inventory_change") is not None]
+        downside_rows.sort(key=lambda row: (float(row.get("revenue_change") or 0), -float(row.get("inventory_change") or 0)))
+        if downside_rows:
+            row = downside_rows[0]
+            observations.append(
+                f"最接近的最新月背離訊號是 {row.get('entity_value')}：營收變化 {_format_number(row.get('revenue_change'))}，庫存金額變化 {_format_number(row.get('inventory_change'))}。"
+            )
+        observations.append("反證：三個月序列檢查未同時滿足兩段營收下降與兩段庫存金額上升。")
+        table_rows = [_canonical_relationship_table_row(row) for row in downside_rows[:8]]
+
+    merged_limitations = list(dict.fromkeys([
+        *limitations,
+        "營收/庫存關係為歷史描述與 proxy，不代表因果或正式庫存週轉率。",
+        "連續三個月條件以現有可對齊月份和事業群彙總資料判斷。",
+    ]))
+    return {
+        "headline": headline,
+        "key_observations": observations[:max_items],
+        "table": {
+            "columns": ["entity_value", "latest_month", "revenue_change", "inventory_amount_change", "inventory_qty_change", "relationship_label"],
+            "rows": table_rows,
+        },
+        "limitations": merged_limitations[:4],
+    }
+
+
+
+def _canonical_relationship_table_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "entity_value": row.get("entity_value") or row.get("business_group") or row.get("platform") or row.get("entity"),
+        "latest_month": row.get("latest_month") or row.get("month"),
+        "revenue_change": row.get("revenue_change") or row.get("revenue_amount_change"),
+        "inventory_amount_change": row.get("inventory_amount_change") if row.get("inventory_amount_change") is not None else row.get("inventory_change"),
+        "inventory_qty_change": row.get("inventory_qty_change"),
+        "relationship_label": row.get("relationship_label"),
+    }
+
+
+def _has_multimetric_period_pair_evidence(domain_results: list[Any]) -> bool:
+    metrics = {item.get("metric") for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_entity_period_pair_table"}
+    return len(metrics & {"revenue_amount", "inventory_amount", "inventory_qty"}) > 1
+
+
+def _has_multimetric_trend_evidence(domain_results: list[Any]) -> bool:
+    metrics = {item.get("metric") for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_entity_trend_comparison"}
+    return len(metrics & {"revenue_amount", "inventory_amount", "inventory_qty"}) > 1
+
+
+def _build_multimetric_period_pair_display_blocks(task_profile: Any, domain_results: list[Any], limitations: list[str], max_items: int) -> dict[str, Any]:
+    evidence_by_metric = {item.get("metric"): item for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_entity_period_pair_table"}
+    revenue_rows = {str(row.get("entity_value")): row for row in (evidence_by_metric.get("revenue_amount") or {}).get("rows", [])}
+    inventory_rows = {str(row.get("entity_value")): row for row in (evidence_by_metric.get("inventory_amount") or {}).get("rows", [])}
+    qty_rows = {str(row.get("entity_value")): row for row in (evidence_by_metric.get("inventory_qty") or {}).get("rows", [])}
+    top_n = (getattr(task_profile, "task_requirements", {}) or {}).get("top_n") or 3
+    ranked = sorted([row for row in revenue_rows.values() if row.get("change") is not None], key=lambda row: float(row.get("change") or 0))[: int(top_n)]
+    table_rows: list[dict[str, Any]] = []
+    for row in ranked:
+        entity = str(row.get("entity_value"))
+        inv = inventory_rows.get(entity, {})
+        qty = qty_rows.get(entity, {})
+        table_rows.append({
+            "entity_value": entity,
+            "period_a": row.get("period_a") or (evidence_by_metric.get("revenue_amount") or {}).get("period_a"),
+            "period_b": row.get("period_b") or (evidence_by_metric.get("revenue_amount") or {}).get("period_b"),
+            "revenue_change": row.get("change"),
+            "inventory_amount_change": inv.get("change"),
+            "inventory_qty_change": qty.get("change"),
+            "risk_sort_basis": "revenue decline plus inventory amount/qty cross-check",
+        })
+    headline = "結論：已先依營收下降幅度篩選，再交叉檢查同期庫存金額與庫存數量變化。"
+    observations = []
+    if table_rows:
+        first = table_rows[0]
+        observations.append(f"營收下降最多的是 {first.get('entity_value')}，營收變化 {_format_number(first.get('revenue_change'))}。")
+        observations.append(f"其庫存金額變化 {_format_number(first.get('inventory_amount_change'))}，庫存數量變化 {_format_number(first.get('inventory_qty_change'))}。")
+    return {
+        "headline": headline,
+        "key_observations": observations[:max_items],
+        "table": {"columns": ["entity_value", "period_a", "period_b", "revenue_change", "inventory_amount_change", "inventory_qty_change", "risk_sort_basis"], "rows": table_rows},
+        "limitations": list(dict.fromkeys([*limitations, "風險排序為 deterministic cross-check proxy，不代表根本原因。"]))[:4],
+    }
+
+
+def _is_management_risk_selection_task(task_profile: Any | None) -> bool:
+    requirements = getattr(task_profile, "task_requirements", {}) or {}
+    operations = set(requirements.get("requested_operations") or [])
+    metrics = set(requirements.get("requested_metrics") or [])
+    return bool(
+        requirements.get("requires_named_selection")
+        and (requirements.get("requested_top_n") or requirements.get("top_n"))
+        and {"revenue_amount", "inventory_amount", "inventory_qty"}.issubset(metrics)
+        and ({"rank", "select"} & operations)
+    )
+
+
+def _build_management_risk_selection_display_blocks(task_profile: Any, domain_results: list[Any], limitations: list[str], max_items: int) -> dict[str, Any]:
+    requirements = getattr(task_profile, "task_requirements", {}) or {}
+    top_n = int(requirements.get("requested_top_n") or requirements.get("top_n") or 2)
+    candidates = _rank_management_risk_candidates(domain_results)
+    selected = candidates[:top_n]
+    if len(selected) < top_n:
+        return {
+            "headline": "結論：目前 evidence 不足以完成具名 Top-N 管理風險選擇。",
+            "key_observations": ["缺少足夠的營收趨勢、庫存金額、庫存數量或異常訊號交叉證據。"],
+            "table": None,
+            "limitations": list(dict.fromkeys([*limitations, "完成管理風險選擇前，必須同時具備多指標證據與具名候選對象。"]))[:4],
+        }
+
+    first = selected[0].get("entity_value")
+    second = selected[1].get("entity_value") if len(selected) > 1 else None
+    headline = f"結論：第一優先事業群是 {first}" + (f"；第二優先事業群是 {second}。" if second else "。")
+    observations: list[str] = []
+    for item in selected:
+        rank = int(item.get("rank") or 0)
+        label = "第一優先" if rank == 1 else "第二優先" if rank == 2 else f"第 {rank} 優先"
+        observations.append(
+            f"{label}事業群 {item.get('entity_value')}：支持證據：{'; '.join(item.get('supporting_evidence') or ['N/A'])}。"
+        )
+        observations.append(
+            f"{label}事業群 {item.get('entity_value')}：可能反證：{'; '.join(item.get('counter_evidence') or ['目前未見明確降低風險證據'])}。"
+        )
+        observations.append(
+            f"{label}事業群 {item.get('entity_value')}：管理層下一步：{item.get('next_action')}。"
+        )
+    observations.append(f"排序方法：先比較完整事業群集合，再以營收趨勢、庫存金額、庫存數量與異常訊號形成綜合風險分數；本次選出 {len(selected)} 個具名事業群。")
+    table_rows = [
+        {
+            "rank": row.get("rank"),
+            "entity_value": row.get("entity_value"),
+            "composite_risk_score": round(float(row.get("score") or 0), 3),
+            "latest_month": row.get("latest_month"),
+            "revenue_change_pct": row.get("revenue_change_pct"),
+            "inventory_amount_change_pct": row.get("inventory_amount_change_pct"),
+            "inventory_qty_change_pct": row.get("inventory_qty_change_pct"),
+            "anomaly_signal": row.get("anomaly_signal"),
+            "evidence_metric_count": row.get("evidence_metric_count"),
+            "counter_evidence": "；".join(row.get("counter_evidence") or []),
+            "next_action": row.get("next_action"),
+        }
+        for row in selected
+    ]
+    merged_limitations = list(dict.fromkeys([
+        *limitations,
+        "多指標管理風險排序為歷史資料 proxy，不代表因果或預測。",
+        "異常訊號只能指出需追蹤的觀察點，不能直接證明產品賣不出去或庫存增加原因。",
+    ]))
+    return {
+        "headline": headline,
+        "key_observations": observations[: max(max_items, top_n * 3 + 1)],
+        "table": {
+            "columns": ["rank", "entity_value", "composite_risk_score", "latest_month", "revenue_change_pct", "inventory_amount_change_pct", "inventory_qty_change_pct", "anomaly_signal", "evidence_metric_count", "counter_evidence", "next_action"],
+            "rows": table_rows,
+        },
+        "limitations": merged_limitations[:4],
+    }
+
+
+def _rank_management_risk_candidates(domain_results: list[Any]) -> list[dict[str, Any]]:
+    metric_summaries: dict[str, dict[str, dict[str, Any]]] = {}
+    latest_month = None
+    for item in _iter_evidence_items(domain_results):
+        if item.get("source_tool") != "get_entity_trend_comparison":
+            continue
+        metric = str(item.get("metric") or "")
+        if not metric:
+            continue
+        by_entity: dict[str, dict[str, Any]] = {}
+        for summary in item.get("entity_summaries") or []:
+            if not isinstance(summary, dict):
+                continue
+            entity = str(summary.get("entity_value") or "").strip()
+            if not entity or entity in {"N/A", "未對應", "None", "null"}:
+                continue
+            by_entity[entity] = summary
+            latest_month = latest_month or summary.get("latest_month")
+        if by_entity:
+            metric_summaries[metric] = by_entity
+    entities = set().union(*(set(value) for value in metric_summaries.values())) if metric_summaries else set()
+    anomaly_by_entity: dict[str, dict[str, Any]] = {}
+    for row in _find_anomaly_rows(domain_results):
+        entity = str(row.get("entity_value") or row.get(COL_GROUP_CODE) or row.get("group_code") or row.get(COL_PLATFORM) or row.get("platform") or "").strip()
+        if entity:
+            anomaly_by_entity[entity] = row
+            entities.add(entity)
+    candidates: list[dict[str, Any]] = []
+    for entity in sorted(entities):
+        metrics = {metric: metric_summaries.get(metric, {}).get(entity) for metric in metric_summaries}
+        revenue = metrics.get("revenue_amount") or {}
+        amount = metrics.get("inventory_amount") or {}
+        qty = metrics.get("inventory_qty") or {}
+        ratio = metrics.get("revenue_inventory_amount_ratio") or {}
+        anomaly = anomaly_by_entity.get(entity, {})
+        score = 0.0
+        supporting: list[str] = []
+        counter: list[str] = []
+        revenue_pct = _as_float(revenue.get("overall_change_pct"))
+        amount_pct = _as_float(amount.get("overall_change_pct"))
+        qty_pct = _as_float(qty.get("overall_change_pct"))
+        ratio_pct = _as_float(ratio.get("overall_change_pct"))
+        if revenue_pct is not None:
+            if revenue_pct < 0:
+                score += min(abs(revenue_pct), 2.0) * 2.0
+                supporting.append(f"營收趨勢下降 {revenue_pct:.1%}")
+            else:
+                counter.append(f"營收仍成長 {revenue_pct:.1%}")
+        if amount_pct is not None:
+            if amount_pct > 0:
+                score += min(amount_pct, 2.0) * 1.5
+                supporting.append(f"庫存金額上升 {amount_pct:.1%}")
+            else:
+                counter.append(f"庫存金額下降 {amount_pct:.1%}")
+        if qty_pct is not None:
+            if qty_pct > 0:
+                score += min(qty_pct, 2.0) * 1.2
+                supporting.append(f"庫存數量上升 {qty_pct:.1%}")
+            else:
+                counter.append(f"庫存數量下降 {qty_pct:.1%}")
+        if ratio_pct is not None:
+            if ratio_pct < 0:
+                score += min(abs(ratio_pct), 2.0)
+                supporting.append(f"營收/庫存效率 proxy 走弱 {ratio_pct:.1%}")
+            else:
+                counter.append(f"營收/庫存效率 proxy 改善 {ratio_pct:.1%}")
+        anomaly_signal = _as_float(anomaly.get(COL_ANOMALY_SIGNAL) if anomaly else None)
+        if anomaly:
+            score += min(abs(anomaly_signal or 0.0), 5.0)
+            supporting.append(f"異常訊號 {anomaly.get(COL_ANOMALY_TYPE) or 'detected'}，訊號值 {_format_number(anomaly_signal)}")
+        else:
+            counter.append("目前未列入主要異常訊號清單")
+        evidence_metric_count = sum(1 for item in [revenue, amount, qty, ratio] if item) + (1 if anomaly else 0)
+        if evidence_metric_count < 3:
+            continue
+        candidates.append({
+            "entity_value": entity,
+            "score": score,
+            "latest_month": revenue.get("latest_month") or amount.get("latest_month") or qty.get("latest_month") or latest_month,
+            "revenue_change_pct": revenue_pct,
+            "inventory_amount_change_pct": amount_pct,
+            "inventory_qty_change_pct": qty_pct,
+            "ratio_change_pct": ratio_pct,
+            "anomaly_signal": anomaly_signal,
+            "evidence_metric_count": evidence_metric_count,
+            "supporting_evidence": supporting or ["多指標資料完整但未見單一突出風險"],
+            "counter_evidence": counter or ["目前缺少明確反向證據"],
+            "next_action": _management_next_action(entity, supporting, counter),
+        })
+    candidates.sort(key=lambda row: (float(row.get("score") or 0), row.get("evidence_metric_count") or 0), reverse=True)
+    for index, row in enumerate(candidates, start=1):
+        row["rank"] = index
+    return candidates
+
+
+def _find_anomaly_rows(domain_results: list[Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in _iter_evidence_items(domain_results):
+        if item.get("source_tool") == "get_anomalies" and isinstance(item.get("rows"), list):
+            rows.extend(row for row in item.get("rows") or [] if isinstance(row, dict))
+        elif item.get(COL_ANOMALY_TYPE) or item.get(COL_ANOMALY_SIGNAL) is not None:
+            rows.append(item)
+    return rows
+
+
+def _management_next_action(entity: str, supporting: list[str], counter: list[str]) -> str:
+    joined = " ".join(supporting)
+    if "庫存金額上升" in joined and "庫存數量上升" in joined:
+        return f"先核對 {entity} 的庫齡、在途/呆滯庫存與近期出貨節奏，確認庫存累積是否可消化"
+    if "營收趨勢下降" in joined:
+        return f"先核對 {entity} 最新訂單、出貨與價格變動，判斷營收下降是否延續"
+    if "異常訊號" in joined:
+        return f"先追查 {entity} 異常訊號來源資料列，確認是否為資料品質或真實營運風險"
+    return f"先補查 {entity} 的訂單、出貨、庫齡與產品組合，再決定是否升級管理處置"
+
+
+def _as_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_multimetric_trend_display_blocks(task_profile: Any, domain_results: list[Any], limitations: list[str], max_items: int) -> dict[str, Any]:
+    items = [item for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_entity_trend_comparison"]
+    metrics = [str(item.get("metric")) for item in items if item.get("metric")]
+    first = items[0] if items else {}
+    headline = "結論：已依使用者要求用多個指標檢查事業群趨勢，而不是只看單一營收趨勢。"
+    observations = [f"已覆蓋指標：{', '.join(dict.fromkeys(metrics))}。"]
+    anomaly = _find_anomaly(domain_results)
+    if anomaly:
+        observations.append(f"異常指標參考：{anomaly.get(COL_MONTH, anomaly.get('month', 'N/A'))} / {anomaly.get(COL_PLATFORM, anomaly.get('entity_value', 'N/A'))}。")
+    table_rows = []
+    for item in items[:4]:
+        for row in (item.get("entity_summaries") or [])[:3]:
+            table_rows.append({"metric": item.get("metric"), **row})
+    return {
+        "headline": headline,
+        "key_observations": observations[:max_items],
+        "table": {"columns": ["metric", "entity_value", "latest_month", "latest_value", "overall_change", "overall_change_pct", "direction"], "rows": table_rows[:12]} if table_rows else None,
+        "limitations": list(dict.fromkeys([*limitations, "多角度評估為歷史資料 proxy，不代表根本原因或預測。"])),
+    }
+
+
+def _build_relationship_cross_check_display_blocks(task_profile: Any, domain_results: list[Any], limitations: list[str], max_items: int) -> dict[str, Any]:
+    relationship = next((item for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_revenue_inventory_relationship"), {})
+    snapshot = next((item for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_entity_performance_snapshot"), {})
+    snapshot_by_entity = {str(row.get("entity_value") or row.get("platform") or row.get("business_group")): row for row in (snapshot.get("rows") or []) if isinstance(row, dict)}
+    rows: list[dict[str, Any]] = []
+    for row in (relationship.get("rows") or [])[:8]:
+        if not isinstance(row, dict):
+            continue
+        entity = str(row.get("entity_value") or row.get("platform") or row.get("business_group") or "")
+        snap = snapshot_by_entity.get(entity, {})
+        rows.append({
+            "entity_value": entity or None,
+            "latest_month": row.get("month") or snap.get("month"),
+            "previous_month": row.get("previous_month"),
+            "relationship_label": row.get("relationship_label"),
+            "revenue_change": row.get("revenue_change"),
+            "inventory_amount_change": row.get("inventory_amount_change", row.get("inventory_change")),
+            "inventory_qty": snap.get("inventory_qty"),
+            "inventory_amount": snap.get("inventory_amount"),
+            "revenue_inventory_amount_ratio": row.get("latest_ratio") or snap.get("revenue_inventory_amount_ratio"),
+        })
+    observations = []
+    if relationship.get("summary"):
+        observations.append(f"庫存風險關係分布：{relationship.get('summary', {}).get('relationship_counts')}。")
+    if snapshot_by_entity:
+        observations.append("已用 performance snapshot 補齊庫存數量與庫存金額水位，避免只依單一 relationship table 判斷。")
+    return {
+        "headline": "結論：已用營收變化、庫存金額變化與庫存數量水位交叉檢查庫存風險。",
+        "key_observations": observations[:max_items],
+        "table": {"columns": ["entity_value", "latest_month", "previous_month", "relationship_label", "revenue_change", "inventory_amount_change", "inventory_qty", "inventory_amount", "revenue_inventory_amount_ratio"], "rows": rows} if rows else None,
+        "limitations": list(dict.fromkeys([*limitations, "營收/庫存關係為描述性 proxy，庫存數量水位來自同月 snapshot；不宣稱因果。"])),
+    }
+
+
+def _build_risk_scan_display_blocks(task_profile: Any, domain_results: list[Any], limitations: list[str], max_items: int) -> dict[str, Any]:
+    relationship = next((item for item in _iter_evidence_items(domain_results) if item.get("source_tool") == "get_revenue_inventory_relationship"), {})
+    proxy_rows = _find_turnover_proxy_rows(domain_results)
+    anomaly = _find_anomaly(domain_results)
+    comparable = [row for row in proxy_rows if row.get("is_comparable") is not False]
+    non_comparable = [row for row in proxy_rows if row.get("is_comparable") is False]
+    leading = comparable[0] if comparable else (non_comparable[0] if non_comparable else None)
+    if leading and leading.get("is_comparable") is False:
+        headline = "結論：部分營收/庫存 proxy 因營收或分母不合法而不可比較，不能直接當作正常週轉效率排名。"
+    elif leading:
+        headline = f"結論：目前庫存風險需以營收/庫存關係、庫存 proxy 與異常訊號交叉判斷；{leading.get('entity_value') or leading.get('platform')} 是優先檢查對象。"
+    else:
+        headline = "結論：目前沒有足夠庫存風險 evidence 可以形成完成判斷。"
+    observations = []
+    if relationship.get("summary"):
+        observations.append(f"營收/庫存關係分布：{relationship.get('summary', {}).get('relationship_counts')}")
+    if leading:
+        observations.append(
+            f"proxy 公式：{leading.get('proxy_formula', 'revenue / inventory_amount')}；分子={leading.get('proxy_numerator', 'revenue')}，分母={leading.get('proxy_denominator', 'inventory_amount')}，單位={leading.get('proxy_unit', 'ratio')}。"
+        )
+    if anomaly:
+        observations.append(f"異常訊號：{anomaly.get(COL_MONTH, anomaly.get('month', 'N/A'))} / {anomaly.get(COL_ANOMALY_TYPE, MISSING_INFO_TEXT)}。")
+    table_rows = proxy_rows[:8]
+    return {
+        "headline": headline,
+        "key_observations": observations[:max_items],
+        "table": {"columns": ["month", "entity_value", "revenue", "inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio", "is_comparable", "non_comparable_reason", "risk_label"], "rows": table_rows} if table_rows else None,
+        "limitations": list(dict.fromkeys([*limitations, "營收/庫存 proxy 是描述性替代指標；負營收或非正分母列為 non-comparable，不納入正常效率排名。"])),
+    }
+
+
+def _iter_evidence_items(domain_results: list[Any]):
+    for result in domain_results:
+        for item in getattr(result, "evidence", []):
+            if isinstance(item, dict):
+                yield item
+
+
+def _is_consecutive_direction(rows: list[dict[str, Any]], *, positive: bool = False, negative: bool = False) -> bool:
+    changes = [row.get("mom_change") for row in rows[1:] if row.get("mom_change") is not None]
+    if len(changes) < 2:
+        return False
+    if positive:
+        return all(float(change) > 0 for change in changes[-2:])
+    if negative:
+        return all(float(change) < 0 for change in changes[-2:])
+    return False
+
+
+def _latest_non_null_change(rows: list[dict[str, Any]]) -> Any:
+    for row in reversed(rows):
+        if row.get("mom_change") is not None:
+            return row.get("mom_change")
+    return None
 
 
 def _build_chart_display_blocks(domain_results: list[Any], answer: str, limitations: list[str]) -> dict[str, Any]:
@@ -451,6 +927,9 @@ def _build_performance_assessment_display_blocks(
     if weakest:
         observations.append(
             f"{weakest.get('month')} / {weakest.get('platform')} 的營收/庫存金額 proxy 為 {_format_number(weakest.get('revenue_inventory_amount_ratio'))}。"
+        )
+        observations.append(
+            f"proxy 公式：{weakest.get('proxy_formula', 'revenue / inventory_amount')}；分子={weakest.get('proxy_numerator', 'revenue')}，分母={weakest.get('proxy_denominator', 'inventory_amount')}，單位={weakest.get('proxy_unit', 'ratio')}；non-comparable policy：revenue<=0 或 inventory_amount<=0 不列入正常效率排名。"
         )
     if len(proxy_rows) > 1:
         second = proxy_rows[1]
@@ -1030,7 +1509,7 @@ def _build_limitations(
         for item in getattr(result, "evidence", [])
         if isinstance(item, dict)
     )
-    if "health_score" in question or "health_score" in combined_chart_text:
+    if "health_score" in question or "health score" in question.lower():
         limitations.append("health_score 為 deterministic scorecard 指標，需搭配營收、庫存 proxy 與資料品質限制解讀。")
 
     root_cause = _find_root_cause_candidates(domain_results)
@@ -1058,6 +1537,8 @@ def _productize_text(text: str) -> str:
     normalized = text.strip()
     normalized = normalized.replace("欄位不足", MISSING_INFO_TEXT)
     normalized = normalized.replace("代理異常", "風險訊號")
+    while "風險訊號訊號" in normalized:
+        normalized = normalized.replace("風險訊號訊號", "風險訊號")
     return normalized
 
 
@@ -1116,8 +1597,11 @@ def _detect_unsupported_topics(question: str) -> list[str]:
     lowered = question.lower()
     matched: list[str] = []
     product_line_question = any(token in lowered or token in question for token in ["product line", "產品線", "產品線"])
+    proxy_fallback_context = any(token in question for token in ["沒有正式", "如果目前沒有", "替代指標", "代理指標", "proxy"])
     for topic, hints in UNSUPPORTED_FIELD_HINTS.items():
         if topic == "product" and product_line_question:
+            continue
+        if topic == "cost" and proxy_fallback_context and any(token in question for token in ["銷貨成本", "成本"]):
             continue
         if any(hint.lower() in lowered for hint in hints):
             matched.append(topic)
@@ -1307,11 +1791,16 @@ def _find_turnover_proxy_rows(domain_results: list[Any]) -> list[dict[str, Any]]
     candidates: list[dict[str, Any]] = []
     for result in domain_results:
         for item in getattr(result, "evidence", []):
-            if isinstance(item, dict) and item.get("efficiency_level") and item.get("revenue_inventory_amount_ratio") is not None:
-                candidates.append(item)
+            items = item.get("rows") if isinstance(item, dict) and item.get("source_tool") == "get_inventory_turnover_proxy" else [item]
+            for row in items or []:
+                if isinstance(row, dict) and row.get("efficiency_level") and row.get("revenue_inventory_amount_ratio") is not None:
+                    candidates.append(row)
     return sorted(
         candidates,
-        key=lambda item: float(item.get("revenue_inventory_amount_ratio")) if item.get("revenue_inventory_amount_ratio") is not None else float("inf"),
+        key=lambda item: (
+            item.get("is_comparable") is False,
+            float(item.get("revenue_inventory_amount_ratio")) if item.get("revenue_inventory_amount_ratio") is not None else float("inf"),
+        ),
     )
 
 

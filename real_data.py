@@ -1,3 +1,11 @@
+"""inventory/revenue 的載入、欄位正規化與 entity/month 對齊層。
+
+本模組是正式資料契約的唯一實作入口：將兩份 Excel 轉成 canonical 欄位，
+再以 `month_key`、`business_group`、`product_line_5` 建立可比較資料。它也
+產生 validation quality report，供 PipelineContext、API 與 evidence layer
+揭露缺欄、日期錯誤及 revenue-only/inventory-only 限制。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -115,6 +123,7 @@ def load_real_data_sources(
     revenue_path: Path | str,
     collector: MessageCollector | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """載入並正規化 inventory/revenue；回傳兩份資料與來源 metadata。"""
     collector = collector or MessageCollector()
     inventory = load_real_inventory_data(inventory_path, collector)
     revenue = load_real_revenue_data(revenue_path, collector)
@@ -126,6 +135,7 @@ def load_real_data_sources(
 
 
 def normalize_real_inventory_data(df: pd.DataFrame, collector: MessageCollector | None = None) -> pd.DataFrame:
+    """把 inventory 原始欄位轉為 canonical inventory schema。"""
     collector = collector or MessageCollector()
     if df.empty:
         return pd.DataFrame(columns=_inventory_standard_columns())
@@ -153,6 +163,7 @@ def normalize_real_inventory_data(df: pd.DataFrame, collector: MessageCollector 
 
 
 def normalize_real_revenue_data(df: pd.DataFrame, collector: MessageCollector | None = None) -> pd.DataFrame:
+    """把 revenue 原始欄位轉為 canonical revenue schema。"""
     collector = collector or MessageCollector()
     if df.empty:
         return pd.DataFrame(columns=_revenue_standard_columns())
@@ -183,6 +194,7 @@ def build_real_analysis_tables(
     revenue: pd.DataFrame,
     source_metadata: dict[str, Any] | None = None,
 ) -> RealAnalysisTables:
+    """建立月份/entity 聚合與 revenue-inventory alignment，並附品質報告。"""
     source_metadata = source_metadata or {}
     inventory_monthly_entity = _build_inventory_monthly_entity(inventory)
     revenue_monthly_entity = _build_revenue_monthly_entity(revenue)

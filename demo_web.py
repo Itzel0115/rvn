@@ -1,3 +1,10 @@
+"""Dashboard、mobile UI 與 Agent flow 共用的 Python Backend/API 入口.
+
+本模組在啟動時建立共用的 PipelineContext，並將 HTTP request 路由到
+deterministic tools 或 MultiAgentAssistant。輕量 metadata endpoint 不需要
+LLM；`/api/ask` 才會進入 Agent orchestration。Frontend 不直接讀取 Excel。
+"""
+
 from __future__ import annotations
 
 import json
@@ -21,8 +28,14 @@ from proactive_workflow.revision import create_revision
 from utils import MessageCollector
 
 
-HOST = "127.0.0.1"
-PORT = 8765
+HOST = os.getenv("DEMO_WEB_HOST", "0.0.0.0")
+PORT = int(os.getenv("DEMO_WEB_PORT", "8765"))
+DEFAULT_CORS_ALLOWED_ORIGINS = "http://10.8.35.35:3000,http://localhost:3000,http://127.0.0.1:3000"
+CORS_ALLOWED_ORIGINS = {
+    origin.strip().rstrip("/")
+    for origin in os.getenv("DEMO_CORS_ALLOWED_ORIGINS", DEFAULT_CORS_ALLOWED_ORIGINS).split(",")
+    if origin.strip()
+}
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -125,7 +138,7 @@ def build_data_quality_payload(context: PipelineContext, toolbox: AnalysisToolbo
         {
             "name": "mapping_success",
             "status": "ok" if version_payload["mapping_success"] else "error",
-            "message": "mapping 載入成功" if version_payload["mapping_success"] else "mapping 載入失敗",
+            "message": "資料來源對齊摘要可用" if version_payload["mapping_success"] else "資料來源對齊摘要不可用",
         },
     ]
     if pipeline_payload["warning_count"] > 0:
@@ -141,7 +154,7 @@ def build_data_quality_payload(context: PipelineContext, toolbox: AnalysisToolbo
         "目前資料品質報告僅反映已載入資料與 pipeline 狀態。",
     ]
     if mapping_summary.get("bridge_candidate_count", 0) > 0:
-        limitations.append("若 mapping 有 ambiguous candidates，平台層分析需搭配限制解讀。")
+        limitations.append("若資料來源對齊存在 ambiguous candidates，平台層分析需搭配限制解讀。")
 
     return {
         "status": pipeline_payload["status"],
@@ -172,6 +185,7 @@ def build_data_quality_payload(context: PipelineContext, toolbox: AnalysisToolbo
 
 class DemoApplication:
     def __init__(self) -> None:
+        """建立 API 共用的 context、toolbox 與 Agent application state。"""
         server_request_id = configure_logging(OUTPUT_DIR / "logs", request_id="web-server")
         self.logger = get_logger("demo_web", server_request_id, domain="web")
         self.logger.info("Initializing demo web application")
@@ -209,6 +223,7 @@ class DemoApplication:
         use_llm_planner: bool | None = None,
         use_llm_rewriter: bool | None = None,
     ) -> dict:
+        """將問題交給 MultiAgentAssistant，並回傳既有 API schema 的回答結果。"""
         request_id = build_request_id()
         assistant = self._build_assistant(
             request_id,
@@ -358,15 +373,23 @@ DemoApplication.proactive_approvals = _proactive_approvals
 class DemoRequestHandler(BaseHTTPRequestHandler):
     server_version = "MultiAgentDemo/1.0"
 
+    def do_OPTIONS(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self._send_cors_headers()
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def do_GET(self) -> None:
+        """處理 health、summary、chart 與其他唯讀 metadata request。"""
         parsed = urlparse(self.path)
         if parsed.path in {"/", ""}:
             self._send_json(
                 {
                     "service": "revenue-intelligence-api",
                     "status": "ok",
-                    "web_url": "http://127.0.0.1:3000",
-                    "mobile_url": "http://127.0.0.1:3001",
+                    "web_url": os.getenv("DEMO_WEB_URL", "http://10.8.35.35:3000"),
+                    "mobile_url": os.getenv("DEMO_MOBILE_URL", "http://10.8.35.35:3000/mobile"),
                     "endpoints": [
                         "/api/health",
                         "/api/data-version",
@@ -483,10 +506,17 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(_json_safe(payload), ensure_ascii=False, allow_nan=False).encode("utf-8")
         self.send_response(status)
+        self._send_cors_headers()
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_cors_headers(self) -> None:
+        origin = self.headers.get("Origin")
+        if origin and origin.rstrip("/") in CORS_ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
 
 
 def run() -> None:

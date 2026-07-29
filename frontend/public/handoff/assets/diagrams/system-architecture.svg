@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+<title id="title">Revenue Intelligence POC 主架構圖</title><desc id="desc">以一般問答主流程為中央，MCP、Proactive、Observability、Evaluation 作為側邊支援模組。</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#1f5f8b"/></marker><marker id="arrowSoft" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7b8da3"/></marker></defs>
+<style>
+.bg{fill:#f7f9fc}.lane{fill:#ffffff;stroke:#d8e1ec;stroke-width:1.4}.side{fill:#eef4fb;stroke:#c9d7e6;stroke-width:1.4}.box{fill:#ffffff;stroke:#1f5f8b;stroke-width:1.7}.box2{fill:#f2f7fb;stroke:#1f5f8b;stroke-width:1.5}.data{fill:#fff8e6;stroke:#946200;stroke-width:1.5}.support{fill:#f6f8fb;stroke:#7b8da3;stroke-width:1.4}.main{stroke:#1f5f8b;stroke-width:2.4;fill:none;marker-end:url(#arrow)}.soft{stroke:#7b8da3;stroke-width:1.8;fill:none;stroke-dasharray:7 7;marker-end:url(#arrowSoft)}.loop{stroke:#946200;stroke-width:1.9;fill:none;marker-end:url(#arrowSoft)}text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#172033}.t{font-size:18px;font-weight:760}.s{font-size:13px;fill:#5f6b7a}.lane-title{font-size:15px;font-weight:760;fill:#1f5f8b}.small{font-size:12px;fill:#5f6b7a}
+@media (prefers-color-scheme:dark){.bg{fill:#18212c}.lane{fill:#222d3a;stroke:#405064}.side{fill:#1d2733;stroke:#405064}.box{fill:#263447;stroke:#8cc5f0}.box2{fill:#223042;stroke:#8cc5f0}.data{fill:#332b18;stroke:#f5c56b}.support{fill:#243041;stroke:#7b8da3}.main{stroke:#8cc5f0}.soft{stroke:#9fb0c4}.loop{stroke:#f5c56b}text{fill:#eef4fb}.s,.small{fill:#b5c0cd}.lane-title{fill:#8cc5f0}}</style>
+<rect class="bg" width="1280" height="760" rx="0"/>
+<text x="40" y="42" class="t">Revenue Intelligence POC：交接主路徑</text><text x="40" y="66" class="s">中央是一般問答最常走的路；側邊模組是受控入口、主動流程、觀測與離線驗收。</text>
+<rect class="lane" x="40" y="92" width="1200" height="112" rx="12"/><text x="60" y="120" class="lane-title">第一層：使用入口</text>
+<rect class="box" x="90" y="138" width="170" height="46" rx="8"/><text x="175" y="158" text-anchor="middle" class="t">使用者</text><text x="175" y="176" text-anchor="middle" class="s">中文提問</text>
+<rect class="box" x="360" y="132" width="210" height="58" rx="8"/><text x="465" y="154" text-anchor="middle" class="t">Frontend Dashboard</text><text x="465" y="174" text-anchor="middle" class="s">/dashboard</text>
+<rect class="box" x="680" y="132" width="210" height="58" rx="8"/><text x="785" y="154" text-anchor="middle" class="t">Backend API</text><text x="785" y="174" text-anchor="middle" class="s">demo_web.py</text>
+<path class="main" d="M260 161 H360"/><path class="main" d="M570 161 H680"/>
+<rect class="lane" x="40" y="232" width="1200" height="126" rx="12"/><text x="60" y="260" class="lane-title">第二層：問答理解與規劃</text>
+<rect class="box" x="150" y="282" width="230" height="58" rx="8"/><text x="265" y="304" text-anchor="middle" class="t">MultiAgentAssistant</text><text x="265" y="324" text-anchor="middle" class="s">問題理解 / TaskProfile</text>
+<rect class="box" x="500" y="282" width="230" height="58" rx="8"/><text x="615" y="304" text-anchor="middle" class="t">Semantic Layer</text><text x="615" y="324" text-anchor="middle" class="s">KPI / Evidence 規則</text>
+<rect class="box" x="850" y="282" width="230" height="58" rx="8"/><text x="965" y="304" text-anchor="middle" class="t">AnswerPlan</text><text x="965" y="324" text-anchor="middle" class="s">PlanValidator</text>
+<path class="main" d="M785 190 V218 H265 V282"/><path class="main" d="M380 311 H500"/><path class="main" d="M730 311 H850"/>
+<rect class="lane" x="40" y="386" width="1200" height="150" rx="12"/><text x="60" y="414" class="lane-title">第三層：執行與驗證主循環</text>
+<rect class="box" x="90" y="442" width="210" height="62" rx="8"/><text x="195" y="464" text-anchor="middle" class="t">Stateful Runtime</text><text x="195" y="484" text-anchor="middle" class="s">PlanStep / Checkpoint</text>
+<rect class="box" x="390" y="442" width="230" height="62" rx="8"/><text x="505" y="464" text-anchor="middle" class="t">Analysis Toolbox</text><text x="505" y="484" text-anchor="middle" class="s">Tool Registry</text>
+<rect class="box" x="710" y="442" width="210" height="62" rx="8"/><text x="815" y="464" text-anchor="middle" class="t">Evidence Validator</text><text x="815" y="484" text-anchor="middle" class="s">Primary evidence</text>
+<rect class="box" x="1010" y="442" width="190" height="62" rx="8"/><text x="1105" y="464" text-anchor="middle" class="t">Answer Contract</text><text x="1105" y="484" text-anchor="middle" class="s">Writer Validator</text>
+<path class="main" d="M965 340 V372 H195 V442"/><path class="main" d="M300 473 H390"/><path class="main" d="M620 473 H710"/><path class="main" d="M920 473 H1010"/>
+<rect class="support" x="710" y="548" width="210" height="56" rx="8"/><text x="815" y="570" text-anchor="middle" class="t">Replanner</text><text x="815" y="590" text-anchor="middle" class="s">或 Capability Gap</text>
+<path class="loop" d="M815 504 V548"/><path class="loop" d="M710 576 H650 V512 H300"/>
+<rect class="lane" x="40" y="620" width="1200" height="92" rx="12"/><text x="60" y="648" class="lane-title">第四層：資料來源</text>
+<rect class="data" x="390" y="654" width="230" height="42" rx="8"/><text x="505" y="681" text-anchor="middle" class="t">Revenue / Inventory Data</text>
+<path class="main" d="M505 654 V504"/>
+<rect class="side" x="40" y="548" width="250" height="56" rx="10"/><text x="165" y="570" text-anchor="middle" class="t">MCP Server</text><text x="165" y="590" text-anchor="middle" class="s">外部 Agent 的受控入口</text><path class="soft" d="M290 576 H390"/>
+<rect class="side" x="970" y="548" width="270" height="56" rx="10"/><text x="1105" y="570" text-anchor="middle" class="t">Proactive Workflow</text><text x="1105" y="590" text-anchor="middle" class="s">Draft / Approval / Publication</text><path class="soft" d="M1105 548 V516"/>
+<rect class="side" x="930" y="638" width="150" height="48" rx="10"/><text x="1005" y="657" text-anchor="middle" class="t">Observability</text><text x="1005" y="676" text-anchor="middle" class="s">Trace / State</text><path class="soft" d="M1005 638 V516"/>
+<rect class="side" x="1090" y="638" width="150" height="48" rx="10"/><text x="1165" y="657" text-anchor="middle" class="t">Evaluation</text><text x="1165" y="676" text-anchor="middle" class="s">Regression Gate</text><path class="soft" d="M1165 638 V604"/>
+<text x="60" y="732" class="small">實線：一般問答主線。虛線：旁支支援或離線驗收。證據不足時先重新規劃；沒有合法工具才回 partial / capability gap。</text>
+</svg>

@@ -26,6 +26,7 @@ class CanonicalTaskProfile:
     resolved_dimension_ids: list[str] = field(default_factory=list)
     semantic_task_requirement_id: str | None = None
     semantic_warnings: list[str] = field(default_factory=list)
+    task_requirements: dict[str, Any] = field(default_factory=dict)
     constraints: CanonicalConstraints = field(default_factory=CanonicalConstraints)
 
     @classmethod
@@ -34,6 +35,8 @@ class CanonicalTaskProfile:
         target_entity = _canonical_entity(getattr(task_profile, "target_entity", {}) or {})
         parent_entity = _canonical_parent_entity(getattr(task_profile, "parent_entity", {}) or {})
         metrics = list(getattr(task_profile, "metrics", []) or [])
+        requested_metrics = list((getattr(task_profile, "task_requirements", {}) or {}).get("requested_metrics") or [])
+        metrics = list(dict.fromkeys([*(str(item) for item in metrics if item), *(str(item) for item in requested_metrics if item)]))
         question_text = str(
             getattr(routing, "question", None)
             or getattr(routing, "question_text", None)
@@ -57,6 +60,7 @@ class CanonicalTaskProfile:
             chart_type=chart_type,
             answer_mode=answer_mode,
             **_semantic_references(metrics, target_entity, task_profile),
+            task_requirements=_canonical_task_requirements(getattr(task_profile, "task_requirements", {}) or {}, metrics, target_entity, time_scope),
             constraints=CanonicalConstraints(
                 no_forecast=getattr(task_profile, "task_family", None) != "forecast_unsupported",
                 no_root_cause_claim=True,
@@ -81,6 +85,21 @@ class CanonicalTaskProfile:
         if self.task_family == "chart_request" and not self.chart_type:
             errors.append("missing_chart_type")
         return not errors, errors
+
+
+def _canonical_task_requirements(requirements: dict[str, Any], metrics: list[str], target_entity: dict[str, Any], time_scope: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(requirements or {})
+    payload["requested_metrics"] = list(dict.fromkeys(str(item) for item in (payload.get("requested_metrics") or metrics or []) if item))
+    payload["requested_dimensions"] = list(dict.fromkeys(str(item) for item in (payload.get("requested_dimensions") or [target_entity.get("dimension")]) if item))
+    payload["time_scope"] = dict(payload.get("time_scope") or time_scope or {})
+    payload["requested_operations"] = list(dict.fromkeys(str(item) for item in (payload.get("requested_operations") or []) if item))
+    payload["top_n"] = payload.get("top_n")
+    payload["requested_top_n"] = payload.get("requested_top_n", payload.get("top_n"))
+    payload["requires_counter_evidence"] = bool(payload.get("requires_counter_evidence") or "counter_evidence" in payload["requested_operations"])
+    payload["requires_recommendation"] = bool(payload.get("requires_recommendation") or "next_action" in payload["requested_operations"])
+    payload["requires_named_selection"] = bool(payload.get("requires_named_selection"))
+    payload["required_selected_entity_count"] = payload.get("required_selected_entity_count")
+    return payload
 
 
 def _semantic_references(metrics: list[str], target_entity: dict[str, Any], task_profile: Any) -> dict[str, Any]:

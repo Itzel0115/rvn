@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一題怎麼跑｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="question-journey.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="" href="./">首頁</a>
+<a class="" href="overview.html">系統總覽</a>
+<a class="active" href="question-journey.html">一題怎麼跑</a>
+<a class="" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="" href="operations.html">展示與操作</a>
+<a class="" href="maintenance.html">新增與修改</a>
+<a class="" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>一題怎麼跑</h1>
+      <p>用一個虛構問題看懂 Agent、分析工具、回答證據、重新規劃與回答驗證。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#step1">看懂問題</a><a class="page-toc-link" href="#step2">需要證據</a><a class="page-toc-link" href="#step3">執行工具</a><a class="page-toc-link" href="#step4">檢查證據</a><a class="page-toc-link" href="#step5">驗證回答</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section class="notice">
+  <strong>教學問題</strong>
+  <p>「2025 年 2 月到 3 月，某事業群是否出現營收下降、庫存上升？」以下所有數字都是教學用虛構資料，不是公司真實數據；JSON 結構依目前程式欄位整理。</p>
+</section>
+<section id="step1">
+  <h2>第一步：看懂問題</h2>
+  <p>系統先把中文問題拆成幾個交接時最重要的欄位：時間、對象、KPI、問題類型。這一步不是計算，而是把自然語言整理成後面可驗證的任務。</p>
+  <div class="mini-grid"><div><strong>時間</strong><code>2025-02 → 2025-03</code></div><div><strong>對象</strong><code>business_group</code></div><div><strong>KPI</strong><code>revenue_amount, inventory_amount</code></div><div><strong>問題類型</strong><code>metric_relationship_analysis</code></div></div>
+  <details><summary>工程細節：TaskProfile 與 CanonicalTaskProfile</summary><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">@dataclass(frozen=True)
+class TaskProfile:
+    task_type: str
+    months: list[str]
+    metrics: list[str]
+    entity_scope: str | None = None
+
+
+def build_task_profile(question: str) -&gt; TaskProfile:
+    months = extract_months(question)
+    metrics = detect_metrics(question)
+    task_type = detect_task_family(question)
+    # ...其餘邏輯省略
+    return TaskProfile(task_type=task_type, months=months, metrics=metrics)</code></pre></div><p class="code-note"><strong>來源：</strong><code>task_profile.py</code>　<strong>位置：</strong><code>TaskProfile / build_task_profile()</code>　<strong>看法：</strong>看它如何保存 task family、時間、實體與 KPI。</p><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">@dataclass(frozen=True)
+class CanonicalTaskProfile:
+    task_family: str
+    periods: tuple[str, ...]
+    metrics: tuple[str, ...]
+    dimensions: tuple[str, ...]
+
+    @classmethod
+    def from_task_profile(cls, profile: TaskProfile) -&gt; &quot;CanonicalTaskProfile&quot;:
+        # ...其餘邏輯省略
+        return cls(
+            task_family=profile.task_type,
+            periods=tuple(profile.months),
+            metrics=tuple(profile.metrics),
+            dimensions=tuple(_normalize_dimensions(profile)),
+        )</code></pre></div><p class="code-note"><strong>來源：</strong><code>canonical_task.py</code>　<strong>位置：</strong><code>CanonicalTaskProfile.from_task_profile()</code>　<strong>看法：</strong>看它如何把問題整理成後續驗證可使用的穩定 schema。</p></details>
+</section>
+<section id="step2">
+  <h2>第二步：決定需要哪些證據</h2>
+  <p>要回答這題，不能只看到單一月份或單一 KPI。系統需要能比較兩個月份的營收與庫存，並且要把這些資料當成主要回答證據（primary evidence）。</p>
+  <details open><summary>這題需要的回答證據（Evidence）</summary>
+    <ul class="check-list"><li>主要證據：<code>metric_relationship</code></li><li>輔助證據：表現快照、趨勢或 anomaly，可用來補充，但不能取代主要證據。</li><li>禁止當主要證據的工具：<code>get_root_cause_candidates</code>、<code>get_contribution_analysis(revenue)</code>。</li></ul>
+  </details>
+  <details><summary>工程細節：AnswerPlan 節錄</summary><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">AnswerPlan(
+    task_family=&quot;metric_relationship_analysis&quot;,
+    primary_evidence=[&quot;metric_relationship&quot;],
+    supporting_evidence=[&quot;entity_period_pair_table&quot;],
+    allowed_tools=[&quot;get_revenue_inventory_relationship&quot;],
+    forbidden_tools=[&quot;forecast&quot;, &quot;arbitrary_python&quot;],
+    # ...其餘邏輯省略
+)</code></pre></div><p class="code-note"><strong>來源：</strong><code>answer_plan.py</code>　<strong>位置：</strong><code>build_answer_plan() / metric_relationship_analysis</code>　<strong>看法：</strong>看 primary/supporting/background/forbidden tools 如何被固定下來。</p></details>
+</section>
+<section id="step3">
+  <h2>第三步：選擇並執行工具</h2>
+  <p>Agent 決定要用哪個分析工具（Tool），真正計算由 <code>AnalysisToolbox</code> 執行。執行前，Plan Validator 會先確認工具名稱、允許參數、KPI、時間與 entity 都合法。</p>
+  <div class="tool-call-demo">
+    <div><h3>Agent 產生 Tool Call</h3><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-json">{
+  &quot;tool_name&quot;: &quot;get_revenue_inventory_relationship&quot;,
+  &quot;args&quot;: {
+    &quot;entity_dimension&quot;: &quot;business_group&quot;,
+    &quot;recent_n&quot;: 2
+  },
+  &quot;reason&quot;: &quot;需要成對比較營收與庫存變化&quot;
+}</code></pre></div><p class="code-note"><strong>重點：</strong>這是教學用虛構 tool call；欄位名稱依目前 planner/tool call 結構整理。</p></div>
+    <div><h3>Tool Result 範例</h3><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-json">{
+  &quot;source_tool&quot;: &quot;get_revenue_inventory_relationship&quot;,
+  &quot;evidence_type&quot;: &quot;metric_relationship&quot;,
+  &quot;entity_dimension&quot;: &quot;business_group&quot;,
+  &quot;rows&quot;: [
+    {
+      &quot;entity_value&quot;: &quot;教學事業群 A&quot;,
+      &quot;revenue_change&quot;: -1200,
+      &quot;inventory_change&quot;: 830,
+      &quot;relationship_label&quot;: &quot;營收下降、庫存上升&quot;,
+      &quot;period_start&quot;: &quot;2025-02&quot;,
+      &quot;period_end&quot;: &quot;2025-03&quot;
+    }
+  ],
+  &quot;limitations&quot;: [
+    &quot;僅描述歷史資料，不做 root cause claim。&quot;
+  ]
+}</code></pre></div><p class="code-note"><strong>重點：</strong>數字為教學虛構資料，不是公司真實數據。</p></div>
+  </div>
+</section>
+<section id="step4">
+  <h2>第四步：檢查證據是否足夠</h2>
+  <div class="flow-three">
+    <div><strong>證據足夠</strong><span>→ 產生回答</span></div>
+    <div><strong>證據不足，但有合法替代工具</strong><span>→ 重新規劃（Replan）→ 再執行工具</span></div>
+    <div><strong>沒有合法工具能補足</strong><span>→ Partial Answer → Capability Gap</span></div>
+  </div>
+  <p>Replan 和 Retry 不一樣：Retry 是同一步重試；Replan 是因為缺少回答證據，新增一個 registry 允許且尚未重複的工具。這個 repo 的 replanner 是保守修補，不會任意發明工具。</p>
+  <details><summary>工程細節：Evidence Validator 節錄</summary><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">def validate(self, records: list[ToolExecutionRecord], requirement: SemanticRequirement):
+    evidence_types = {record.evidence_type for record in records}
+    missing = set(requirement.primary_evidence) - evidence_types
+    if missing:
+        return EvidenceValidationResult(
+            status=&quot;insufficient&quot;,
+            missing_primary_evidence=sorted(missing),
+        )
+    # ...其餘邏輯省略
+    return EvidenceValidationResult(status=&quot;sufficient&quot;)</code></pre></div><p class="code-note"><strong>來源：</strong><code>agent_runtime/evidence_validator.py</code>　<strong>位置：</strong><code>EvidenceValidator.validate()</code>　<strong>看法：</strong>看關係分析如何要求成對營收與庫存 evidence。</p></details>
+</section>
+<section id="step5">
+  <h2>第五步：產生並驗證回答</h2>
+  <p>回答產生後還會再檢查一次：數字、月份、實體與 KPI 必須來自證據；proxy 不能說成正式指標；描述性關係不能寫成因果；不支援的 forecast 不能偷渡成預測。</p>
+  <div class="example-stack">
+    <div class="example ok"><strong>正常完成案例</strong><p>主要 relationship evidence 有 rows，月份與 KPI 都涵蓋，回答以「描述性關係」呈現。</p></div>
+    <details><summary>valuable replan 案例</summary><p>初次工具結果缺少庫存數量的補充觀察；Evidence Validator 標示缺口，Replanner 補上 <code>get_entity_trend_comparison</code>。</p></details>
+    <details><summary>capability gap 案例</summary><p>使用者要求預測下個月是否改善。<code>forecast_unsupported</code> 沒有合法 primary tool，系統應清楚說明目前不支援預測，而不是硬湊答案。</p></details>
+  </div>
+  <details><summary>工程細節：Writer Validator 節錄</summary><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">def validate_answer(answer: AnswerContract) -&gt; WriterValidationResult:
+    checks = [
+        validate_numbers(answer),
+        validate_months(answer),
+        validate_proxy_language(answer),
+        validate_forecast_boundary(answer),
+        validate_debug_redaction(answer),
+    ]
+    # ...其餘邏輯省略
+    return combine_checks(checks)</code></pre></div><p class="code-note"><strong>來源：</strong><code>writer_validator.py</code>　<strong>位置：</strong><code>WriterValidator._validate()</code>　<strong>看法：</strong>看回答文字會被哪些安全規則擋下。</p></details>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

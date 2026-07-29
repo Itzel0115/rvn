@@ -1,20 +1,30 @@
+"""正式資料 Pipeline 的組裝入口。
+
+本模組集中載入 `data/inventory.xlsx` 與 `data/revenue.xlsx`，呼叫
+`real_data.py` 完成 normalization、entity/month alignment，並建立 API、
+Agent 與 analysis tools 共用的 `PipelineContext`。正式資料驗證失敗時直接
+回報 inventory/revenue 問題，不再 fallback 到 mapping workbook；
+`ParsedMapping` 只承載由正式資料衍生的 compatibility metadata。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 import pandas as pd
 
-from analyzer import AnalysisArtifacts, analyze_data
-from config import CHART_DIR, COL_GROUP_CODE, COL_GROUP_NAME, DATA_DIR, INVENTORY_FILE, MAPPING_FILE, OUTPUT_DIR, REVENUE_FILE
-from data_loader import load_inventory, load_mapping_raw, load_real_data_sources, load_revenue
+from analyzer import AnalysisArtifacts
+from config import CHART_DIR, COL_GROUP_CODE, COL_GROUP_NAME, DATA_DIR, INVENTORY_FILE, OUTPUT_DIR, REVENUE_FILE
+from data_loader import load_real_data_sources
 from logging_utils import get_logger
-from mapping_parser import ParsedMapping, parse_mapping
+from mapping_parser import ParsedMapping
 from real_data import build_legacy_compatible_frames, build_real_analysis_tables
 from utils import MessageCollector, ensure_directories
 
 
 @dataclass
 class PipelineContext:
+    """供 Backend、Agent 與所有 Tool 共用的正規化資料與分析 artifacts。"""
     inventory_check: dict[str, list[str]]
     revenue_check: dict[str, list[str]]
     inventory_df: pd.DataFrame
@@ -28,17 +38,17 @@ class PipelineContext:
 
 
 def build_pipeline_context(request_id: str) -> PipelineContext:
+    """建立共用分析上下文；資料驗證失敗時直接回報 inventory/revenue 錯誤。"""
     logger = get_logger("analysis_pipeline", request_id, domain="pipeline")
     ensure_directories([DATA_DIR, OUTPUT_DIR, CHART_DIR])
 
     logger.info("Loading source files")
     logger.info("Using inventory file: %s", INVENTORY_FILE)
     logger.info("Using revenue file: %s", REVENUE_FILE)
-    logger.info("Using mapping file: %s", MAPPING_FILE)
-
     messages = MessageCollector()
     real_inventory_df, real_revenue_df, real_source_metadata = load_real_data_sources(INVENTORY_FILE, REVENUE_FILE, messages)
     if not real_inventory_df.empty and not real_revenue_df.empty:
+        # 兩份來源在此統一完成對齊，避免不同 Tool 各自定義月份或 entity grain。
         logger.info("Loaded real data files by configured file path; building Phase 9A entity analysis tables")
         real_tables = build_real_analysis_tables(real_inventory_df, real_revenue_df, real_source_metadata)
         for message in real_tables.messages:
@@ -132,83 +142,16 @@ def build_pipeline_context(request_id: str) -> PipelineContext:
             source_files={
                 "inventory": str(INVENTORY_FILE),
                 "revenue": str(REVENUE_FILE),
-                "mapping": str(MAPPING_FILE),
             },
             real_data_quality_report=real_tables.data_quality_report,
         )
 
-    inventory_df, inventory_check, inventory_messages = load_inventory(INVENTORY_FILE)
-    revenue_df, revenue_check, revenue_messages = load_revenue(REVENUE_FILE)
-    mapping_raw_df, mapping_messages = load_mapping_raw(MAPPING_FILE)
-
-    messages.extend(inventory_messages)
-    messages.extend(revenue_messages)
-    messages.extend(mapping_messages)
-
-    logger.info(
-        "Loaded raw dataframes: inventory_rows=%s, revenue_rows=%s, mapping_rows=%s",
-        len(inventory_df),
-        len(revenue_df),
-        len(mapping_raw_df),
-    )
-
-    parsed_mapping, mapping_parse_messages = parse_mapping(mapping_raw_df)
-    messages.extend(mapping_parse_messages)
-    logger.info(
-        "Parsed mapping: structured_rows=%s, bridge_candidates=%s, mapping_success=%s",
-        len(parsed_mapping.structured_mapping),
-        len(parsed_mapping.bridge_candidates),
-        parsed_mapping.mapping_success,
-    )
-
-    if inventory_check.get("missing") or revenue_check.get("missing") or parsed_mapping.structured_mapping.empty:
-        logger.error(
-            "Pipeline prerequisites missing: inventory_missing=%s revenue_missing=%s mapping_empty=%s",
-            inventory_check.get("missing"),
-            revenue_check.get("missing"),
-            parsed_mapping.structured_mapping.empty,
-        )
-        raise ValueError("Required input files or columns are missing; unable to build analysis context.")
-
-    artifacts, analysis_messages = analyze_data(inventory_df, revenue_df, parsed_mapping)
-    messages.extend(analysis_messages)
-    logger.info(
-        "Analysis complete: monthly_revenue=%s, anomalies=%s, correlations=%s",
-        len(artifacts.monthly_revenue),
-        len(artifacts.anomalies),
-        len(artifacts.correlation_analysis),
-    )
-
-    supported_domains = {
-        "sales": not artifacts.monthly_revenue.empty,
-        "inventory": not artifacts.monthly_inventory_amount.empty,
-        "financial": not artifacts.merged_analysis.empty or not artifacts.platform_monthly_analysis.empty,
-        "association": not artifacts.correlation_analysis.empty,
-        "chart": any(
-            [
-                not artifacts.monthly_revenue.empty,
-                not artifacts.monthly_inventory_amount.empty,
-                not artifacts.monthly_inventory_qty.empty,
-                not artifacts.revenue_by_group.empty,
-                not artifacts.inventory_by_group.empty,
-                not artifacts.platform_monthly_analysis.empty,
-            ]
-        ),
-    }
-    logger.info("Supported domains: %s", supported_domains)
-
-    return PipelineContext(
-        inventory_check=inventory_check,
-        revenue_check=revenue_check,
-        inventory_df=inventory_df,
-        revenue_df=revenue_df,
-        parsed_mapping=parsed_mapping,
-        artifacts=artifacts,
-        messages=messages,
-        supported_domains=supported_domains,
-        source_files={
-            "inventory": str(INVENTORY_FILE),
-            "revenue": str(REVENUE_FILE),
-            "mapping": str(MAPPING_FILE),
-        },
+    inventory_status = "loaded" if not real_inventory_df.empty else "missing or invalid"
+    revenue_status = "loaded" if not real_revenue_df.empty else "missing or invalid"
+    validation_details = "; ".join(messages.errors) or "normalization produced no usable rows"
+    raise ValueError(
+        "Real-data validation failed: "
+        f"inventory source={INVENTORY_FILE} ({inventory_status}); "
+        f"revenue source={REVENUE_FILE} ({revenue_status}); "
+        f"details={validation_details}"
     )

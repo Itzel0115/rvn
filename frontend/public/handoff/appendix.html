@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>附錄｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="appendix.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="" href="./">首頁</a>
+<a class="" href="overview.html">系統總覽</a>
+<a class="" href="question-journey.html">一題怎麼跑</a>
+<a class="" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="" href="operations.html">展示與操作</a>
+<a class="" href="maintenance.html">新增與修改</a>
+<a class="active" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>附錄</h1>
+      <p>名詞、安全、Evaluation、限制與可搜尋檔案索引。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#terms">名詞表</a><a class="page-toc-link" href="#quality">品質與安全</a><a class="page-toc-link" href="#eval">Evaluation</a><a class="page-toc-link" href="#limits">已知限制</a><a class="page-toc-link" href="#files">檔案索引</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section id="terms"><h2>名詞表</h2><p>先用白話理解，再對照程式名稱。不要把英文名詞當成已經理解系統。</p><div class="table-wrap"><table><thead><tr><th>名詞</th><th>一句白話</th><th>程式名稱</th><th>容易混淆</th></tr></thead><tbody><tr><td>LLM vs Agent</td><td>LLM 是文字模型；Agent 是會規劃、選工具、檢查證據的流程。</td><td><code>OllamaClient / MultiAgentAssistant</code></td><td>LLM 不等於可以任意動作。</td></tr><tr><td>Agent vs Tool</td><td>Agent 決定做什麼；分析工具（Tool）做一次受控計算。</td><td><code>MultiAgentAssistant / AnalysisToolbox</code></td><td>Tool 不是自由執行器。</td></tr><tr><td>State vs Trace</td><td>State 是一次回答的可恢復狀態；Trace 是排錯與觀測紀錄。</td><td><code>AgentRunState / SQLiteTraceStore</code></td><td>State 給 runtime，trace 給排錯和 evaluation。</td></tr><tr><td>Plan vs AnswerPlan</td><td>Plan 是具體 Tool calls；AnswerPlan 是問題類型的工具邊界。</td><td><code>PlanStep / AnswerPlan</code></td><td>LLM plan 必須符合 deterministic AnswerPlan。</td></tr><tr><td>Tool Result vs Evidence</td><td>Tool result 是原始回傳；回答證據（Evidence）是整理後給 validator 判斷的材料。</td><td><code>ToolExecutionRecord / evidence</code></td><td>有 result 不代表 evidence 足夠。</td></tr><tr><td>Primary vs Supporting Evidence</td><td>Primary 是回答必需證據；Supporting 是輔助補充。</td><td><code>SemanticRequirement</code></td><td>缺 primary 時要 partial 或 capability gap。</td></tr><tr><td>Replan vs Retry</td><td>重新規劃（Replan）是換合法工具補證據；Retry 是同一步重試。</td><td><code>Replanner</code></td><td>證據不足通常不是單純 retry。</td></tr><tr><td>Capability Gap vs Error</td><td>Capability gap 是目前能力邊界；Error 是執行失敗。</td><td><code>AnswerContract</code></td><td>能力不足要說清楚，不要偽裝成完整回答。</td></tr><tr><td>Approval vs Publication</td><td>Approval 是核准草稿；Publication 是產生正式發布 artifact。</td><td><code>ApprovalDecision / PublicationArtifact</code></td><td>核准不等於已發布。</td></tr><tr><td>MCP vs Demo HTTP API</td><td>MCP 是外部 Agent 的受控工具入口；Demo API 是 Dashboard 問答入口。</td><td><code>mcp_server / demo_web</code></td><td>MCP 不是一般問答必經路徑。</td></tr></tbody></table></div></section>
+<section id="quality"><h2>品質與安全</h2>
+  <div class="principle-grid">
+    <div class="principle-card"><h3>Writer Validator</h3><p>檢查數字、月份、實體、KPI、proxy、因果描述、forecast 限制與 debug 外洩。</p></div>
+    <div class="principle-card"><h3>Evidence Validation</h3><p>確認 primary evidence 足夠；不足時才走重新規劃或 partial answer。</p></div>
+    <div class="principle-card"><h3>MCP allowlist</h3><p>外部 Agent 只能使用明確公開的 read-only 工具。</p></div>
+    <div class="principle-card"><h3>Approval gate</h3><p>主動洞察草稿必須核准，publication artifact 才能產生。</p></div>
+  </div>
+  <details><summary>工程細節</summary><ul><li>argument validation：ToolContract allowed arguments 與 MCP schema。</li><li>row cap：MCP 回傳限制筆數，避免大量資料外洩。</li><li>redaction：不要把未處理 trace 或敏感欄位放入回應。</li><li>expected security rejection：任意 Python / SQL / shell、hidden MCP tool、forecast unsupported。</li></ul></details>
+</section>
+<section id="eval"><h2>Evaluation 與 Gate</h2><p>以下來自目前 repository 的 evaluation 設定與 suite 掃描；若要最新成績，請重跑正式 evaluation，不要引用過期 artifact。</p><div class="table-wrap"><table><thead><tr><th>suite</th><th>cases</th><th>execution-backed</th><th>synthetic</th><th>adapters</th></tr></thead><tbody><tr><td><code>approval</code></td><td>6</td><td>6</td><td>0</td><td><span class="chips"><span class="chip">approval</span><span class="chip">publication</span></span></td></tr><tr><td><code>core</code></td><td>8</td><td>8</td><td>0</td><td><span class="chips"><span class="chip">assistant</span></span></td></tr><tr><td><code>mcp</code></td><td>4</td><td>4</td><td>0</td><td><span class="chips"><span class="chip">mcp</span></span></td></tr><tr><td><code>proactive</code></td><td>5</td><td>5</td><td>0</td><td><span class="chips"><span class="chip">proactive</span></span></td></tr><tr><td><code>redteam</code></td><td>8</td><td>7</td><td>1</td><td><span class="chips"><span class="chip">assistant</span><span class="chip">trace_only</span></span></td></tr><tr><td><code>replanning</code></td><td>7</td><td>6</td><td>1</td><td><span class="chips"><span class="chip">assistant</span><span class="chip">trace_only</span></span></td></tr><tr><td><code>semantic</code></td><td>5</td><td>5</td><td>0</td><td><span class="chips"><span class="chip">assistant</span></span></td></tr></tbody></table></div><details><summary>Gate policy</summary><p><code>evaluation/policies/regression_gate.v1.json</code>。threshold 必須以目前 policy 為準，不能為了單次 Demo 放寬。</p><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-bash">uv run python -m evaluation.run_evaluation --help</code></pre></div></details></section>
+<section id="limits"><h2>已知限制</h2>
+  <div class="split"><div><h3>刻意設計邊界</h3><ul><li>不提供任意 Python、SQL、shell。</li><li>不把描述性 proxy 寫成因果或正式 turnover。</li><li>預測問題目前安全拒絕。</li><li>MCP 不可操作 approval / publication。</li></ul></div><div><h3>尚未產品化</h3><ul><li>Dashboard 是 POC 工作台，不是完整權限與多租戶產品。</li><li>主動洞察需要人工 review，不自動發布。</li><li>資料 mapping warning 需要維護者在正式展示前檢查。</li></ul></div></div>
+</section>
+<section id="files"><h2>完整檔案索引</h2>
+  <p class="notice">此區協助定位，不取代實際程式碼閱讀。</p>
+  <div class="search-panel"><label for="fileSearch">搜尋檔案、symbol 或用途</label><input id="fileSearch" type="search" placeholder="至少輸入 2 個字，例如 registry、validator、approval" autocomplete="off"><p id="fileSearchHint">輸入至少 2 個字後，才會在本頁用本地 JSON 顯示結果。</p></div>
+  <h3>類別目錄</h3><div class="category-grid"><div class='category-card'><strong>root</strong><span>39 個檔案</span></div><div class='category-card'><strong>agent_runtime</strong><span>8 個檔案</span></div><div class='category-card'><strong>semantic_layer</strong><span>12 個檔案</span></div><div class='category-card'><strong>proactive_workflow</strong><span>16 個檔案</span></div><div class='category-card'><strong>mcp_server</strong><span>4 個檔案</span></div><div class='category-card'><strong>observability</strong><span>13 個檔案</span></div><div class='category-card'><strong>evaluation</strong><span>24 個檔案</span></div><div class='category-card'><strong>frontend</strong><span>23 個檔案</span></div><div class='category-card'><strong>tests</strong><span>98 個檔案</span></div></div>
+  <h3>交接必讀檔</h3><ul class="must-read-list"><li><code>README.md</code><span>專案總覽與正式啟動方式，先確認資料來源、服務入口與交接網站路徑。</span></li><li><code>demo_web.py</code><span>Python Backend/API 入口，建立共用分析環境，接 Dashboard 問答、圖表、health 與主動流程 API。</span></li><li><code>analysis_pipeline.py</code><span>把資料讀取、清理、正規化與分析表建立成 PipelineContext，供所有工具共用。</span></li><li><code>real_data.py</code><span>定義真實 Excel 資料的讀取、欄位檢查、月份與實體對齊規則。</span></li><li><code>task_profile.py</code><span>把中文問題歸類成 task family，抽出時間、KPI、實體與回答需求。</span></li><li><code>canonical_task.py</code><span>把 TaskProfile 整理成穩定 schema，保留月份、實體、KPI 與 semantic reference。</span></li><li><code>tool_registry.py</code><span>所有正式 ToolContract 的登記處，定義工具參數、支援 KPI、evidence type 與 MCP exposure。</span></li><li><code>analysis_tools.py</code><span>受控分析工具的實作位置，所有營收、庫存、排名、趨勢與圖表計算都從這裡出來。</span></li><li><code>agent_runtime/evidence_validator.py</code><span>檢查回答證據是否真的涵蓋 KPI、月份、實體、rows 與 semantic requirement。</span></li><li><code>semantic_layer/catalog.py</code><span>載入 KPI、dimension、task evidence 與 data contract 定義，提供查詢與驗證入口。</span></li><li><code>proactive_workflow/approval.py</code><span>人工核准流程，檢查 approver、draft hash、狀態衝突與 revision/reject 條件。</span></li><li><code>evaluation/policies/regression_gate.v1.json</code><span>交付前 gate policy，定義 execution-backed、trace、安全與 publication 門檻。</span></li></ul>
+  <div id="fileResults" class="file-results" aria-live="polite"></div>
+  <details><summary>工程細節：索引資料來源</summary><p>搜尋資料來自 <code>assets/data/file-index.json</code>，由 <code>scripts/generate_handoff_site.py</code> 於 build-time 產生，不會呼叫 Backend。</p></details>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

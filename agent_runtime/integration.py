@@ -47,7 +47,8 @@ def _stateful_answer_impl(assistant: Any, question: str, legacy_answer: Any) -> 
     if routing.question_type in {"overview", "data_quality"} or canonical.task_family == "chart_request" or (canonical.task_family == "period_pair_compare" and routing.planning_source != "llm_planner"):
         return legacy_answer(assistant, question)
 
-    steps = _materialize_steps(canonical, answer_plan, routing.planned_tools if routing.planning_source == "llm_planner" else None)
+    planned_tool_calls = getattr(routing, "planned_tool_calls", None) if routing.planning_source == "llm_planner" else None
+    steps = _materialize_steps(canonical, answer_plan, routing.planned_tools if routing.planning_source == "llm_planner" else None, planned_tool_calls)
     state = AgentRunState(
         request_id=assistant.request_id, thread_id=assistant.request_id, question=question,
         canonical_task=canonical.to_dict(), routing_summary=assistant._build_routing_payload(routing),
@@ -121,19 +122,63 @@ def _limit(name: str, default: int, *, minimum: int) -> int:
         return default
 
 
-def _materialize_steps(canonical: CanonicalTaskProfile, answer_plan: Any, planned_tools: list[str] | None = None) -> list[PlanStep]:
+def _materialize_steps(
+    canonical: CanonicalTaskProfile,
+    answer_plan: Any,
+    planned_tools: list[str] | None = None,
+    planned_tool_calls: list[dict[str, Any]] | None = None,
+) -> list[PlanStep]:
     steps: list[PlanStep] = []
-    selected = planned_tools or [*answer_plan.primary_tools, *answer_plan.supporting_tools]
-    for raw in selected:
-        base_name = str(raw).split("(", 1)[0]
-        purpose = "primary evidence" if base_name in {str(tool).split("(", 1)[0] for tool in answer_plan.primary_tools} else "supporting evidence"
-        tool_name = str(raw).split("(", 1)[0]
+    primary_names = {str(tool).split("(", 1)[0] for tool in answer_plan.primary_tools}
+    if planned_tool_calls:
+        selected: list[tuple[str, dict[str, Any]]] = [
+            (str(call.get("tool_name") or ""), dict(call.get("args") or {}))
+            for call in planned_tool_calls
+        ]
+    else:
+        selected = [(str(raw).split("(", 1)[0], {}) for raw in (planned_tools or [*answer_plan.primary_tools, *answer_plan.supporting_tools])]
+    for tool_name, explicit_args in selected:
+        purpose = "primary evidence" if tool_name in primary_names else "supporting evidence"
         if tool_name not in TOOL_REGISTRY or not is_tool_allowed_for_task(tool_name, canonical.task_family):
             continue
-        steps.append(PlanStep(step_id=f"p1-s{len(steps)+1}", plan_version=1, sequence=len(steps)+1,
-                              tool_name=tool_name, tool_args=_tool_args(tool_name, canonical), purpose=purpose))
+        base_args = {**_tool_args(tool_name, canonical), **explicit_args}
+        if explicit_args.get("metric") is not None:
+            base_args.pop("__default_metric", None)
+        for tool_args in _expand_args_for_requirements(tool_name, base_args, canonical):
+            fingerprint = (tool_name, repr(sorted(tool_args.items())))
+            existing = {(step.tool_name, repr(sorted(step.tool_args.items()))) for step in steps}
+            if fingerprint in existing:
+                continue
+            steps.append(PlanStep(step_id=f"p1-s{len(steps)+1}", plan_version=1, sequence=len(steps)+1,
+                                  tool_name=tool_name, tool_args=tool_args, purpose=purpose))
     return steps
 
+
+
+def _expand_args_for_requirements(tool_name: str, base_args: dict[str, Any], canonical: CanonicalTaskProfile) -> list[dict[str, Any]]:
+    requirements = getattr(canonical, "task_requirements", {}) or {}
+    requested_metrics = [str(item) for item in (requirements.get("requested_metrics") or []) if item]
+    allowed = set(TOOL_REGISTRY[tool_name].allowed_args)
+    if "top_n" in allowed and requirements.get("top_n") is not None and "top_n" not in base_args:
+        base_args = {**base_args, "top_n": requirements.get("top_n")}
+    explicit_metric = base_args.get("metric") is not None and not base_args.pop("__default_metric", False)
+    if "metric" not in allowed or explicit_metric:
+        return [base_args]
+    expandable: list[str] = []
+    if tool_name == "get_entity_period_pair_table":
+        expandable = [metric for metric in requested_metrics if metric in {"revenue_amount", "inventory_amount", "inventory_qty"}]
+    elif tool_name == "get_entity_trend_comparison":
+        expandable = [metric for metric in requested_metrics if metric in {"revenue_amount", "inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio"}]
+    elif tool_name == "get_entity_metric_ranking":
+        expandable = [metric for metric in requested_metrics if metric in TOOL_REGISTRY[tool_name].supported_metrics and metric not in {"risk_score"}]
+    if not expandable:
+        return [base_args]
+    expanded: list[dict[str, Any]] = []
+    for metric in dict.fromkeys(expandable):
+        args = dict(base_args)
+        args["metric"] = metric
+        expanded.append(args)
+    return expanded
 
 def _tool_args(tool_name: str, canonical: CanonicalTaskProfile) -> dict[str, Any]:
     allowed = set(TOOL_REGISTRY[tool_name].allowed_args)
@@ -142,6 +187,7 @@ def _tool_args(tool_name: str, canonical: CanonicalTaskProfile) -> dict[str, Any
     if "metric" in allowed and canonical.metric:
         period_pair_revenue_tools = {"get_entity_period_pair_comparison", "get_period_pair_metric_comparison"}
         args["metric"] = "revenue" if tool_name in period_pair_revenue_tools and canonical.metric == "revenue_amount" else canonical.metric
+        args["__default_metric"] = True
     selected_dimension = target.get("dimension") if target.get("dimension") not in {None, "overall"} else "business_group"
     if "entity_dimension" in allowed:
         args["entity_dimension"] = selected_dimension
@@ -152,6 +198,12 @@ def _tool_args(tool_name: str, canonical: CanonicalTaskProfile) -> dict[str, Any
     for field in ("month", "period_a", "period_b", "start_month", "end_month", "recent_n"):
         if field in allowed and scope.get(field) is not None:
             args[field] = scope[field]
+    requirements = getattr(canonical, "task_requirements", {}) or {}
+    if "top_n" in allowed and requirements.get("top_n") is not None:
+        top_n = int(requirements.get("top_n"))
+        if tool_name == "get_anomalies" and (requirements.get("requires_named_selection") or requirements.get("requires_counter_evidence")):
+            top_n = max(top_n, 10)
+        args["top_n"] = top_n
     if "parent_filter" in allowed and parent.get("value"):
         args["parent_filter"] = {str(parent.get("dimension") or "business_group"): parent["value"]}
     return args
@@ -159,7 +211,8 @@ def _tool_args(tool_name: str, canonical: CanonicalTaskProfile) -> dict[str, Any
 
 def _execute_tool(assistant: Any, tool_name: str, args: dict[str, Any]) -> Any:
     if tool_name == "get_anomalies":
-        return assistant.toolbox.get_anomalies(filters=QueryFilters(month=args.get("month")))
+        call_args = {k: v for k, v in args.items() if k not in {"month"} and v is not None}
+        return assistant.toolbox.get_anomalies(filters=QueryFilters(month=args.get("month")), **call_args)
     if tool_name in {"get_inventory_turnover_proxy", "get_root_cause_candidates", "get_yoy_mom_breakdown", "get_contribution_analysis"}:
-        return getattr(assistant.toolbox, tool_name)(filters=QueryFilters(month=args.get("month")), **{k: v for k, v in args.items() if k != "month"})
+        return getattr(assistant.toolbox, tool_name)(filters=QueryFilters(month=args.get("month")), **{k: v for k, v in args.items() if k != "month" and v is not None})
     return getattr(assistant.toolbox, tool_name)(**args)

@@ -1,3 +1,11 @@
+"""歷史分析 helpers 與仍被使用的 `AnalysisArtifacts` compatibility model。
+
+正式 runtime 主要由 `real_data.py` 和 `analysis_pipeline.py` 建立 artifacts；
+`AnalysisArtifacts` 仍被 production pipeline 與 evaluation fixtures import，
+因此本檔案目前不能直接刪除。其他 legacy analysis functions 不在正式 runtime
+dispatch，未來可先把 model 移到 dedicated types module 再清理。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,6 +28,7 @@ from utils import MessageCollector, dataframe_to_records
 
 @dataclass
 class AnalysisArtifacts:
+    """保存 tools、summary 與舊相容 consumer 共用的分析表集合。"""
     inventory_enriched: pd.DataFrame
     revenue_enriched: pd.DataFrame
     monthly_revenue: pd.DataFrame

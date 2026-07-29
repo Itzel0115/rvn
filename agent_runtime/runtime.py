@@ -17,6 +17,12 @@ AnswerRenderer = Callable[[AgentRunState], tuple[str, str | None]]
 ReplanValidator = Callable[[AgentRunState, ReplanProposal], dict[str, Any]]
 
 
+_LIST_TOOL_EVIDENCE_TYPES = {
+    "get_anomalies": "anomaly",
+    "get_inventory_turnover_proxy": "inventory_turnover_proxy",
+}
+
+
 class StatefulAgentRuntime:
     def __init__(self, *, executor: ToolExecutor, state_store: AgentStateStore | None = None,
                  validator: EvidenceValidator | None = None, replanner: DeterministicReplanner | None = None,
@@ -177,7 +183,11 @@ def _summarize_output(output: Any, tool_name: str, evidence_index: int) -> tuple
         return {"kind": "none"}, {"evidence_id": f"ev-{evidence_index}", "source_tool": tool_name}, 0, True
     if isinstance(output, list):
         safe = _json_safe(output[:20])
-        return {"kind": "list", "row_count": len(output)}, {"evidence_id": f"ev-{evidence_index}", "source_tool": tool_name, "rows": safe}, len(output), not bool(output)
+        evidence = {"evidence_id": f"ev-{evidence_index}", "source_tool": tool_name, "rows": safe}
+        evidence_type = _LIST_TOOL_EVIDENCE_TYPES.get(tool_name)
+        if evidence_type:
+            evidence["evidence_type"] = evidence_type
+        return {"kind": "list", "row_count": len(output)}, evidence, len(output), not bool(output)
     if isinstance(output, dict):
         safe = _json_safe(output)
         row_count = _extract_row_count(safe)

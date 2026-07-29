@@ -32,6 +32,7 @@ class TaskProfile:
     requires_table: bool = False
     requires_limitations: bool = True
     question_text: str = ""
+    task_requirements: dict[str, Any] = field(default_factory=dict)
 
 
 OVERALL_TOKENS = ["總體", "整體", "overall", "全部", "全體"]
@@ -41,7 +42,7 @@ PRODUCT_LINE_TOKENS = ["product line", "product_line", "五大產品線", "產�
 
 REVENUE_TOKENS = ["revenue", "sales", "營收", "銷售"]
 INVENTORY_AMOUNT_TOKENS = ["inventory", "stock", "庫存", "存貨", "庫存金額"]
-INVENTORY_QTY_TOKENS = ["qty", "inventory qty", "庫存數量", "數量", "QTY"]
+INVENTORY_QTY_TOKENS = ["qty", "inventory qty", "inventory quantity", "庫存數量", "數量", "QTY"]
 RATIO_TOKENS = ["ratio", "efficiency", "營收相對庫存效率", "營收/庫存", "庫存/營收", "效率", "週轉", "周轉", "proxy"]
 HEALTH_TOKENS = ["health_score", "health score", "健康", "綜合表現", "表現"]
 RISK_TOKENS = ["risk_score", "risk score", "風險", "異常", "警示"]
@@ -65,10 +66,14 @@ FORECAST_TOKENS = [
 BEST_TOKENS = ["best", "better", "highest", "top", "最健康", "較佳", "較好", "最好", "最高", "成長最快"]
 WORST_TOKENS = ["worst", "weakest", "lowest", "較差", "最差", "較弱", "最弱", "最低", "壓力較高", "壓力最高"]
 RELATIONSHIP_TOKENS = ["背離", "divergence", "下降但庫存上升", "營收下降但庫存上升", "效率變差", "效率惡化"]
+DEMAND_MOMENTUM_TOKENS = ["需求動能", "動能轉弱", "需求轉弱", "營收動能", "declining revenue momentum", "revenue momentum", "demand momentum"]
+STOCK_BUILDUP_TOKENS = ["東西越堆越多", "越堆越多", "越積越高", "庫存堆高", "資金持續沉澱", "資金沉澱", "building up", "stock keeps building", "stock building", "inventory keeps building"]
 CONTRIBUTION_TOKENS = ["contribution", "contributed", "contribute", "貢獻", "主要來自", "帶動", "造成"]
 YOY_TOKENS = ["yoy", "year over year", "去年同期"]
 CHART_TOKENS = ["chart", "plot", "graph", "visual", "圖", "畫", "畫圖", "圖表", "視覺化"]
 LOOKUP_TOKENS = ["列出", "顯示", "查詢", "查看", "看一下", "告訴我", "多少", "是多少", "資料", "數據"]
+RECOMMENDATION_TOKENS = ["建議", "下一步", "優先確認", "優先檢查", "行動", "action", "next action", "next step", "recommend", "recommendation"]
+SELECTION_TOKENS = ["選出", "挑出", "找出", "辨識", "identify", "select", "choose", "which", "top"]
 
 
 def build_task_profile(question: str, routing: Any) -> TaskProfile:
@@ -77,6 +82,16 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
     answer_strategy = getattr(routing, "answer_strategy", None) or getattr(routing, "question_type", "query")
 
     def make_profile(**kwargs: Any) -> TaskProfile:
+        if "task_requirements" not in kwargs:
+            kwargs["task_requirements"] = _build_task_requirement_manifest(
+                text=text,
+                lowered=lowered,
+                task_family=str(kwargs.get("task_family") or ""),
+                metrics=_unique([*(metrics or []), *(kwargs.get("metrics") or [])]),
+                target_entity=dict(kwargs.get("target_entity") or target_entity or {}),
+                time_scope=dict(kwargs.get("time_scope") or time_scope or {}),
+                comparison_axis=dict(kwargs.get("comparison_axis") or {}),
+            )
         return TaskProfile(question_text=text, **kwargs)
 
     time_scope = _infer_time_scope(text, lowered)
@@ -86,10 +101,10 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
     primary_metric = metrics[0] if metrics else "revenue_amount"
     polarity = _infer_polarity(text, lowered)
 
-    if _is_forecast_unsupported(text, lowered):
+    if _is_forecast_unsupported(text, lowered) or _is_capability_boundary_unsupported(text, lowered):
         return make_profile(
             task_family="forecast_unsupported",
-            business_intent="forecast_unsupported",
+            business_intent="forecast_unsupported" if _is_forecast_unsupported(text, lowered) else "capability_boundary_unsupported",
             target_entity=target_entity,
             parent_entity=parent_entity,
             metrics=metrics or ["revenue_amount"],
@@ -262,14 +277,15 @@ def build_task_profile(question: str, routing: Any) -> TaskProfile:
         )
 
     if _is_metric_relationship_question(text, lowered):
+        relationship_time_scope = _default_relationship_scope(time_scope)
         return make_profile(
             task_family="metric_relationship_analysis",
             business_intent="metric_relationship_analysis",
             target_entity=_normalize_peer_target(target_entity),
             parent_entity=parent_entity,
-            metrics=["revenue_amount", "inventory_amount", "revenue_inventory_amount_ratio"],
-            time_scope=_default_latest_month_scope(time_scope),
-            comparison_axis={"axis": "entity", "dimension": _peer_dimension(target_entity), "baseline": "latest_vs_previous"},
+            metrics=["revenue_amount", "inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio"],
+            time_scope=relationship_time_scope,
+            comparison_axis={"axis": "entity", "dimension": _peer_dimension(target_entity), "baseline": relationship_time_scope.get("mode") or "latest_vs_previous"},
             polarity=polarity,
             analysis_depth="standard",
             answer_style="conclusion_first",
@@ -456,6 +472,13 @@ def _is_forecast_unsupported(text: str, lowered: str) -> bool:
     return _has_any(text, lowered, FORECAST_TOKENS)
 
 
+def _is_capability_boundary_unsupported(text: str, lowered: str) -> bool:
+    formal_turnover = any(token in text or token in lowered for token in ["正式庫存週轉率", "正式庫存週轉", "庫存週轉天數", "inventory turnover days", "formal inventory turnover", "formal turnover"])
+    forbids_proxy = any(token in text or token in lowered for token in ["不允許", "不要改用", "不得", "不准", "do not use", "not use", "no proxy", "proxy is not allowed"])
+    unsupported_financial = any(token in text or token in lowered for token in ["毛利率", "毛利", "gross margin", "營業利益率", "營業利益", "operating margin", "operating profit", "庫存週轉天數", "inventory turnover days"])
+    return unsupported_financial or (formal_turnover and forbids_proxy)
+
+
 def _is_chart_request(text: str, lowered: str, answer_strategy: str) -> bool:
     return answer_strategy == "chart" or _has_any(text, lowered, CHART_TOKENS)
 
@@ -532,7 +555,7 @@ def _is_entity_period_pair_table_lookup(
         and target_entity.get("scope") in {"all", "children"}
         and not target_entity.get("value")
         and _has_any_entity_dimension_request(text, lowered, target_entity.get("dimension"))
-        and _has_any(text, lowered, LOOKUP_TOKENS + COMPARE_TOKENS)
+        and _has_any(text, lowered, LOOKUP_TOKENS + COMPARE_TOKENS + ["變化", "挑出", "選出", "找出", "對照"])
         and _has_any(text, lowered, REVENUE_TOKENS + INVENTORY_AMOUNT_TOKENS + INVENTORY_QTY_TOKENS)
     )
 
@@ -599,8 +622,8 @@ def _is_cross_section_compare(text: str, lowered: str, answer_strategy: str, tar
 def _is_performance_assessment(text: str, lowered: str, answer_strategy: str, target_entity: dict[str, Any]) -> bool:
     return (
         target_entity.get("dimension") in {"business_group", "product_line_5"}
-        and _has_any(text, lowered, HEALTH_TOKENS + RISK_TOKENS + ["壓力", "較佳", "較差", "表現"])
-        and (answer_strategy == "performance_weakness" or _infer_polarity(text, lowered) is not None)
+        and _has_any(text, lowered, HEALTH_TOKENS + RISK_TOKENS + RATIO_TOKENS + ["壓力", "較佳", "較差", "表現"])
+        and (answer_strategy == "performance_weakness" or _has_any(text, lowered, RATIO_TOKENS) or (_infer_polarity(text, lowered) is not None and not _has_any(text, lowered, REVENUE_TOKENS) and not _has_any(text, lowered, INVENTORY_AMOUNT_TOKENS + INVENTORY_QTY_TOKENS)))
     )
 
 
@@ -609,11 +632,15 @@ def _is_ranking_question(text: str, lowered: str) -> bool:
 
 
 def _is_metric_relationship_question(text: str, lowered: str) -> bool:
-    return (
-        _has_any(text, lowered, REVENUE_TOKENS)
-        and _has_any(text, lowered, INVENTORY_AMOUNT_TOKENS + INVENTORY_QTY_TOKENS)
-        and (_has_any(text, lowered, RELATIONSHIP_TOKENS) or ("下降" in text and ("上升" in text or "增加" in text)))
+    revenue_semantics = _has_any(text, lowered, REVENUE_TOKENS + DEMAND_MOMENTUM_TOKENS) or any(token in text or token in lowered for token in ["營收卻一直往下", "營收一路變弱", "營收仍在成長", "declining revenue", "revenue decline"])
+    inventory_semantics = _has_any(text, lowered, INVENTORY_AMOUNT_TOKENS + INVENTORY_QTY_TOKENS + STOCK_BUILDUP_TOKENS)
+    relationship_semantics = (
+        _has_any(text, lowered, RELATIONSHIP_TOKENS + STOCK_BUILDUP_TOKENS)
+        or ("下降" in text and ("上升" in text or "增加" in text or "堆" in text or "積" in text))
+        or any(token in lowered for token in ["declining revenue momentum", "revenue keeps dropping", "inventory risk", "stock keeps building", "worsening inventory"])
+        or any(token in text for token in ["惡化", "風險可能惡化", "庫存風險"])
     )
+    return revenue_semantics and inventory_semantics and relationship_semantics
 
 
 def _is_contribution_question(text: str, lowered: str) -> bool:
@@ -753,21 +780,160 @@ def _infer_parent_entity(text: str) -> dict[str, Any]:
 
 def _infer_metrics(text: str, lowered: str, answer_strategy: str) -> list[str]:
     metrics: list[str] = []
+    if _has_any(text, lowered, DEMAND_MOMENTUM_TOKENS):
+        metrics.append("revenue_amount")
+    if _has_any(text, lowered, STOCK_BUILDUP_TOKENS):
+        metrics.append("inventory_amount")
     if _has_any(text, lowered, RATIO_TOKENS):
         metrics.append("revenue_inventory_amount_ratio")
     if _has_any(text, lowered, HEALTH_TOKENS) and "營收" not in text and "庫存" not in text:
         metrics.append("health_score")
-    if _has_any(text, lowered, RISK_TOKENS) and "營收" not in text and "庫存" not in text:
+    if _has_any(text, lowered, RISK_TOKENS) and "risk_score" not in metrics:
         metrics.append("risk_score")
     if _has_any(text, lowered, REVENUE_TOKENS):
         metrics.append("revenue_amount")
-    if _has_any(text, lowered, INVENTORY_QTY_TOKENS):
+    has_inventory_qty = _has_any(text, lowered, INVENTORY_QTY_TOKENS) or ("inventory" in lowered and "quantity" in lowered)
+    has_inventory_amount = _has_inventory_amount_metric_request(text, lowered, has_inventory_qty=has_inventory_qty)
+    if has_inventory_qty:
         metrics.append("inventory_qty")
-    if _has_any(text, lowered, INVENTORY_AMOUNT_TOKENS):
+    if has_inventory_amount:
         metrics.append("inventory_amount")
+    if any(token in text or token in lowered for token in ["異常訊號", "異常信號", "anomaly signal", "anomaly signals"]):
+        if "risk_score" not in metrics:
+            metrics.append("risk_score")
+    if any(token in text or token in lowered for token in ["庫存風險", "inventory risk"]):
+        for metric in ["inventory_amount", "inventory_qty"]:
+            if metric not in metrics:
+                metrics.append(metric)
     if answer_strategy in {"risk", "performance_weakness"} and "risk_score" not in metrics:
         metrics.append("risk_score")
     return _unique(metrics or ["revenue_amount"])
+
+
+def _build_task_requirement_manifest(
+    *,
+    text: str,
+    lowered: str,
+    task_family: str,
+    metrics: list[str],
+    target_entity: dict[str, Any],
+    time_scope: dict[str, Any],
+    comparison_axis: dict[str, Any],
+) -> dict[str, Any]:
+    requested_metrics = _unique(metrics or ["revenue_amount"])
+    if _asks_for_multiple_inventory_indicators(text, lowered):
+        for metric in ["inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio"]:
+            if metric not in requested_metrics:
+                requested_metrics.append(metric)
+    if _has_any(text, lowered, STOCK_BUILDUP_TOKENS) or any(token in text or token in lowered for token in ["庫存風險", "inventory risk", "庫存價值", "inventory value"]):
+        for metric in ["inventory_amount", "inventory_qty"]:
+            if metric not in requested_metrics:
+                requested_metrics.append(metric)
+    if _has_any(text, lowered, DEMAND_MOMENTUM_TOKENS) and "revenue_amount" not in requested_metrics:
+        requested_metrics.insert(0, "revenue_amount")
+    if _has_any(text, lowered, INVENTORY_QTY_TOKENS) and "inventory_qty" not in requested_metrics:
+        requested_metrics.append("inventory_qty")
+    if task_family in {"risk_scan", "performance_assessment"} and _has_any(text, lowered, REVENUE_TOKENS) and "revenue_amount" not in requested_metrics:
+        requested_metrics.insert(0, "revenue_amount")
+
+    operations = _infer_requested_operations(text, lowered, task_family, time_scope)
+    if "anomaly" in operations and "risk_score" not in requested_metrics:
+        requested_metrics.append("risk_score")
+    top_n = _extract_top_n(text)
+    requires_recommendation = _requires_recommendation(text, lowered)
+    requires_named_selection = _requires_named_selection(text, lowered, top_n, operations)
+    if requires_recommendation and "next_action" not in operations:
+        operations.append("next_action")
+    if requires_named_selection and "select" not in operations:
+        operations.append("select")
+    dimensions = [target_entity.get("dimension") or comparison_axis.get("dimension") or "overall"]
+    dimensions = [dimension for dimension in dimensions if dimension]
+    return {
+        "requested_metrics": requested_metrics,
+        "requested_dimensions": _unique([str(item) for item in dimensions]),
+        "time_scope": dict(time_scope),
+        "top_n": top_n,
+        "requested_top_n": top_n,
+        "requested_operations": operations,
+        "requires_counter_evidence": "counter_evidence" in operations,
+        "requires_recommendation": requires_recommendation,
+        "requires_named_selection": requires_named_selection,
+        "required_selected_entity_count": top_n if requires_named_selection and top_n is not None else None,
+    }
+
+
+def _requires_recommendation(text: str, lowered: str) -> bool:
+    return _has_any(text, lowered, RECOMMENDATION_TOKENS)
+
+
+def _requires_named_selection(text: str, lowered: str, top_n: int | None, operations: list[str]) -> bool:
+    if top_n is None:
+        return False
+    has_select_language = _has_any(text, lowered, SELECTION_TOKENS) or any(token in text or token in lowered for token in ["最需要", "最值得", "關注", "management attention", "management risk"])
+    return has_select_language and ("rank" in operations or "filter" in operations or "select" in operations)
+
+
+def _asks_for_multiple_inventory_indicators(text: str, lowered: str) -> bool:
+    return (
+        ("庫存" in text and any(token in text for token in ["兩個", "2個", "二個", "至少兩", "至少 2", "多個", "交叉"]))
+        or ("inventory" in lowered and any(token in lowered for token in ["two", "multiple", "cross"]))
+    )
+
+
+def _has_inventory_amount_metric_request(text: str, lowered: str, *, has_inventory_qty: bool) -> bool:
+    explicit_amount_tokens = ["inventory amount", "stock amount", "庫存金額", "存貨金額", "庫存額", "金額"]
+    if _has_any(text, lowered, explicit_amount_tokens):
+        return True
+    return _has_any(text, lowered, INVENTORY_AMOUNT_TOKENS) and not has_inventory_qty
+
+
+def _infer_requested_operations(text: str, lowered: str, task_family: str, time_scope: dict[str, Any]) -> list[str]:
+    operations: list[str] = []
+    top_n = _extract_top_n(text)
+    if _has_any(text, lowered, COMPARE_TOKENS + ["對照"]) or time_scope.get("mode") == "period_pair":
+        operations.append("compare")
+    if _has_any(text, lowered, TREND_TOKENS + DEMAND_MOMENTUM_TOKENS + STOCK_BUILDUP_TOKENS) or time_scope.get("mode") in {"multi_month_series", "recent_n_months", "date_range"} or any(token in text or token in lowered for token in ["一直", "一路", "持續", "連續", "最近", "momentum", "declining", "growing", "growth", "成長"]):
+        operations.append("trend")
+    if any(token in text or token in lowered for token in ["找出", "篩選", "符合", "哪些", "挑出", "辨識", "有沒有", "identify", "find", "which", "where"]):
+        operations.append("filter")
+    if any(token in text or token in lowered for token in ["選出", "挑出", "select", "choose"]):
+        operations.append("select")
+    if any(token in text or token in lowered for token in ["檢查", "交叉", "一致", "同時", "以及", "也", "分辨", "區分", "只有其中", "只有一邊", "兩個指標", "多指標", "庫存金額與庫存數量", "庫存金額和庫存數量", "cross-check", "cross check", "support", "both", "only one", "only those", "same groups", "evaluate", "all considered", "considered", "direction"]):
+        operations.append("cross_check")
+    if top_n is not None or _is_ranking_question(text, lowered) or any(token in text or token in lowered for token in ["排序", "最異常", "最需要", "最明顯", "關注", "選出", "挑出", "rank", "management risk", "highest risk"]):
+        operations.append("rank")
+    if any(token in text or token in lowered for token in ["反證", "相反證據", "降低其風險", "降低風險", "可能降低", "確定答案", "因為", "造成", "counter", "counter-evidence", "counter evidence"]):
+        operations.append("counter_evidence")
+    if any(token in text or token in lowered for token in ["異常", "異常指標", "異常訊號", "異常信號", "警示", "anomaly", "anomalies", "signals"]):
+        operations.append("anomaly")
+    if any(token in text or token in lowered for token in ["排除", "分開呈現", "分開列", "不可比較", "不具可比", "non-comparable", "not comparable", "exclude", "excluded"]):
+        operations.append("exclude")
+    if _is_metric_relationship_question(text, lowered):
+        operations.append("relationship")
+    if _has_any(text, lowered, RATIO_TOKENS):
+        operations.append("proxy")
+    if any(token in text or token in lowered for token in ["限制", "代理指標", "不能", "不要直接停止", "不允許", "不要改用", "資料不足", "缺少", "避免只依", "避免只用", "單一指標", "limitation", "limitations", "limits"]):
+        operations.append("limitations")
+    return _unique(operations or [task_family or "lookup"])
+
+
+def _extract_top_n(text: str) -> int | None:
+    patterns = [
+        r"(?:top|前|最)\s*(?P<n>\d+|[一二三四五六七八九十兩]+)\s*(?:名|個|項|筆|條)?",
+        r"(?P<n>\d+|[一二三四五六七八九十兩]+)\s*(?:個|名|條)\s*(?:可比較)?\s*(?:事業群|產品線|business groups?|product lines?)",
+        r"(?P<n>\d+|[一二三四五六七八九十兩]+)\s*個\s*最",
+        r"(?:跌最多的|下降最多的|衰退最大的)\s*(?P<n>\d+|[一二三四五六七八九十兩]+)\s*個",
+        r"(?P<n>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:business groups?|product lines?)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        raw = match.group("n")
+        parsed = _parse_small_number(raw)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 def _has_explicit_metric(text: str, lowered: str) -> bool:
@@ -868,6 +1034,12 @@ def _default_latest_or_single_month_scope(time_scope: dict[str, Any]) -> dict[st
     return time_scope if time_scope.get("mode") in {"single_month", "latest_month"} else _default_latest_month_scope(time_scope)
 
 
+def _default_relationship_scope(time_scope: dict[str, Any]) -> dict[str, Any]:
+    if time_scope.get("mode") in {"recent_n_months", "date_range", "multi_month_series"}:
+        return time_scope
+    return _default_latest_month_scope(time_scope)
+
+
 def _default_series_scope(time_scope: dict[str, Any]) -> dict[str, Any]:
     if time_scope.get("mode") in {"date_range", "multi_month_series", "recent_n_months", "year_over_year"}:
         return time_scope
@@ -932,6 +1104,7 @@ def _extract_all_month_matches(text: str) -> list[dict[str, Any]]:
         }
         for match in pattern.finditer(text)
     ]
+    matches.extend(_extract_english_month_matches(text))
     if matches:
         first_year = str(matches[0]["year"])
         occupied = [item["span"] for item in matches]
@@ -949,6 +1122,30 @@ def _extract_all_month_matches(text: str) -> list[dict[str, Any]]:
     return sorted(matches, key=lambda item: item["span"][0])
 
 
+
+
+def _extract_english_month_matches(text: str) -> list[dict[str, Any]]:
+    month_map = {
+        "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
+        "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
+        "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9, "oct": 10, "october": 10,
+        "nov": 11, "november": 11, "dec": 12, "december": 12,
+    }
+    month_pattern = "|".join(sorted(month_map, key=len, reverse=True))
+    matches: list[dict[str, Any]] = []
+    pair = re.search(rf"(?P<m1>{month_pattern})\s+(?:versus|vs\.?|and|to|-)\s+(?P<m2>{month_pattern})\s+(?P<year>20\d{{2}})", text, flags=re.IGNORECASE)
+    if pair:
+        year = pair.group("year")
+        for key in ["m1", "m2"]:
+            month = month_map[pair.group(key).lower()]
+            span = pair.span(key)
+            matches.append({"month": f"{year}-{month:02d}", "span": span, "year": year})
+    for match in re.finditer(rf"(?P<mon>{month_pattern})\s+(?P<year>20\d{{2}})", text, flags=re.IGNORECASE):
+        month = month_map[match.group("mon").lower()]
+        matches.append({"month": f"{match.group('year')}-{month:02d}", "span": match.span(), "year": match.group("year")})
+    return matches
+
+
 def _extract_quarter_range(text: str) -> tuple[str, str] | None:
     match = re.search(r"(20\d{2})\s*Q([1-4])", text, flags=re.IGNORECASE)
     if not match:
@@ -963,8 +1160,43 @@ def _extract_quarter_range(text: str) -> tuple[str, str] | None:
 
 
 def _extract_recent_n(text: str) -> int | None:
-    match = re.search(r"近\s*(\d+)\s*個?月", text)
-    return int(match.group(1)) if match else None
+    match = re.search(r"(?:近|最近)\s*(\d+|[一二三四五六七八九十兩]+)\s*個?月", text)
+    if match:
+        return _parse_small_number(match.group(1))
+    lowered = text.lower()
+    match = re.search(r"(?:latest|recent|last)\s+(?P<n>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+months", lowered)
+    if match:
+        return _parse_small_number(match.group("n"))
+    if any(token in text or token in lowered for token in ["最近幾個月", "近幾個月", "recent months", "last few months"]):
+        return 3
+    return None
+
+
+def _parse_small_number(raw: str) -> int | None:
+    raw = str(raw).strip().lower()
+    if raw.isdigit():
+        return int(raw)
+    english = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
+    if raw in english:
+        return english[raw]
+    return _parse_small_chinese_number(raw)
+
+
+def _parse_small_chinese_number(raw: str) -> int | None:
+    digits = {"一": 1, "二": 2, "兩": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+    if raw in digits:
+        return digits[raw]
+    if raw == "十":
+        return 10
+    if raw.startswith("十") and len(raw) == 2 and raw[1] in digits:
+        return 10 + digits[raw[1]]
+    if raw.endswith("十") and len(raw) == 2 and raw[0] in digits:
+        return digits[raw[0]] * 10
+    if "十" in raw:
+        left, right = raw.split("十", 1)
+        if left in digits and right in digits:
+            return digits[left] * 10 + digits[right]
+    return None
 
 
 def _looks_like_period_pair_question(text: str) -> bool:
@@ -1008,7 +1240,7 @@ def _extract_named_product_line(text: str) -> str | None:
     if not match:
         return None
     value = match.group("value").strip()
-    if value in {"五大", "各", "哪個", "哪一個"} or _looks_like_non_entity_token(value):
+    if value in {"五大", "各", "哪個", "哪一個", "用"} or "五大" in value or _looks_like_non_entity_token(value):
         return None
     return resolve_entity_value(value, "product_line_5") or value
 
@@ -1019,9 +1251,11 @@ def _looks_like_non_entity_token(value: str) -> bool:
         return True
     if re.search(r"20\d{2}", cleaned):
         return True
+    if "產品線" in cleaned:
+        return True
     if "各" in cleaned and any(token in cleaned for token in ["列出", "比較", "顯示", "查詢", "查看", "看一下"]):
         return True
-    if any(cleaned.startswith(token) for token in ["列出", "比較", "顯示", "查詢", "查看", "看一下", "告訴我"]):
+    if any(cleaned.startswith(token) for token in ["列出", "比較", "顯示", "查詢", "查看", "看一下", "告訴我", "請以", "請用", "請"]):
         return True
     return cleaned in {
         "比較",

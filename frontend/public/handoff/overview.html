@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>系統總覽｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="overview.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="" href="./">首頁</a>
+<a class="active" href="overview.html">系統總覽</a>
+<a class="" href="question-journey.html">一題怎麼跑</a>
+<a class="" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="" href="operations.html">展示與操作</a>
+<a class="" href="maintenance.html">新增與修改</a>
+<a class="" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>系統總覽</h1>
+      <p>先用業務語言理解能力、資料、輸出與安全邊界。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#questions">能回答什麼</a><a class="page-toc-link" href="#boundaries">刻意不做</a><a class="page-toc-link" href="#data">資料來源</a><a class="page-toc-link" href="#outputs">輸出</a><a class="page-toc-link" href="#map">總圖</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section id="questions">
+  <h2>系統能回答哪些問題</h2>
+  <p>這套系統可以用中文查營收與庫存。它不是讓 Agent 自由寫程式，而是讓 Agent 選擇受控的分析工具（Tool），再用回答證據（Evidence）決定能不能完整回答。</p>
+  <p>下表把「能不能用」和「怎麼執行」拆開看：走固定規則、可重現的 deterministic 流程，不代表功能沒完成；它表示這題不需要 LLM 才能穩定回答。</p>
+  <div class="table-wrap"><table><thead><tr><th>中文用途</th><th>task family</th><th>功能狀態</th><th>執行方式</th><th>限制</th></tr></thead><tbody><tr><td>最新月份平台摘要</td><td><code>latest_month_platform_summary</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>使用既有 deterministic answer contract。</td></tr><tr><td>最新月份實體摘要</td><td><code>latest_month_entity_summary</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>使用既有 deterministic answer contract。</td></tr><tr><td>兩期間比較</td><td><code>period_pair_compare</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>期間比較仍由既有 answer plan 驗證。</td></tr><tr><td>兩期間實體表格</td><td><code>entity_period_pair_table_lookup</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>期間表格查詢仍由既有 answer plan 驗證。</td></tr><tr><td>多月實體表格</td><td><code>entity_multi_month_table_lookup</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>多月表格查詢仍由既有 answer plan 驗證。</td></tr><tr><td>單一實體兩期間數值</td><td><code>entity_period_pair_metric_lookup</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>期間數值查詢仍由既有 answer plan 驗證。</td></tr><tr><td>單一實體時間序列</td><td><code>entity_time_series</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>時間序列仍由既有 answer plan 驗證。</td></tr><tr><td>整體趨勢</td><td><code>overall_trend_analysis</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>趨勢為 metric operation，仍走既有 deterministic path。</td></tr><tr><td>實體趨勢比較</td><td><code>entity_trend_comparison</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>趨勢比較仍走既有 deterministic path。</td></tr><tr><td>營收與庫存關係</td><td><code>metric_relationship_analysis</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">Agentic evidence-validated</span></td><td>僅描述歷史資料，不做 root cause claim。</td></tr><tr><td>貢獻分析</td><td><code>contribution_analysis</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>貢獻為 metric operation，仍走既有 deterministic path。</td></tr><tr><td>預測不支援</td><td><code>forecast_unsupported</code></td><td><span class="status bad">不支援</span></td><td><span class="status bad">安全拒絕</span></td><td>目前沒有預測能力。</td></tr><tr><td>事業群到產品線鑽取</td><td><code>parent_child_drilldown</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>鑽取仍走既有 deterministic path。</td></tr><tr><td>單月實體表格</td><td><code>entity_month_table_lookup</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">Agentic evidence-validated</span></td><td>結果受可用月份與實體 mapping 限制。</td></tr><tr><td>同月橫向比較</td><td><code>cross_section_compare</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>橫向比較仍走既有 deterministic path。</td></tr><tr><td>表現評估</td><td><code>performance_assessment</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">Agentic evidence-validated</span></td><td>營收/庫存為 proxy 指標，非正式周轉指標。</td></tr><tr><td>風險訊號掃描</td><td><code>risk_scan</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>風險訊號非因果判定。</td></tr><tr><td>單一數值查詢</td><td><code>metric_lookup</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>數值查詢仍走既有 deterministic path。</td></tr><tr><td>圖表產生</td><td><code>chart_request</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>圖表輸出仍走既有 deterministic path。</td></tr><tr><td>排序排名</td><td><code>entity_ranking</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>排序為 metric operation，仍走既有 deterministic path。</td></tr><tr><td>時間比較</td><td><code>time_compare</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>時間比較仍走既有 deterministic path。</td></tr><tr><td>資料品質</td><td><code>data_quality</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>資料品質結果為 coverage/mapping 摘要。</td></tr><tr><td>診斷候選</td><td><code>diagnosis</code></td><td><span class="status ok">可使用</span></td><td><span class="status ok">受控 deterministic</span></td><td>診斷候選因子不是已證實因果。</td></tr></tbody></table></div>
+  <div class="callout">穩定展示題型包含：查詢某月營收或庫存、比較兩個月份、比較事業群或產品線、查看排名、查看趨勢、找異常或風險訊號、分析營收與庫存的描述性關係、產生圖表，以及資料更新後產生待審查主動洞察。</div>
+</section>
+<section id="boundaries">
+  <h2>系統刻意不做什麼</h2>
+  <ul class="check-list">
+    <li>不提供任意 Python、SQL 或 shell；Agent 只能選 registry 中的工具。</li>
+    <li>不允許任意檔案路徑；MCP arguments 出現 <code>/</code>、<code>\</code> 或 <code>..</code> 會被拒絕。</li>
+    <li>不將描述性關係寫成因果；Writer Validator 會抓「導致」等根因宣稱。</li>
+    <li>不把 <code>revenue_inventory_amount_ratio</code> 說成正式 turnover；semantic catalog 明確標示為 proxy。</li>
+    <li>沒有 primary evidence 時不假裝完整回答；runtime 會重新規劃（Replan）或安全停止。</li>
+    <li>主動草稿不自動發布；必須先 approve，再 publish。</li>
+    <li>MCP 不可操作 approval 或 publication，只公開 allowlisted read-only tools。</li>
+  </ul>
+</section>
+<section id="data">
+  <h2>使用哪些資料</h2>
+  <div class="diagram-card"><img src="assets/diagrams/data-flow.svg" alt="資料流圖"></div>
+  <p>正式資料來源由 <code>config.py</code> 定義為 <code>data/inventory.xlsx</code> 與 <code>data/revenue.xlsx</code>。<code>analysis_pipeline.build_pipeline_context()</code> 負責建立共用 context，<code>real_data.py</code> 與 <code>data_loader.py</code> 負責正規化與對齊；Frontend 不直接讀 Excel。</p>
+  <h3>KPI</h3><div class="table-wrap"><table><thead><tr><th>名稱</th><th>metric_id</th><th>計算口徑</th><th>proxy</th><th>操作</th></tr></thead><tbody><tr><td>營收</td><td><code>revenue_amount</code></td><td>由既有 deterministic AnalysisToolbox 聚合。</td><td>否</td><td><span class="chips"><span class="chip">lookup</span><span class="chip">trend</span><span class="chip">ranking</span><span class="chip">comparison</span><span class="chip">contribution</span></span></td></tr><tr><td>庫存金額</td><td><code>inventory_amount</code></td><td>由既有 deterministic AnalysisToolbox 聚合。</td><td>否</td><td><span class="chips"><span class="chip">lookup</span><span class="chip">trend</span><span class="chip">ranking</span><span class="chip">comparison</span></span></td></tr><tr><td>庫存數量</td><td><code>inventory_qty</code></td><td>由既有 deterministic AnalysisToolbox 聚合。</td><td>否</td><td><span class="chips"><span class="chip">lookup</span><span class="chip">trend</span><span class="chip">ranking</span><span class="chip">comparison</span></span></td></tr><tr><td>營收相對庫存效率 proxy</td><td><code>revenue_inventory_amount_ratio</code></td><td>現有工具的營收/庫存 proxy；不是正式周轉率。</td><td>是</td><td><span class="chips"><span class="chip">ranking</span><span class="chip">performance</span></span></td></tr></tbody></table></div>
+  <h3>Dimension</h3><div class="table-wrap"><table><thead><tr><th>名稱</th><th>dimension_id</th><th>說明</th><th>允許 KPI</th></tr></thead><tbody><tr><td>月份</td><td><code>month</code></td><td>標準化 YYYY-MM period。</td><td><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></td></tr><tr><td>事業群</td><td><code>business_group</code></td><td>既有對齊 entity dimension。</td><td><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></td></tr><tr><td>產品線</td><td><code>product_line_5</code></td><td>既有五大產品線 dimension。</td><td><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></td></tr></tbody></table></div>
+</section>
+<section id="outputs">
+  <h2>系統可能產生哪些輸出</h2>
+  <div class="term-grid">
+    <div><strong>文字回答</strong><p>由 answer contract render，受 Evidence 與 validator 限制。</p></div>
+    <div><strong>表格</strong><p>Tool result 或 display block，可供 Dashboard 顯示。</p></div>
+    <div><strong>圖表</strong><p><code>get_chart_payload</code> 回傳 chart-ready JSON，必要時可輸出 PNG 到 <code>output/charts</code>。</p></div>
+    <div><strong>Partial answer</strong><p>有部分證據，但不足以完整回答。</p></div>
+    <div><strong>Limitation</strong><p>資料、proxy、coverage 或工具能力限制。</p></div>
+    <div><strong>Capability gap</strong><p>沒有合法工具能補足缺失證據。</p></div>
+    <div><strong>Trace</strong><p>本地 SQLite trace，預設 <code>output/observability/traces.sqlite3</code>。</p></div>
+    <div><strong>Proactive draft</strong><p>主動偵測後產生的待審查草稿。</p></div>
+    <div><strong>Approval／publication artifact</strong><p>核准與發布後寫入 <code>output/investigations</code>。</p></div>
+  </div>
+  <details><summary>工程細節：輸出與 state 儲存位置</summary><p><code>config.py</code> 定義 <code>OUTPUT_DIR = BASE_DIR / "output"</code>、<code>CHART_DIR = OUTPUT_DIR / "charts"</code>。Stateful Agent runs 寫入 <code>output/state/agent_runs.sqlite3</code>；Proactive workflow 寫入 <code>output/state/proactive_workflow.sqlite3</code>；trace 預設寫入 <code>output/observability/traces.sqlite3</code>。</p></details>
+</section>
+<section id="map">
+  <h2>簡化系統總圖</h2>
+  <div class="diagram-card"><img src="assets/diagrams/system-overview.svg" alt="簡化系統總圖"></div>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

@@ -71,12 +71,13 @@ def assign_evidence_roles(task_profile: Any, answer_plan: Any, domain_results: l
             if not isinstance(raw, dict):
                 continue
             evidence_type = _detect_evidence_type(raw, domain)
-            source_tool = _infer_source_tool(evidence_type, raw)
+            details = _normalize_evidence_details(raw)
+            source_tool = _infer_source_tool(evidence_type, details)
             role, priority, reason = _assign_role(
                 task_family=task_family,
                 evidence_type=evidence_type,
                 source_tool=source_tool,
-                details=raw,
+                details=details,
                 requested_month=requested_month,
             )
             items.append(
@@ -84,8 +85,8 @@ def assign_evidence_roles(task_profile: Any, answer_plan: Any, domain_results: l
                     role=role.value,
                     evidence_type=evidence_type,
                     source_tool=source_tool,
-                    summary=_summarize_evidence(evidence_type, raw, domain),
-                    details=raw,
+                    summary=_summarize_evidence(evidence_type, details, domain),
+                    details=details,
                     display_priority=priority,
                     reason=reason,
                     domain=domain,
@@ -102,6 +103,20 @@ def assign_evidence_roles(task_profile: Any, answer_plan: Any, domain_results: l
         background_count=sum(1 for item in items if item.role == EvidenceRole.BACKGROUND.value),
         debug_count=sum(1 for item in items if item.role == EvidenceRole.DEBUG.value),
     )
+
+
+def _normalize_evidence_details(raw: dict[str, Any]) -> dict[str, Any]:
+    details = dict(raw)
+    rows = details.get("rows")
+    if not isinstance(rows, list):
+        return details
+    first = next((row for row in rows if isinstance(row, dict)), None)
+    if not first:
+        return details
+    for key in ("entity_dimension", "entity_label", "entity_value", "month", "latest_month"):
+        if details.get(key) is None and first.get(key) is not None:
+            details[key] = first.get(key)
+    return details
 
 
 def rubric_result_to_dict(result: RubricResult) -> dict[str, Any]:

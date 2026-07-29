@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>展示與操作｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="operations.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="" href="./">首頁</a>
+<a class="" href="overview.html">系統總覽</a>
+<a class="" href="question-journey.html">一題怎麼跑</a>
+<a class="" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="active" href="operations.html">展示與操作</a>
+<a class="" href="maintenance.html">新增與修改</a>
+<a class="" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>展示與操作</h1>
+      <p>五分鐘 Demo、啟動方式、健康檢查與排錯。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#demo">五分鐘 Demo</a><a class="page-toc-link" href="#start">啟動方式</a><a class="page-toc-link" href="#health-warning">health warning</a><a class="page-toc-link" href="#windows">PowerShell</a><a class="page-toc-link" href="#linux">Linux</a><a class="page-toc-link" href="#tests">測試與 Evaluation</a><a class="page-toc-link" href="#troubleshoot">排錯</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section id="demo"><h2>五分鐘交接 Demo 腳本</h2>
+  <ol class="demo-steps">
+    <li><strong>開 <code>/dashboard</code></strong><span>說明這是使用者主要工作台。正常會看到摘要區、分析對話輸入框與資料觀察區。</span></li>
+    <li><strong>問單月查詢</strong><span>輸入：<code>2025-03 各事業群營收</code>。觀察回答是否能列出 2025-03 的事業群營收表格。</span></li>
+    <li><strong>問兩期間比較</strong><span>輸入：<code>比較 2025-02 和 2025-03 各事業群營收變化</code>。這題適合說明系統會走固定規則、可重現的 deterministic 流程，取得兩個月份可比較資料。</span></li>
+    <li><strong>開 Tool 工具箱</strong><span>開 <code data-url-template="handoffTools">/handoff/tools.html</code>。如果 Dashboard 沒有顯示 trace 或 tool 區塊，就從工具箱說明這題會用到哪種工具。</span></li>
+    <li><strong>搜尋 Tool</strong><span>在工具箱搜尋：<code>get_entity_period_pair_table</code>。說明它適合支援兩期間、依 entity 分組的比較表。</span></li>
+    <li><strong>展示安全拒絕</strong><span>回 Dashboard 問：<code>預測下個月營收會不會改善</code>。正常情況會說明目前不支援預測，而不是硬湊答案。</span></li>
+    <li><strong>開健康檢查</strong><span>開 <code data-url-template="health">/api/health</code>。若 status 是 warning，請看下一段說明，不要只用顏色判斷系統壞掉。</span></li>
+  </ol>
+</section>
+<section id="start"><h2>正式啟動方式</h2>
+  <div class="split"><div><h3>Backend</h3><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-bash">USE_LLM_PLANNER=true uv run python demo_web.py</code></pre></div><p>若展示希望讓 LLM Planner 保持開啟，啟動後端時要帶 <code>USE_LLM_PLANNER=true</code>。一般 deterministic Demo 不依賴 LLM Planner，但開著可以展示 Agentic planning 路徑。</p></div><div><h3>Frontend</h3><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-bash">cd frontend
+npm run dev -- --hostname 0.0.0.0 --port 3000</code></pre></div><p>Handoff site 由 <code>frontend/public/handoff/</code> 提供，不需要另一個 handoff server。</p></div></div>
+  <div class="table-wrap"><table><thead><tr><th>入口</th><th>URL</th><th>用途</th></tr></thead><tbody>
+    <tr><td>Dashboard</td><td><code data-url-template="dashboard">/dashboard</code></td><td>現場 Demo 與一般問答。</td></tr>
+    <tr><td>Handoff</td><td><code data-url-template="handoff">/handoff/</code></td><td>新人交接教材。</td></tr>
+    <tr><td>Backend health</td><td><code data-url-template="health">/api/health</code></td><td>確認 API、pipeline 與 planner 狀態。</td></tr>
+  </tbody></table></div>
+</section>
+<section id="health-warning"><h2>health warning 怎麼看</h2>
+  <div class="callout"><p>目前 <code>/api/health</code> 可以是 HTTP 200，但 <code>status=warning</code>。這代表服務有回應、pipeline 已載入，但資料品質檢查提醒維護者要注意解讀限制。</p></div>
+  <ul>
+    <li><strong>warning 原因：</strong>目前 <code>/api/pipeline-status</code> 回報兩個資料對齊提醒：「有新事業群只出現在庫存：未對應」，以及存在 revenue-only / inventory-only rows。</li>
+    <li><strong>對 deterministic Demo 的影響：</strong>不影響本次交接展示中的單月營收、兩期間比較與預測安全拒絕。</li>
+    <li><strong>對 LLM Planner 的影響：</strong>LLM Planner 可以開啟並回答，但回答仍要遵守證據檢查與限制描述。</li>
+    <li><strong>對 Proactive 的影響：</strong>可以產生草稿，但發布前應特別看資料品質 warning；主動草稿仍需人工核准。</li>
+  </ul>
+</section>
+<section id="windows"><h2>Windows PowerShell 常用命令</h2><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-powershell">netstat -ano | findstr :3000
+Get-Process -Id &lt;PID&gt; | Select-Object Id,ProcessName,StartTime,Path
+Stop-Process -Id &lt;PID&gt;
+$env:USE_LLM_PLANNER=&quot;true&quot;
+uv run python demo_web.py</code></pre></div></section>
+<section id="linux"><h2>Server / Linux 常用命令</h2><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-bash">ss -ltnp | grep -E &quot;:(3000|8765)&quot;
+ps -eo pid,ppid,etime,cmd | grep -E &quot;demo_web|next dev&quot;
+tmux new -s revenue-poc
+# backend
+USE_LLM_PLANNER=true uv run python demo_web.py
+# frontend
+cd frontend &amp;&amp; npm run dev -- --hostname 0.0.0.0 --port 3000
+tail -f /tmp/rvn_frontend.log</code></pre></div><p>停止服務前先確認 PID、啟動時間與命令內容；不要直接對不明 process 使用強制停止。</p></section>
+<section id="tests"><h2>測試與 Evaluation</h2>
+  <div class="table-wrap"><table><thead><tr><th>時機</th><th>命令</th><th>預期</th></tr></thead><tbody>
+    <tr><td>最快健康檢查</td><td><code>uv run python scripts/validate_handoff_site.py</code></td><td>靜態網站連結、資源與 Tool catalog 一致。</td></tr>
+    <tr><td>修改 Tool 後</td><td><code>uv run pytest tests/test_tool_registry.py tests/test_analysis_tools.py</code></td><td>Registry 與工具輸出契約不退化。</td></tr>
+    <tr><td>修改 Semantic Layer 後</td><td><code>uv run pytest tests/test_semantic_catalog.py tests/test_semantic_validation.py</code></td><td>KPI、維度與 evidence 定義可載入。</td></tr>
+    <tr><td>修改 Runtime 後</td><td><code>uv run pytest tests/test_agent_runtime.py tests/test_evidence_validator.py tests/test_agent_replanner.py</code></td><td>執行、證據檢查與重新規劃正常。</td></tr>
+    <tr><td>完整交付前</td><td><code>uv run python -m evaluation.run_evaluation --help</code></td><td>確認 evaluation CLI 可用，再依政策執行指定 suite。</td></tr>
+  </tbody></table></div>
+  <details><summary>目前 evaluation suite 摘要</summary><div class="table-wrap"><table><thead><tr><th>suite</th><th>cases</th><th>execution-backed</th><th>synthetic</th><th>adapters</th></tr></thead><tbody><tr><td><code>approval</code></td><td>6</td><td>6</td><td>0</td><td><span class="chips"><span class="chip">approval</span><span class="chip">publication</span></span></td></tr><tr><td><code>core</code></td><td>8</td><td>8</td><td>0</td><td><span class="chips"><span class="chip">assistant</span></span></td></tr><tr><td><code>mcp</code></td><td>4</td><td>4</td><td>0</td><td><span class="chips"><span class="chip">mcp</span></span></td></tr><tr><td><code>proactive</code></td><td>5</td><td>5</td><td>0</td><td><span class="chips"><span class="chip">proactive</span></span></td></tr><tr><td><code>redteam</code></td><td>8</td><td>7</td><td>1</td><td><span class="chips"><span class="chip">assistant</span><span class="chip">trace_only</span></span></td></tr><tr><td><code>replanning</code></td><td>7</td><td>6</td><td>1</td><td><span class="chips"><span class="chip">assistant</span><span class="chip">trace_only</span></span></td></tr><tr><td><code>semantic</code></td><td>5</td><td>5</td><td>0</td><td><span class="chips"><span class="chip">assistant</span></span></td></tr></tbody></table></div></details>
+</section>
+<section id="troubleshoot"><h2>常見故障排除</h2>
+  <div class="faq-grid">
+    <details><summary>port already in use</summary><p>用 <code>ss -ltnp</code> 或 PowerShell <code>netstat -ano</code> 找 PID，再確認 process start time。只停止自己啟動的服務。</p></details>
+    <details><summary>Frontend 連不到 Backend</summary><p>檢查 <code>PYTHON_API_BASE</code>、<code>/api/health</code>、backend port 8765 是否在聽。</p></details>
+    <details><summary>原始碼已改但頁面仍是舊版</summary><p>重新執行 generator，必要時重啟 Next dev server；build 後若 chunk 不一致，也要重啟 frontend。</p></details>
+    <details><summary>缺少資料檔案</summary><p>看 <code>config.py</code> 與 health response 的 data path / warning。不要在 handoff site 放真實資料。</p></details>
+    <details><summary>Tool 沒出現在 Registry</summary><p>確認 <code>tool_registry.py</code> 有 ToolContract，且測試更新。</p></details>
+    <details><summary>MCP Tool 沒出現</summary><p>確認 ToolContract 允許 MCP exposure，並與 <code>mcp_server/server.py</code> registration 一致。</p></details>
+    <details><summary>semantic validation fail</summary><p>通常是 metric、dimension 或 task evidence 定義不一致；先查 Semantic Layer 定義檔。</p></details>
+    <details><summary>evaluation run 找不到</summary><p>確認 evaluation output path 與 generated artifacts。artifact 是驗收結果，不是 production source。</p></details>
+    <details><summary>static handoff 某頁 404</summary><p>確認檔案在 <code>frontend/public/handoff/</code>，內部連結使用 <code>.html</code> 或 <code>/handoff/</code>。</p></details>
+    <details><summary>CSS / JS 路徑錯誤</summary><p>所有資源應使用相對路徑 <code>assets/...</code>；不要使用 <code>file scheme</code>、外部 CDN 或 localhost 靜態資源。</p></details>
+  </div>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

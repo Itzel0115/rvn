@@ -1,3 +1,11 @@
+"""Agent 可使用 Tool 的 registry 與參數驗證契約。
+
+每個 registry entry 連結 Tool name、description、arguments、支援範圍與
+evidence type。Planner 依 description 和 allowed task family 選擇工具；
+新增 Tool 時應先在此註冊，再由 `AnalysisToolbox` 提供 handler，避免直接
+修改 Agent 的分派邏輯或破壞既有 schema。
+"""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -6,6 +14,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class ToolContract:
+    """描述 Tool 的輸入限制、可用任務與 evidence-friendly 輸出類型。"""
     tool_name: str
     description: str
     allowed_task_families: tuple[str, ...] = ()
@@ -119,7 +128,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
     "get_entity_performance_snapshot": ToolContract(
         tool_name="get_entity_performance_snapshot",
         description="Return deterministic entity performance scorecard; relationship analyses may use it only as supporting context.",
-        allowed_task_families=("latest_month_entity_summary", "cross_section_compare", "performance_assessment", "parent_child_drilldown", "metric_relationship_analysis"),
+        allowed_task_families=("latest_month_entity_summary", "cross_section_compare", "performance_assessment", "parent_child_drilldown", "metric_relationship_analysis", "entity_period_pair_table_lookup", "entity_trend_comparison", "risk_scan"),
         required_args=("entity_dimension",),
         optional_args=("dimension", "month", "parent_filter", "top_n"),
         supported_entity_dimensions=COMMON_ENTITY_DIMENSIONS,
@@ -131,7 +140,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
     "get_entity_cross_section_comparison": ToolContract(
         tool_name="get_entity_cross_section_comparison",
         description="Return same-month entity comparison.",
-        allowed_task_families=("cross_section_compare",),
+        allowed_task_families=("cross_section_compare", "performance_assessment"),
         required_args=("entity_dimension",),
         optional_args=("month", "parent_filter"),
         supported_entity_dimensions=COMMON_ENTITY_DIMENSIONS,
@@ -187,7 +196,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
     "get_entity_trend_comparison": ToolContract(
         tool_name="get_entity_trend_comparison",
         description="Return monthly trend comparison across entities.",
-        allowed_task_families=("entity_trend_comparison",),
+        allowed_task_families=("entity_trend_comparison", "metric_relationship_analysis", "risk_scan"),
         required_args=("entity_dimension", "metric"),
         optional_args=("recent_n", "start_month", "end_month", "parent_filter"),
         supported_entity_dimensions=COMMON_ENTITY_DIMENSIONS,
@@ -246,7 +255,7 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
     ),
     "get_mapping_summary": ToolContract(
         tool_name="get_mapping_summary",
-        description="Return mapping summary and data alignment coverage.",
+        description="Return data source alignment summary, normalized entity metadata, and business-group alignment coverage.",
         allowed_task_families=("data_quality", "forecast_unsupported"),
         output_evidence_type="mapping_summary",
     ),
@@ -259,8 +268,8 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
     "get_anomalies": ToolContract(
         tool_name="get_anomalies",
         description="Return deterministic anomaly records.",
-        allowed_task_families=("risk_scan", "diagnosis", "cross_section_compare"),
-        optional_args=("month",),
+        allowed_task_families=("risk_scan", "diagnosis", "cross_section_compare", "entity_trend_comparison", "performance_assessment", "metric_relationship_analysis"),
+        optional_args=("month", "top_n"),
         supports_month=True,
         output_evidence_type="anomaly",
     ),
@@ -287,7 +296,10 @@ TOOL_REGISTRY: dict[str, ToolContract] = {
     "get_inventory_turnover_proxy": ToolContract(
         tool_name="get_inventory_turnover_proxy",
         description="Return inventory efficiency proxy rows.",
-        allowed_task_families=("performance_assessment", "risk_scan", "diagnosis"),
+        allowed_task_families=("performance_assessment", "risk_scan", "diagnosis", "entity_ranking", "cross_section_compare", "metric_relationship_analysis"),
+        optional_args=("month", "top_n", "entity_dimension", "parent_filter"),
+        supported_entity_dimensions=COMMON_ENTITY_DIMENSIONS,
+        supported_metrics=("revenue_inventory_amount_ratio", "inventory_amount", "inventory_qty"),
         output_evidence_type="inventory_turnover_proxy",
     ),
     "get_root_cause_candidates": ToolContract(

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>新增與修改｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="maintenance.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="" href="./">首頁</a>
+<a class="" href="overview.html">系統總覽</a>
+<a class="" href="question-journey.html">一題怎麼跑</a>
+<a class="" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="" href="operations.html">展示與操作</a>
+<a class="active" href="maintenance.html">新增與修改</a>
+<a class="" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>新增與修改</h1>
+      <p>新增 Tool、KPI 與問題類型的安全配方。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#recipes">情境入口</a><a class="page-toc-link" href="#tool">新增 Tool</a><a class="page-toc-link" href="#kpi">新增 KPI</a><a class="page-toc-link" href="#task">新增問題類型</a><a class="page-toc-link" href="#advanced">進階</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section id="recipes"><h2>我想做什麼？</h2>
+  <div class="table-wrap"><table><thead><tr><th>我想做什麼</th><th>應從哪個配方開始</th></tr></thead><tbody>
+    <tr><td>新增一種分析計算</td><td><a href="#tool">新增 Tool</a></td></tr>
+    <tr><td>新增 KPI</td><td><a href="#kpi">新增 Metric + 更新 Tool</a></td></tr>
+    <tr><td>支援新的問題型態</td><td><a href="#task">新增 Task Family</a></td></tr>
+    <tr><td>對外部 Agent 開放工具</td><td><a href="#advanced">MCP Exposure</a></td></tr>
+    <tr><td>新增主動偵測規則</td><td><a href="#advanced">Proactive Detector</a></td></tr>
+    <tr><td>修改品質門檻</td><td><a href="#advanced">Evaluation Gate</a></td></tr>
+  </tbody></table></div>
+</section>
+<section id="tool"><h2>配方一：新增分析工具（Tool）</h2>
+  <p>當既有 Tool 無法取得某種受控分析結果時，才新增 Tool。不要把自由 Python、SQL 或任意檔案讀取包成 Tool。</p>
+  <ol>
+    <li>在 <code>analysis_tools.py</code> 加一個明確、read-only、JSON-safe 的 method。</li>
+    <li>在 <code>tool_registry.py</code> 登記 ToolContract，列出 allowed arguments、supported metrics、task families 與 evidence type。</li>
+    <li>確認 <code>plan_validator.py</code> 能用 ToolContract 檢查這個 call。</li>
+    <li>決定是否 MCP exposable；預設不要公開，除非參數和輸出都能安全控管。</li>
+    <li>補 focused tests，再跑 handoff validator 與相關 evaluation gate。</li>
+  </ol>
+  <div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">def get_entity_metric_ranking(self, period: str, metric: str, entity: str = &quot;business_group&quot;):
+    period = normalize_period(period)
+    metric = normalize_metric(metric)
+    snapshot = self.get_entity_performance_snapshot(period=period, entity=entity)
+    rows = _rank_rows_from_snapshot(snapshot, metric)
+    result = {
+        &quot;period&quot;: period,
+        &quot;metric&quot;: metric,
+        &quot;entity&quot;: entity,
+        &quot;rows&quot;: rows,
+        &quot;limitations&quot;: snapshot.get(&quot;limitations&quot;, []),
+    }
+    # ...其餘邏輯省略
+    return make_json_safe(result)</code></pre></div><p class="code-note"><strong>來源：</strong><code>analysis_tools.py（簡化示意碼；保留交接重點）</code>　<strong>位置：</strong><code>AnalysisToolbox.get_entity_metric_ranking</code>　<strong>看法：</strong>看 input normalization、snapshot 取得、result 結構與 limitations 概念。</p>
+  <div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">&quot;get_entity_metric_ranking&quot;: ToolContract(
+    name=&quot;get_entity_metric_ranking&quot;,
+    description=&quot;Rank entities by a supported metric for one period.&quot;,
+    allowed_arguments=(&quot;period&quot;, &quot;metric&quot;, &quot;entity&quot;, &quot;limit&quot;),
+    required_arguments=(&quot;period&quot;, &quot;metric&quot;),
+    supported_metrics=(&quot;revenue_amount&quot;, &quot;inventory_amount&quot;, &quot;inventory_qty&quot;),
+    supported_task_families=(&quot;entity_ranking&quot;, &quot;cross_section_compare&quot;),
+    evidence_type=&quot;entity_metric_ranking&quot;,
+    read_only=True,
+    risk=ToolRisk.LOW,
+    mcp_exposable=True,
+),</code></pre></div><p class="code-note"><strong>來源：</strong><code>tool_registry.py（原始 ToolContract 節錄）</code>　<strong>位置：</strong><code>TOOL_REGISTRY[&quot;get_entity_metric_ranking&quot;]</code>　<strong>看法：</strong>看 Tool Registry 如何限制參數、metric、task family、evidence type、read-only 與 MCP exposure。</p>
+  <details><summary>不能破壞的契約</summary><ul><li>Tool result 必須 JSON-safe。</li><li>不要回傳未 redaction 的 raw trace 或真實敏感資料。</li><li>沒有 primary evidence 時，不要讓回答看起來完整。</li><li>MCP Tool 必須通過 allowlist、argument validation、row cap 與 sanitization。</li></ul></details>
+  <details><summary>最少測試與完整驗收</summary><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-bash">uv run pytest tests/test_tool_registry.py tests/test_analysis_tools.py tests/test_plan_validator.py
+uv run python scripts/generate_handoff_site.py
+uv run python scripts/validate_handoff_site.py</code></pre></div></details>
+</section>
+<section id="kpi"><h2>配方二：新增 KPI</h2>
+  <p>新增 KPI 不是只加一個欄位名稱。你要同時確認資料有來源、維度能相容、Tool 支援查詢，以及回答證據規則知道怎麼驗證它。</p>
+  <div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-json">{
+  &quot;metric_id&quot;: &quot;revenue_inventory_amount_ratio&quot;,
+  &quot;display_name_zh&quot;: &quot;營收庫存金額比&quot;,
+  &quot;category&quot;: &quot;relationship&quot;,
+  &quot;semantic_type&quot;: &quot;ratio&quot;,
+  &quot;supported_dimensions&quot;: [
+    &quot;business_group&quot;,
+    &quot;product_line&quot;
+  ],
+  &quot;proxy_warning&quot;: &quot;這是描述性 proxy，不是正式 turnover。&quot;
+}</code></pre></div><p class="code-note"><strong>來源：</strong><code>semantic_layer/definitions/metrics.json（簡化示意碼）</code>　<strong>位置：</strong><code>metric definition</code>　<strong>看法：</strong>看 metric id、中文名稱、語意類型、可用維度與 proxy 限制如何寫清楚。</p>
+  <ul><li><strong>資料與計算：</strong>確認 <code>data_loader.py</code> / <code>real_data.py</code> 能產生需要的欄位或計算。</li><li><strong>Tool 支援：</strong>把 metric 加到相關 ToolContract 的 supported metrics。</li><li><strong>證據需求：</strong>若 KPI 會改變回答條件，更新 <code>task_evidence.json</code>。</li><li><strong>回答格式：</strong>需要 proxy warning 時，Writer Validator 不能把它寫成正式財務結論。</li></ul>
+  <details><summary>最少測試</summary><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-bash">uv run pytest tests/test_semantic_catalog.py tests/test_semantic_validation.py tests/test_tool_registry.py</code></pre></div></details>
+</section>
+<section id="task"><h2>配方三：新增問題類型</h2>
+  <p>問題類型（task family）決定系統如何理解問題、需要哪些證據、可以用哪些 Tool，以及證據不足時要補問、重新規劃或標示 capability gap。</p>
+  <div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">def build_task_profile(question: str) -&gt; TaskProfile:
+    if _is_entity_period_pair_table_lookup(question):
+        task_type = &quot;entity_period_pair_table_lookup&quot;
+    elif _is_ranking_request(question):
+        task_type = &quot;entity_ranking&quot;
+    elif _is_forecast_request(question):
+        task_type = &quot;forecast_unsupported&quot;
+    else:
+        task_type = &quot;metric_lookup&quot;
+    # ...其餘邏輯省略
+    return TaskProfile(task_type=task_type, months=extract_months(question))</code></pre></div><p class="code-note"><strong>來源：</strong><code>task_profile.py（節錄後省略非重點邏輯）</code>　<strong>位置：</strong><code>build_task_profile</code>　<strong>看法：</strong>看自然語句如何被歸類成 task family。</p>
+  <div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">AnswerPlan(
+    task_family=&quot;metric_relationship_analysis&quot;,
+    primary_evidence=[&quot;metric_relationship&quot;],
+    supporting_evidence=[&quot;entity_period_pair_table&quot;],
+    allowed_tools=[&quot;get_revenue_inventory_relationship&quot;],
+    forbidden_tools=[&quot;forecast&quot;, &quot;arbitrary_python&quot;],
+    # ...其餘邏輯省略
+)</code></pre></div><p class="code-note"><strong>來源：</strong><code>semantic_layer/catalog.py（節錄後省略非重點邏輯）</code>　<strong>位置：</strong><code>AnswerPlan / Semantic Requirement</code>　<strong>看法：</strong>看 task family 如何連到可用 Tool 與 primary evidence。</p>
+  <ul><li><strong>Detection：</strong>在 TaskProfile / Canonical Task 補上辨識規則。</li><li><strong>AnswerPlan：</strong>定義允許的 Tool、metric、維度與 evidence requirement。</li><li><strong>Partial / Unsupported：</strong>沒有合法 Tool 時應回 capability gap，不要硬湊答案。</li><li><strong>Tests：</strong>補 detection、plan validation、evidence validation 與 writer validation。</li></ul>
+</section>
+<section id="advanced"><h2>進階修改</h2>
+  <div class="faq-grid">
+    <details><summary>MCP Exposure</summary><p>先確認 Tool 是 read-only、參數可完整驗證、輸出可 sanitization 且有 row cap。再同步 <code>tool_registry.py</code> 與 <code>mcp_server/server.py</code>。</p></details>
+    <details><summary>Proactive Detector</summary><p>新增偵測規則後，要讓 Candidate、Investigation、Draft、Approval 都能留下可追蹤 artifact；不能繞過人工核准。</p></details>
+    <details><summary>Evaluation Gate</summary><p>修改 <code>evaluation/policies/regression_gate.v1.json</code> 前，要確認 threshold 是正式門檻，不是為了讓一次結果過關而放寬。</p></details>
+  </div>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

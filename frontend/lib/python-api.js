@@ -4,6 +4,10 @@ function getApiBase() {
   return process.env.PYTHON_API_BASE || DEFAULT_API_BASE;
 }
 
+/**
+ * 將 dashboard/mobile request 轉送至 Python API，統一處理 JSON 與錯誤。
+ * Frontend 不直接讀取 Excel；backend URL 可由 PYTHON_API_BASE 設定。
+ */
 export async function proxyPythonJson(path, init = {}) {
   const response = await fetch(`${getApiBase()}${path}`, {
     ...init,

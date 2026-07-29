@@ -9,7 +9,6 @@ from preprocess import (
     coerce_numeric_column,
     normalize_code_column,
     normalize_date_column,
-    normalize_text_column,
 )
 from utils import MessageCollector
 from real_data import (
@@ -78,13 +77,3 @@ def load_revenue(path: Path) -> tuple[pd.DataFrame, dict[str, list[str]], Messag
     df = coerce_numeric_column(df, "營收", "營收", collector)
     df = coerce_numeric_column(df, "新事業群", "營收", collector, integer=True)
     return df, check, collector
-
-
-def load_mapping_raw(path: Path) -> tuple[pd.DataFrame, MessageCollector]:
-    collector = MessageCollector()
-    df = load_excel_file(path, collector, sheet_name=0)
-    if not df.empty:
-        df.columns = [str(col).strip() for col in df.columns]
-        for column in df.columns:
-            df = normalize_text_column(df, column)
-    return df, collector

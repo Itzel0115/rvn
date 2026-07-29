@@ -9,11 +9,9 @@ CHART_DIR = OUTPUT_DIR / "charts"
 
 INVENTORY_FILE = DATA_DIR / "inventory.xlsx"
 REVENUE_FILE = DATA_DIR / "revenue.xlsx"
-MAPPING_FILE = DATA_DIR / "mapping.xlsx"
 
 CLEANED_INVENTORY_FILE = OUTPUT_DIR / "cleaned_inventory.xlsx"
 CLEANED_REVENUE_FILE = OUTPUT_DIR / "cleaned_revenue.xlsx"
-PARSED_MAPPING_FILE = OUTPUT_DIR / "parsed_mapping.xlsx"
 MERGED_ANALYSIS_FILE = OUTPUT_DIR / "merged_analysis.xlsx"
 SUMMARY_METRICS_FILE = OUTPUT_DIR / "summary_metrics.xlsx"
 ANALYSIS_REPORT_FILE = OUTPUT_DIR / "analysis_report.md"
@@ -21,7 +19,7 @@ LLM_EXPLANATION_FILE = OUTPUT_DIR / "llm_explanation.md"
 QA_TRANSCRIPT_FILE = OUTPUT_DIR / "qa_transcript.md"
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b-it-qat")
 OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "90"))
 
 # ---------------------------------------------------------------------------
@@ -35,7 +33,7 @@ COL_DATE = "日期"
 COL_MONTH = "月份"
 COL_GROUP_CODE = "新事業群"
 COL_GROUP_NAME = "事業群名稱"
-COL_GROUP_CODE_ALT = "事業群代碼"   # mapping table uses this name
+COL_GROUP_CODE_ALT = "事業群代碼"   # canonical compatibility metadata label
 COL_PLATFORM = "平台"
 COL_HQBU = "HQBU"
 
@@ -66,19 +64,6 @@ COL_CORR_LABEL = "關聯判讀"
 EXPECTED_INVENTORY_COLUMNS = [COL_DATE, COL_HQBU, COL_INV_AMOUNT, COL_INV_QTY, COL_GROUP_CODE]
 EXPECTED_REVENUE_COLUMNS = [COL_DATE, COL_PLATFORM, COL_REVENUE, COL_GROUP_CODE]
 
-MAPPING_POSITION_COLUMNS = {
-    "A": "事業群名稱",
-    "B": "事業群代碼",
-    "C": "庫存HQBU分類名稱",
-    "D": "庫存HQBU代碼",
-    "E": "金額處理方式",
-    "F": "QTY處理方式",
-    "G": "營收平台分類名稱",
-    "H": "營收平台代碼",
-    "I": "實際營收處理方式",
-}
-
-BU_CODE_PATTERN = r"^GG-(0[1-9]|[1-8][0-9]|9[0-1])$"
 ANOMALY_MOM_THRESHOLD = 0.3
 HIGH_INVENTORY_REVENUE_RATIO_THRESHOLD = 0.8
 HIGH_REVENUE_INVENTORY_QTY_RATIO_THRESHOLD = 0.8

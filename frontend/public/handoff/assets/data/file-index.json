@@ -1,0 +1,3848 @@
+{
+  "agent_runtime": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/__init__.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/evidence_validator.py",
+      "purpose": "檢查回答證據是否真的涵蓋 KPI、月份、實體、rows 與 semantic requirement。",
+      "symbols": [
+        "EvidenceValidationResult",
+        "EvidenceValidator",
+        "_missing_task_requirement_coverage",
+        "_missing_management_risk_selection_coverage",
+        "_management_trend_summaries",
+        "_management_risk_candidates",
+        "_safe_float",
+        "_evidence_covers_metric",
+        "_contains_value",
+        "_contains_metric",
+        "_row_count",
+        "_has_rows"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_evidence_validator.py",
+        "tests/test_phase1_acceptance_runtime.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/integration.py",
+      "purpose": "把 Stateful Runtime 接進 MultiAgentAssistant.answer，並決定何時走 legacy 或 stateful path。",
+      "symbols": [
+        "attach_stateful_answer",
+        "_stateful_answer_impl",
+        "_stateful_answer",
+        "_limit",
+        "_materialize_steps",
+        "_expand_args_for_requirements",
+        "_tool_args",
+        "_execute_tool"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_integration.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_mcp_server_integration.py",
+        "tests/test_replanner_semantic_integration.py",
+        "tests/test_semantic_runtime_integration.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/models.py",
+      "purpose": "AgentRunState、PlanStep、ToolExecutionRecord 等 runtime 狀態資料模型。",
+      "symbols": [
+        "utc_now",
+        "AgentRunStatus",
+        "PlanStepStatus",
+        "PlanStep",
+        "ToolExecutionRecord",
+        "ReplanRecord",
+        "AgentRunState"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_grounding_grader.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_approval_identity.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/plan_validation.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "validate_stateful_steps"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase1_acceptance_runtime.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/replanner.py",
+      "purpose": "保守補證工具，只能新增 registry 允許且未重複的合法工具呼叫。",
+      "symbols": [
+        "ReplanProposal",
+        "DeterministicReplanner",
+        "_repair_for_missing_requirement",
+        "_metric_repair_tool",
+        "_args_key",
+        "_args_for_tool"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_phase1_acceptance_runtime.py",
+        "tests/test_replanner_semantic_integration.py"
+      ]
+    },
+    {
+      "callee": "EvidenceValidator、DeterministicReplanner、AgentStateStore、tool executor",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/runtime.py",
+      "purpose": "可 checkpoint 的執行迴圈，依序跑工具、收 evidence、驗證、不足時 replan。",
+      "symbols": [
+        "StatefulAgentRuntime",
+        "_summarize_output",
+        "_extract_row_count",
+        "_json_safe"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_compatibility.py",
+        "tests/test_agent_runtime_integration.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_evidence_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "agent_runtime/integration.py、tests、evaluation adapters",
+      "path": "agent_runtime/state_store.py",
+      "purpose": "Agent run state 的記憶體與 SQLite 儲存實作，用於 checkpoint 與排錯。",
+      "symbols": [
+        "AgentStateStore",
+        "InMemoryAgentStateStore",
+        "SQLiteAgentStateStore"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_state_store.py",
+        "tests/test_phase1_acceptance_runtime.py",
+        "tests/test_runtime_instrumentation.py"
+      ]
+    }
+  ],
+  "evaluation": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/__init__.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/adapters.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "EvalEnvironment",
+        "ExecutionBackedResult",
+        "EvaluationExecutionAdapter",
+        "AssistantExecutionAdapter",
+        "ProactiveExecutionAdapter",
+        "MCPExecutionAdapter",
+        "ApprovalExecutionAdapter",
+        "PublicationExecutionAdapter",
+        "RecordedTraceAdapter",
+        "SyntheticTrajectoryAdapter"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_eval_execution_adapters.py",
+        "tests/test_execution_backed_capability_gap.py",
+        "tests/test_execution_backed_replan_eval.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_phase2_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/aggregation.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "load_case_results",
+        "_upgrade_legacy_execution_fields",
+        "case_lookup",
+        "execution_coverage",
+        "_coverage_row"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/cli.py",
+      "purpose": "離線 evaluation、coverage、report、compare 與 regression gate CLI。",
+      "symbols": [
+        "_folder",
+        "main"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_approval_identity.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_rewriter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/comparison.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "compare_runs",
+        "_load_run",
+        "_grader_rate",
+        "_validate_schema",
+        "_delta",
+        "_case_deltas",
+        "_markdown"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_analysis_rubrics.py",
+        "tests/test_analysis_tools.py",
+        "tests/test_answer_contract.py",
+        "tests/test_answer_plan.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_eval_comparison.py",
+        "tests/test_evidence_contracts.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/approval.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/core.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/mcp.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/proactive.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/redteam.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/replanning.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets/semantic.v1.jsonl",
+      "purpose": "Evaluation suite case 定義，用來重跑交付前驗收。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/datasets.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "list_suites",
+        "load_suite",
+        "validate_cases"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_eval_datasets.py",
+        "tests/test_eval_execution_adapters.py",
+        "tests/test_execution_backed_capability_gap.py",
+        "tests/test_execution_backed_replan_eval.py",
+        "tests/test_phase4_acceptance.py",
+        "tests/test_phase4b_closure.py",
+        "tests/test_phase4c_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/failure_taxonomy.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/fixtures.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "ProactiveFixture",
+        "DeterministicProactiveAssistant",
+        "build_proactive_fixture",
+        "build_mcp_fixture",
+        "_build_context",
+        "_aligned_frame",
+        "_artifacts",
+        "_parsed_mapping",
+        "_build_many_group_context"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/generate_reference.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "generate",
+        "main"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evaluation_dataset_reference.py",
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/models.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "EvalCase",
+        "GraderResult",
+        "EvalCaseResult"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_grounding_grader.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_approval_identity.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/normalization.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_data_loader.py",
+        "tests/test_trace_normalization.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/policies/regression_gate.v1.json",
+      "purpose": "交付前 gate policy，定義 execution-backed、trace、安全與 publication 門檻。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/policies/reliability_score.v1.json",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/regression_gate.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "evaluate_gate",
+        "_check"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_acceptance.py",
+        "tests/test_phase4c_full_evaluation.py",
+        "tests/test_regression_gate.py",
+        "tests/test_strict_regression_gate.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/report.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "generate_report"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_tools.py",
+        "tests/test_answer_contract.py",
+        "tests/test_data_loader.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_phase4c_cli.py",
+        "tests/test_proactive_workflow.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/runner.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "_now",
+        "EvaluationRunner"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_comparison.py",
+        "tests/test_eval_runner.py",
+        "tests/test_eval_scorecard.py",
+        "tests/test_execution_backed_capability_gap.py",
+        "tests/test_execution_backed_replan_eval.py",
+        "tests/test_final_reliability_scorecard.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_phase4_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evaluation/scorecard.py",
+      "purpose": "Evaluation runner、grader、report 或資料集處理模組。",
+      "symbols": [
+        "_mean",
+        "_grader_rate",
+        "_combined_rate",
+        "_percentile",
+        "build_scorecard",
+        "_hard_failure_counts",
+        "write_scorecard_artifacts",
+        "_write_markdown",
+        "_write_failure_analysis",
+        "_write_failure_row",
+        "_failure_classification",
+        "_write_trajectory_summary"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_answer_contract.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_eval_runner.py",
+        "tests/test_eval_scorecard.py",
+        "tests/test_final_reliability_scorecard.py",
+        "tests/test_phase4c_cli.py",
+        "tests/test_phase4c_full_evaluation.py"
+      ]
+    }
+  ],
+  "frontend": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/ask/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/chart/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/chart-catalog/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/health/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/observe/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/observe-options/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/api/summary/route.js",
+      "purpose": "Next.js API proxy route，將前端請求轉送到 Python backend。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/dashboard/page.js",
+      "purpose": "Dashboard route，載入 InsightConsole 作為主要 Demo 介面。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/handoff/page.js",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/layout.js",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/mobile/page.js",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/app/page.js",
+      "purpose": "Frontend 首頁轉址到 Dashboard，讓使用者進入主要工作台。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/chart-surface.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/charts/chart-surface.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/insight-console.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/kpi/kpi-card.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/kpi/snapshot-item.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/message-card.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/mobile/mobile-chart-surface.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/components/mobile/mobile-console.jsx",
+      "purpose": "Dashboard 或 mobile UI 元件。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/lib/python-api.js",
+      "purpose": "Next.js API route 轉送 Python backend 的共用 helper，集中處理 backend URL 與 JSON 錯誤。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/next.config.mjs",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "Next.js runtime",
+      "path": "frontend/package.json",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "同步 frontend API routes、Dashboard smoke 與 build。",
+      "tests": []
+    }
+  ],
+  "mcp_server": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "mcp_server/__init__.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "mcp_server/resources.py",
+      "purpose": "MCP semantic resources 的讀取入口，例如 metrics、dimensions、tools 與 data contracts。",
+      "symbols": [
+        "read_resource",
+        "public_tool_contract"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_resources.py",
+        "tests/test_mcp_server_integration.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "mcp_server/security.py",
+      "purpose": "MCP 安全層，負責 hidden tool rejection、argument validation、row cap 與 sanitization。",
+      "symbols": [
+        "is_read_only_tool",
+        "is_mcp_exposable",
+        "validate_tool_arguments",
+        "sanitize_output",
+        "enforce_row_limit"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_execution_fidelity_grader.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_mcp_security.py",
+        "tests/test_mcp_tools.py",
+        "tests/test_publication_execution_adapter.py",
+        "tests/test_trace_completeness_grader.py"
+      ]
+    },
+    {
+      "callee": "mcp_server/security、AnalysisToolbox、observability",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "mcp_server/server.py",
+      "purpose": "MCP stdio server，公開少量 allowlisted read-only tools 與 semantic resources。",
+      "symbols": [
+        "_get_toolbox",
+        "_call",
+        "get_entity_month_table",
+        "get_entity_metric_ranking",
+        "get_entity_performance_snapshot",
+        "get_overall_time_series",
+        "get_revenue_inventory_relationship",
+        "get_data_coverage",
+        "_resource",
+        "catalog_summary",
+        "metrics",
+        "metric"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_execution_fidelity_grader.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_mcp_instrumentation.py",
+        "tests/test_mcp_resources.py",
+        "tests/test_mcp_security.py",
+        "tests/test_mcp_server_integration.py",
+        "tests/test_mcp_tools.py",
+        "tests/test_proactive_api.py"
+      ]
+    }
+  ],
+  "observability": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/__init__.py",
+      "purpose": "Observability 對外入口，匯出 trace context、recorder、SQLite store 與 instrumentation。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/attributes.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_execution_fidelity_grader.py",
+        "tests/test_observability_models.py",
+        "tests/test_replan_value_grader.py",
+        "tests/test_runtime_instrumentation.py",
+        "tests/test_trace_completeness_grader.py",
+        "tests/test_trace_normalization.py",
+        "tests/test_trajectory_graders.py",
+        "tests/test_writer_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/cli.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "main"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_approval_identity.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_rewriter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/config.py",
+      "purpose": "Trace 設定來源，包含預設 SQLite trace store path 與環境變數讀取。",
+      "symbols": [
+        "ObservabilityConfig",
+        "_bool",
+        "_int",
+        "get_config"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_data_loader.py",
+        "tests/test_runtime_instrumentation.py",
+        "tests/test_semantic_instrumentation.py",
+        "tests/test_writer_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/context.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "TraceContext",
+        "current_context",
+        "trace_context"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_tools.py",
+        "tests/test_phase10d_entity_ui_chart.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_proactive_orchestrator.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_status_apis.py",
+        "tests/test_trace_context.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/exporter.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "SQLiteSpanExporter"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_otel_exporter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/instrumentation.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "instrument"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_mcp_instrumentation.py",
+        "tests/test_proactive_instrumentation.py",
+        "tests/test_runtime_instrumentation.py",
+        "tests/test_semantic_instrumentation.py",
+        "tests/test_writer_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/metrics.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "summarize_metrics"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_planner_registry.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_mcp_resources.py",
+        "tests/test_mcp_server_integration.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/models.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "utc_now",
+        "TraceEvent",
+        "SpanRecord",
+        "ModelCallSummary",
+        "TraceRun"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_grounding_grader.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_approval_identity.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/normalization.py",
+      "purpose": "本地 trace、redaction 或 metrics 的輔助模組。",
+      "symbols": [
+        "normalize_trace",
+        "trajectory_fingerprint"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_data_loader.py",
+        "tests/test_trace_normalization.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/redaction.py",
+      "purpose": "Trace 與輸出 redaction helper，避免敏感值或路徑外洩。",
+      "symbols": [
+        "detect_sensitive_key",
+        "hash_content",
+        "truncate_value",
+        "redact_text",
+        "sanitize_exception",
+        "redact_mapping"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trace_redaction.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/store.py",
+      "purpose": "SQLite trace store 實作，用於保存與查詢本地執行軌跡。",
+      "symbols": [
+        "SQLiteTraceStore"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_execution_fidelity_grader.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_otel_exporter.py",
+        "tests/test_phase1_acceptance_runtime.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "observability/tracing.py",
+      "purpose": "TraceRecorder 實作，讓 agent、tool、MCP、approval、publication 產生 span。",
+      "symbols": [
+        "TraceRecorder",
+        "_safe_attributes",
+        "_duration",
+        "get_recorder"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_runtime_instrumentation.py",
+        "tests/test_semantic_instrumentation.py",
+        "tests/test_writer_instrumentation.py"
+      ]
+    }
+  ],
+  "proactive_workflow": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/__init__.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/approval.py",
+      "purpose": "人工核准流程，檢查 approver、draft hash、狀態衝突與 revision/reject 條件。",
+      "symbols": [
+        "create_approval_request",
+        "decide",
+        "_decide"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_approval_identity.py",
+        "tests/test_approval_safety_grader.py",
+        "tests/test_execution_fidelity_grader.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_phase4_acceptance.py",
+        "tests/test_proactive_api.py",
+        "tests/test_proactive_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/candidate_detector.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "CandidateDetector",
+        "RelationshipDetector",
+        "QualityDetector",
+        "detect_candidates",
+        "_candidate",
+        "_quality_candidate",
+        "_cap",
+        "InventoryQuantityDetector"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_proactive_workflow.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/cli.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "_service",
+        "main"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_approval_identity.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_rewriter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/counter_evidence.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "CounterEvidenceStatus",
+        "CounterEvidenceAssessment",
+        "assess_counter_evidence"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_counter_evidence_policy.py",
+        "tests/test_proactive_execution_adapter.py",
+        "tests/test_proactive_revision.py",
+        "tests/test_trace_completeness_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/data_quality.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "run_data_quality_checks",
+        "_finding",
+        "_month_span"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_tools.py",
+        "tests/test_answer_contract.py",
+        "tests/test_data_loader.py",
+        "tests/test_evidence_projector.py",
+        "tests/test_proactive_execution_adapter.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_router.py",
+        "tests/test_status_apis.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/draft_builder.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "build_draft",
+        "create_revision",
+        "_summary",
+        "_markdown"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_revision.py",
+        "tests/test_proactive_workflow.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/fingerprint.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "build_dataset_fingerprint",
+        "compare_fingerprints"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_proactive_execution_adapter.py",
+        "tests/test_proactive_orchestrator.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_replan_value_grader.py",
+        "tests/test_trace_completeness_grader.py",
+        "tests/test_trace_normalization.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/investigator.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "ProactiveInvestigator",
+        "_summarize"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/models.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "utc_now",
+        "stable_hash",
+        "Severity",
+        "ApprovalStatus",
+        "DraftStatus",
+        "DataRefreshEvent",
+        "DataQualityFinding",
+        "InvestigationCandidate",
+        "InvestigationRun",
+        "ExecutiveDraft",
+        "ApprovalRequest",
+        "PublicationRecord"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_grounding_grader.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_approval_identity.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/orchestrator.py",
+      "purpose": "資料刷新後串起 fingerprint、data quality、candidate、investigation、draft 與 approval。",
+      "symbols": [
+        "ProactiveWorkflowOrchestrator"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_execution_adapter.py",
+        "tests/test_proactive_orchestrator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/policies.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "ProactivePolicy",
+        "load_policy"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_phase4c_acceptance.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_trace_completeness_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/prioritizer.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "prioritize"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/publisher.py",
+      "purpose": "發布 gate，只有 approved draft 且 hash 一致時才寫出正式 publication artifacts。",
+      "symbols": [
+        "publish",
+        "_publish"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_revision.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_publication_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/revision.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "create_revision"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_proactive_api.py",
+        "tests/test_proactive_revision.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_publication_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "demo_web.py、proactive_workflow/cli.py、evaluation adapters",
+      "path": "proactive_workflow/store.py",
+      "purpose": "主動洞察流程的其中一個步驟或資料模型。",
+      "symbols": [
+        "SQLiteProactiveStore",
+        "_decode"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_execution_fidelity_grader.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_otel_exporter.py",
+        "tests/test_phase1_acceptance_runtime.py"
+      ]
+    }
+  ],
+  "root": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "README.md",
+      "purpose": "專案總覽與正式啟動方式，先確認資料來源、服務入口與交接網站路徑。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "agent_cli.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "parse_args",
+        "main"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "analysis_pipeline.py",
+      "purpose": "把資料讀取、清理、正規化與分析表建立成 PipelineContext，供所有工具共用。",
+      "symbols": [
+        "PipelineContext",
+        "build_pipeline_context"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "analysis_rubrics.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "EvidenceRole",
+        "EvidenceItemWithRole",
+        "RubricResult",
+        "Rubric",
+        "get_rubric",
+        "assign_evidence_roles",
+        "_normalize_evidence_details",
+        "rubric_result_to_dict",
+        "_assign_role",
+        "_detect_evidence_type",
+        "_infer_source_tool",
+        "_summarize_evidence"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_evidence_projector.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "multi_agent.py、demo_web.py、mcp_server/server.py、proactive_workflow",
+      "path": "analysis_tools.py",
+      "purpose": "受控分析工具的實作位置，所有營收、庫存、排名、趨勢與圖表計算都從這裡出來。",
+      "symbols": [
+        "QueryFilters",
+        "is_unmapped_entity",
+        "_normalize_observation_filter_value",
+        "ObservationRequest",
+        "AnalysisToolbox"
+      ],
+      "sync": "同步 tests/test_tool_registry.py、tests/test_mcp_security.py、PlanValidator 與 evaluation datasets。",
+      "tests": [
+        "tests/test_analysis_tools.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_phase10d_entity_ui_chart.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_status_apis.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "analyzer.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "AnalysisArtifacts",
+        "analyze_data",
+        "enrich_inventory",
+        "enrich_revenue",
+        "aggregate_monthly",
+        "aggregate_by_group",
+        "build_merged_analysis",
+        "detect_anomalies",
+        "analyze_correlations",
+        "_correlation_record",
+        "describe_correlation"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "answer_contract.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "build_answer_contract",
+        "build_data_quality_answer_contract",
+        "render_answer_contract",
+        "_build_display_blocks",
+        "_build_recent_relationship_display_blocks",
+        "_canonical_relationship_table_row",
+        "_has_multimetric_period_pair_evidence",
+        "_has_multimetric_trend_evidence",
+        "_build_multimetric_period_pair_display_blocks",
+        "_is_management_risk_selection_task",
+        "_build_management_risk_selection_display_blocks",
+        "_rank_management_risk_candidates"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_compatibility.py",
+        "tests/test_agent_runtime_integration.py",
+        "tests/test_analysis_rubrics.py",
+        "tests/test_answer_contract.py",
+        "tests/test_evidence_projector.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "answer_plan.py",
+      "purpose": "依 task family 決定主要工具、輔助工具、背景工具與禁止當主要證據的工具。",
+      "symbols": [
+        "AnswerPlan",
+        "build_answer_plan",
+        "_default_primary_tools",
+        "_default_supporting_tools"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_analysis_rubrics.py",
+        "tests/test_answer_plan.py",
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_evidence_validator.py",
+        "tests/test_llm_planner.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "answer_policy.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "AnswerPolicy",
+        "get_answer_policy"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "business_answer_templates.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "compose_evidence_first_answer",
+        "_compose_ranking",
+        "_compose_platform_ranking",
+        "_compose_trend",
+        "_compose_risk",
+        "_compose_data_quality",
+        "_compose_decision",
+        "_compose_comparison",
+        "_compose_diagnosis",
+        "_with_request_id",
+        "_filters_from_routing",
+        "_latest_month"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "business_question_classifier.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "KpiLens",
+        "BusinessQuestionProfile",
+        "classify_business_question",
+        "profile_to_routing_fields",
+        "describe_lenses",
+        "_contains_any",
+        "_is_forecast_question",
+        "_is_latest_month_platform_summary",
+        "_is_parent_child_drilldown_question",
+        "_is_contribution_question",
+        "_is_entity_time_series_question",
+        "_is_overall_trend_question"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan.py",
+        "tests/test_canonical_task.py",
+        "tests/test_evidence_contracts.py",
+        "tests/test_llm_planner.py",
+        "tests/test_phase10d_entity_ui_chart.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_task_profile.py",
+        "tests/test_writer_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "canonical_task.py",
+      "purpose": "把 TaskProfile 整理成穩定 schema，保留月份、實體、KPI 與 semantic reference。",
+      "symbols": [
+        "CanonicalConstraints",
+        "CanonicalTaskProfile",
+        "_canonical_task_requirements",
+        "_semantic_references",
+        "from_task_profile",
+        "_canonical_time_scope",
+        "_canonical_entity",
+        "_canonical_parent_entity",
+        "_infer_chart_type",
+        "_preserved_months",
+        "_preserved_entities"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_canonical_task.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_evidence_contracts.py",
+        "tests/test_evidence_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "config.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_data_loader.py",
+        "tests/test_runtime_instrumentation.py",
+        "tests/test_semantic_instrumentation.py",
+        "tests/test_writer_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "data_loader.py",
+      "purpose": "低階資料載入與欄位標準化 helper，避免各工具各自讀 Excel。",
+      "symbols": [
+        "load_excel_file",
+        "validate_required_columns",
+        "load_inventory",
+        "load_revenue"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_data_loader.py"
+      ]
+    },
+    {
+      "callee": "analysis_pipeline、AnalysisToolbox、MultiAgentAssistant、ProactiveWorkflowOrchestrator",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "demo_web.py",
+      "purpose": "Python Backend/API 入口，建立共用分析環境，接 Dashboard 問答、圖表、health 與主動流程 API。",
+      "symbols": [
+        "_env_flag",
+        "_coerce_optional_bool",
+        "_json_safe",
+        "derive_health_status",
+        "build_data_version_payload",
+        "build_pipeline_status_payload",
+        "build_data_quality_payload",
+        "DemoApplication",
+        "_proactive_service",
+        "_proactive_candidates",
+        "_proactive_investigations",
+        "_proactive_approvals"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_api.py",
+        "tests/test_status_apis.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "entity_labels.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "EntityResolution",
+        "display_label_for_dimension",
+        "normalize_entity_dimension",
+        "text_has_dimension_synonym",
+        "normalize_entity_text",
+        "resolve_entity_value",
+        "resolve_entity_value_with_status"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase10d_entity_ui_chart.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evidence_contracts.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "EvidenceContract",
+        "EvidenceContractBuilder",
+        "from_tool_output",
+        "normalize_tool_output",
+        "build_evidence_contracts",
+        "_iter_tool_outputs",
+        "_source_tool",
+        "_evidence_type",
+        "_task_family",
+        "_time_scope",
+        "_augment_scope_from_rows",
+        "_entity_scope"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evidence_contracts.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_writer_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "evidence_projector.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "is_unmapped_entity",
+        "ProjectedObservation",
+        "DisplayBlocks",
+        "build_display_blocks_from_roles",
+        "_build_headline",
+        "_entity_month_table_headline",
+        "_entity_period_pair_table_headline",
+        "_entity_multi_month_table_headline",
+        "_entity_period_pair_value_headline",
+        "_metric_lookup_headline",
+        "_forecast_unsupported_headline",
+        "_latest_month_platform_summary_headline"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evidence_projector.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "llm_evidence_writer.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "EvidenceWriteRequest",
+        "EvidenceWriteResult",
+        "LLMEvidenceWriter",
+        "_normalize_writer_output",
+        "evidence_write_request_to_dict"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_evidence_writer.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "llm_planner.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "PlannedToolCall",
+        "ToolPlan",
+        "LLMPlanningResult",
+        "AllowedToolSpec",
+        "_allowed_tool_registry_from_tool_registry",
+        "_contains_hint",
+        "infer_prompt_profile",
+        "select_planner_tool_subset",
+        "build_compact_tool_registry",
+        "normalize_task_family",
+        "normalize_question_type",
+        "normalize_answer_mode"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_contract.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_evidence_contracts.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_planner_registry.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "llm_reporter.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "generate_llm_explanation",
+        "generate_qa_llm_answer",
+        "build_prompt",
+        "build_qa_prompt",
+        "build_fallback_explanation",
+        "build_qa_ai_fallback"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "llm_rewriter.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "RewriteRequest",
+        "RewriteValidationResult",
+        "RewriteResult",
+        "LLMAnswerRewriter",
+        "_extract_numbers",
+        "_extract_allowed_entities",
+        "_extract_entity_tokens",
+        "_contains_direction_conflict",
+        "build_rewrite_request",
+        "rewrite_result_payload"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_contract.py",
+        "tests/test_evidence_contracts.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_phase10e_single_month_entity_table.py",
+        "tests/test_phase9a3_frontend_chart.py",
+        "tests/test_phase9b_demo_readiness.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "logging_utils.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "_DefaultContextFilter",
+        "RequestLoggerAdapter",
+        "build_request_id",
+        "configure_logging",
+        "get_logger"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "main.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "main",
+        "parse_args",
+        "run_multi_agent_mode"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_compatibility.py",
+        "tests/test_agent_runtime_integration.py",
+        "tests/test_analysis_rubrics.py",
+        "tests/test_analysis_tools.py",
+        "tests/test_answer_contract.py",
+        "tests/test_answer_plan.py",
+        "tests/test_canonical_task.py",
+        "tests/test_complex_relationship_planning.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "mapping_parser.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "ParsedMapping"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "task_profile、canonical_task、answer_plan、AnalysisToolbox、WriterValidator",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "multi_agent.py",
+      "purpose": "Agent orchestration 主體，負責理解問題、規劃工具、執行分析與組裝回答。",
+      "symbols": [
+        "RoutingDecision",
+        "DomainResult",
+        "BaseDomainAgent",
+        "SalesAgent",
+        "InventoryAgent",
+        "FinancialMetricsAgent",
+        "ChartAgent",
+        "AssociationAgent",
+        "MultiAgentAssistant"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_rubrics.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_phase9a3_frontend_chart.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "ollama_client.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "OllamaCallResult",
+        "OllamaClient"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_task_requirement_coverage_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "package-lock.json",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "plan_validator.py",
+      "purpose": "檢查 planner 產生的 tool call 是否符合 registry、task、時間、實體與 KPI 限制。",
+      "symbols": [
+        "PlanValidator",
+        "validate_plan",
+        "_result",
+        "_canonical_view",
+        "_allowed_tools_from_answer_plan",
+        "_base_tool_name",
+        "_validate_requirement_coverage",
+        "_call_covers_metric",
+        "_metric_covered_by_relationship",
+        "_validate_time",
+        "_validate_entity",
+        "_validate_metric"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_phase1_acceptance_runtime.py",
+        "tests/test_plan_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "preprocess.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "parse_yyyymm_to_period",
+        "normalize_date_column",
+        "coerce_numeric_column",
+        "normalize_text_column",
+        "normalize_code_column"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "pyproject.toml",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "qa_engine.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "start_chat_loop",
+        "answer_question",
+        "retrieve_relevant_data",
+        "build_programmatic_summary",
+        "_filter_dataframe",
+        "_extract_month",
+        "_extract_platform",
+        "_extract_group",
+        "_summarize_recent_points",
+        "_stringify_value",
+        "build_dynamic_tables",
+        "_first_existing_column"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "real_data.py",
+      "purpose": "定義真實 Excel 資料的讀取、欄位檢查、月份與實體對齊規則。",
+      "symbols": [
+        "RealAnalysisTables",
+        "normalize_month_key",
+        "normalize_business_keys",
+        "load_real_inventory_data",
+        "load_real_revenue_data",
+        "load_real_data_sources",
+        "normalize_real_inventory_data",
+        "normalize_real_revenue_data",
+        "build_real_analysis_tables",
+        "build_legacy_compatible_frames",
+        "build_real_data_quality_report",
+        "build_real_data_quality_messages"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_tools.py",
+        "tests/test_answer_contract.py",
+        "tests/test_data_loader.py",
+        "tests/test_real_data_contract.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "task_profile.py",
+      "purpose": "把中文問題歸類成 task family，抽出時間、KPI、實體與回答需求。",
+      "symbols": [
+        "TaskProfile",
+        "build_task_profile",
+        "_is_forecast_unsupported",
+        "_is_capability_boundary_unsupported",
+        "_is_chart_request",
+        "_is_single_month_all_entity_request",
+        "_is_single_month_all_entity_cross_section",
+        "_is_entity_month_table_lookup",
+        "_is_entity_month_metric_lookup",
+        "_is_entity_period_pair_table_lookup",
+        "_is_entity_multi_month_table_lookup",
+        "_is_entity_period_pair_metric_lookup"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_analysis_rubrics.py",
+        "tests/test_answer_contract.py",
+        "tests/test_answer_plan.py",
+        "tests/test_canonical_task.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_evidence_contracts.py",
+        "tests/test_llm_evidence_writer.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "test_data_generator.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "generate_test_data"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "PlanValidator、Stateful Runtime、MCP security、LLM planner",
+      "path": "tool_registry.py",
+      "purpose": "所有正式 ToolContract 的登記處，定義工具參數、支援 KPI、evidence type 與 MCP exposure。",
+      "symbols": [
+        "ToolContract",
+        "get_tool_contract",
+        "tool_registry_payload",
+        "is_tool_allowed_for_task",
+        "build_allowed_tool_names_for_task_family",
+        "build_llm_allowed_tools_from_registry",
+        "validate_tool_args_against_registry"
+      ],
+      "sync": "同步 tests/test_tool_registry.py、tests/test_mcp_security.py、PlanValidator 與 evaluation datasets。",
+      "tests": [
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_registry.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_mcp_tools.py",
+        "tests/test_phase2_acceptance.py",
+        "tests/test_tool_registry.py",
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "utils.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "MessageCollector",
+        "ensure_directories",
+        "safe_strip",
+        "normalize_code",
+        "dataframe_to_records",
+        "format_number"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_data_loader.py",
+        "tests/test_status_apis.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "visualizer.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "render_chart_payload",
+        "create_all_charts",
+        "_plot_line",
+        "_plot_bar",
+        "_plot_platform_pivot",
+        "_color_for_index"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "writer_validator.py",
+      "purpose": "回答文字安全檢查，避免新數字、錯月份、因果宣稱、forecast 外推與 debug 洩漏。",
+      "symbols": [
+        "WriterValidator",
+        "validate_writer_output",
+        "_writer_text",
+        "_writer_metric_text",
+        "_is_safe_forecast_refusal",
+        "_to_plain_dict",
+        "_collect_months",
+        "_extract_output_numbers",
+        "_collect_allowed_numbers",
+        "_number_variants",
+        "_normalize_number_token",
+        "_normalize_month"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_writer_instrumentation.py",
+        "tests/test_writer_validator.py"
+      ]
+    }
+  ],
+  "semantic_layer": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/__init__.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_llm_writer_shadow.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/adapters.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "enrich_answer_plan"
+      ],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_answer_plan_instrumentation.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_eval_execution_adapters.py",
+        "tests/test_execution_backed_capability_gap.py",
+        "tests/test_execution_backed_replan_eval.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_phase2_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/catalog.py",
+      "purpose": "載入 KPI、dimension、task evidence 與 data contract 定義，提供查詢與驗證入口。",
+      "symbols": [
+        "SemanticCatalog",
+        "_read",
+        "get_catalog"
+      ],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py",
+        "tests/test_mcp_tools.py",
+        "tests/test_phase2_acceptance.py",
+        "tests/test_proactive_workflow.py",
+        "tests/test_semantic_catalog.py",
+        "tests/test_semantic_instrumentation.py",
+        "tests/test_semantic_validation.py",
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/definitions/data_contracts.json",
+      "purpose": "Semantic catalog definition。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/definitions/dimensions.json",
+      "purpose": "維度定義檔，描述月份、事業群、產品線與可用 KPI。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_llm_planner_registry.py",
+        "tests/test_mcp_tools.py",
+        "tests/test_phase10d_entity_ui_chart.py",
+        "tests/test_tool_registry.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/definitions/glossary.json",
+      "purpose": "Semantic catalog definition。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/definitions/metrics.json",
+      "purpose": "KPI 定義檔，描述顯示名稱、公式、來源欄位、proxy 與限制。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py",
+        "tests/test_complex_relationship_planning.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_planner_registry.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_mcp_resources.py",
+        "tests/test_mcp_server_integration.py",
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/definitions/task_coverage.json",
+      "purpose": "目前 task family 的功能狀態與執行方式來源。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_phase2_acceptance.py",
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/definitions/task_evidence.json",
+      "purpose": "回答某些 task family 時需要哪些 primary/supporting evidence 的規則。",
+      "symbols": [],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": []
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/generate_reference.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "render_reference",
+        "main"
+      ],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_evaluation_dataset_reference.py",
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/models.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "MetricDefinition",
+        "DimensionDefinition",
+        "EvidenceRequirementDefinition",
+        "GlossaryTerm",
+        "DataContractDefinition",
+        "TaskCoverageDefinition"
+      ],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py",
+        "tests/test_agent_replanner.py",
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_models.py",
+        "tests/test_agent_state_store.py",
+        "tests/test_answer_grounding_grader.py",
+        "tests/test_approval_execution_adapter.py",
+        "tests/test_approval_identity.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "semantic_layer/validation.py",
+      "purpose": "協助定位的檔案，請搭配實際 source code 閱讀。",
+      "symbols": [
+        "validate_catalog"
+      ],
+      "sync": "同步 task_coverage、task_evidence、tool registry、answer_plan 與 semantic tests。",
+      "tests": [
+        "tests/test_execution_backed_capability_gap.py",
+        "tests/test_llm_live_smoke.py",
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_registry.py",
+        "tests/test_llm_rewriter.py",
+        "tests/test_mcp_execution_adapter.py",
+        "tests/test_phase1_acceptance_runtime.py",
+        "tests/test_phase2_acceptance.py"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_actual_execution_coverage.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_result",
+        "test_dataset_declared_and_actual_coverage_are_separate",
+        "test_safe_rejection_is_completed_but_failed_adapter_is_not"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_actual_execution_coverage.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agent_replanner.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AgentReplannerTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_replanner.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agent_runtime.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "OneRepairReplanner",
+        "DuplicateReplanner",
+        "AgentRuntimeTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime.py",
+        "tests/test_agent_runtime_compatibility.py",
+        "tests/test_agent_runtime_integration.py",
+        "tests/test_agent_runtime_models.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agent_runtime_compatibility.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AgentRuntimeCompatibilityTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_compatibility.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agent_runtime_integration.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AgentRuntimeIntegrationTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_integration.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agent_runtime_models.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AgentRuntimeModelsTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_runtime_models.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agent_state_store.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AgentStateStoreTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agent_state_store.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_agentic_acceptance_requirements.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_profile",
+        "test_management_attention_manifest_covers_risk_counter_and_top_n",
+        "test_management_attention_manifest_requires_next_action_when_asked",
+        "test_semantic_stock_building_declining_revenue_maps_to_relationship_task",
+        "test_english_latest_three_months_product_line_top_n",
+        "test_formal_inventory_turnover_forbids_proxy_execution_path",
+        "test_chinese_product_line_dimension_does_not_extract_prompt_prefix_as_entity",
+        "test_english_period_pair_quantity_elision_is_inventory_qty",
+        "test_product_line_dimension_phrase_does_not_become_business_group_entity"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_agentic_acceptance_requirements.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_analysis_rubrics.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AnalysisRubricsTest",
+        "_domain_result",
+        "_platform_ratio",
+        "_contribution",
+        "_inventory_amount_ranking",
+        "_root_cause_candidate",
+        "_performance_snapshot",
+        "_entity_cross_section_comparison",
+        "_entity_period_pair_comparison",
+        "_entity_metric_ranking",
+        "_entity_time_series",
+        "_overall_time_series"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_rubrics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_analysis_tools.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AnalysisToolboxTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_analysis_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_answer_contract.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AnswerContractTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_contract.py",
+        "tests/test_evidence_projector.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_answer_grounding_grader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_causal_claim_pattern_is_rejected"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_grounding_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_answer_plan.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "AnswerPlanTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan.py",
+        "tests/test_answer_plan_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_answer_plan_instrumentation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_Task",
+        "test_semantic_answer_plan_enrichment_emits_span"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_answer_plan_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_approval_execution_adapter.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "_execute",
+        "_load_payload",
+        "_audit_payloads",
+        "test_approve_uses_formal_service_and_reloads_store",
+        "test_reject_uses_formal_service_and_reason",
+        "test_revision_v1_to_v2_uses_services_hash_binding_and_audit",
+        "test_empty_identity_is_rejected_by_formal_service",
+        "test_adapter_failure_is_failed_not_pending_or_synthetic",
+        "test_production_output_is_not_written"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_approval_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_approval_identity.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ApprovalIdentityTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_approval_identity.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_approval_safety_grader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_approval_bypass_is_hard_failure"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_approval_safety_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_candidate_detector_semantics.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Tools",
+        "CandidateDetectorSemanticsTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_candidate_detector_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_canonical_task.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "CanonicalTaskProfileTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_canonical_task.py",
+        "tests/test_semantic_runtime_integration.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_complex_relationship_planning.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ComplexRelationshipPlanningTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_complex_relationship_planning.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_counter_evidence_policy.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "CounterEvidencePolicyTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_counter_evidence_policy.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_data_loader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "RealDataLoaderTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_data_loader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_eval_comparison.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_same_suite_comparison_is_unchanged"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_comparison.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_eval_datasets.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_versioned_datasets_have_more_than_required_cases_and_validate"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_datasets.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_eval_execution_adapters.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_execution_backed_case_uses_declared_adapter"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_execution_adapters.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_eval_models.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_eval_models_are_json_safe_dataclasses"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_models.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_eval_runner.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_runner_emits_repeatable_artifacts"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_runner.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_eval_scorecard.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_scorecard_json_and_csv_are_written"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_eval_scorecard.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_evaluation_dataset_reference.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_committed_dataset_reference_is_generated"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evaluation_dataset_reference.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_evidence_contracts.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "EvidenceContractsTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evidence_contracts.py",
+        "tests/test_llm_evidence_writer.py",
+        "tests/test_writer_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_evidence_projector.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "EvidenceProjectorTest",
+        "_profile",
+        "_plan",
+        "_rubric",
+        "_entity_snapshot",
+        "_entity_row",
+        "_series_item",
+        "_contribution_item",
+        "_period_pair_table_item",
+        "_row"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evidence_projector.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_evidence_validator.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "EvidenceValidatorTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_evidence_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_execution_backed_capability_gap.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "test_capability_gap_runs_public_assistant_and_does_not_become_invalid_replan",
+        "test_capability_gap_runner_projection_passes_existing_case"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_execution_backed_capability_gap.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_execution_backed_replan_eval.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "test_valuable_replan_runs_through_public_assistant_entrypoint",
+        "test_valuable_replan_graders_pass_with_execution_projection",
+        "test_replan_value_and_fidelity_use_state_trace_projection"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_execution_backed_replan_eval.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_execution_fidelity_grader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "_assistant_trace",
+        "test_assistant_fidelity_passes_when_state_response_and_trace_match",
+        "test_tool_call_mismatch_is_hard_failure",
+        "test_applied_replan_requires_replan_span",
+        "test_pending_adapter_is_unimplemented_hard_failure",
+        "test_proactive_count_id_mismatch_is_detected",
+        "test_approval_publication_and_mcp_mismatch_checks"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_execution_fidelity_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_final_reliability_scorecard.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_final_scorecard_separates_execution_and_synthetic_and_writes_safe_artifacts",
+        "test_fidelity_or_hard_failure_forces_scorecard_status_failed"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_final_reliability_scorecard.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_evidence_writer.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "FakeWriterLLM",
+        "LLMEvidenceWriterTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_evidence_writer.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_live_smoke.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_FakeLLMClient",
+        "LLMLiveSmokeTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_live_smoke.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_planner.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "FakePlannerLLM",
+        "LLMPlannerTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_planner.py",
+        "tests/test_llm_planner_canonical.py",
+        "tests/test_llm_planner_eval.py",
+        "tests/test_llm_planner_registry.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_planner_canonical.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "FakePlannerLLM",
+        "LLMPlannerCanonicalTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_planner_canonical.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_planner_eval.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "LLMPlannerEvalTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_planner_eval.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_planner_registry.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "LLMPlannerRegistryTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_planner_registry.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_rewriter.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "FakeRewriteLLM",
+        "LLMRewriterTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_rewriter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_llm_writer_shadow.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ShadowWriterLLM",
+        "LLMWriterShadowTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_llm_writer_shadow.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_boundary_grader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_hidden_mcp_write_is_hard_failure"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_boundary_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_execution_adapter.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "_execute",
+        "_process_lines",
+        "_all_strings",
+        "_assert_response_safe",
+        "test_allowed_tool_protocol_call_and_trace",
+        "test_resource_read_protocol_and_trace",
+        "test_invalid_arguments_are_protocol_rejected_and_sanitized",
+        "test_hidden_tool_is_protocol_rejected_without_side_effects",
+        "test_output_cap_comes_from_formal_server_not_adapter_truncation",
+        "test_tool_list_boundary_matches_read_only_low_risk_registry",
+        "test_fixture_allowlist_and_failure_no_synthetic_fallback"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_instrumentation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_mcp_module_import_does_not_start_server_or_expose_write_tools"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_resources.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "MCPResourcesTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_resources.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_security.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "MCPSecurityTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_security.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_server_integration.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "McpServerIntegrationTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_server_integration.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_mcp_tools.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ToolboxStub",
+        "McpToolsTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_mcp_tools.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_observability_models.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_trace_models_are_json_safe_and_versioned"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_observability_models.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_otel_exporter.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_exporter_failure_is_non_throwing"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_otel_exporter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase10d_entity_ui_chart.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Phase10DEntityUiChartTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase10d_entity_ui_chart.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase10e_single_month_entity_table.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Phase10ESingleMonthEntityTableTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase10e_single_month_entity_table.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase1_acceptance_runtime.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "relationship_state",
+        "InvalidReplanner",
+        "EmptyReplanner",
+        "Phase1AcceptanceRuntimeTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase1_acceptance_runtime.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase2_acceptance.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Phase2AcceptanceTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase2_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase3_acceptance.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Phase3AcceptanceTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase3_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase4_acceptance.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_phase4_acceptance_offline_core_and_redteam"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase4b_closure.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_phase4b_replanning_cases_are_execution_backed_and_use_assistant_adapter"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4b_closure.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase4c_acceptance.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_phase4c_policy_and_dataset_acceptance_contract",
+        "test_evaluation_outputs_are_ignored_and_score_policy_weights_are_bounded"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase4c_cli.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_coverage_report_gate_and_invalid_run_cli",
+        "_write_run",
+        "_row",
+        "test_comparison_emits_case_level_improved_unchanged_regressed_new_and_fixed",
+        "test_comparison_rejects_incompatible_schema"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_cli.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase4c_full_evaluation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_all_suite_runs_43_cases_without_synthetic_fallback_and_emits_artifacts"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase4c_full_evaluation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase9a3_frontend_chart.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Phase9A3FrontendChartTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase9a3_frontend_chart.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_phase9b_demo_readiness.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Phase9BDemoReadinessTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase9b_demo_readiness.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_plan_validator.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "PlanValidatorTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_plan_validator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_proactive_api.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ProactiveApiTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_api.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_proactive_execution_adapter.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "_execute",
+        "_store",
+        "_span_names",
+        "_all_strings",
+        "_assert_no_absolute_paths",
+        "test_new_scan_calls_formal_orchestrator_and_persists_store_records",
+        "test_unchanged_scan_runs_orchestrator_twice_without_duplicate_work",
+        "test_quality_blocker_comes_from_formal_quality_gate",
+        "test_divergence_scan_preserves_relationship_semantics",
+        "test_production_output_is_not_written_and_response_is_path_safe",
+        "test_adapter_failure_is_failed_not_pending_or_synthetic"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_proactive_instrumentation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_approval_validation_still_blocks_missing_identity"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_proactive_orchestrator.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Assistant",
+        "ProactiveOrchestratorTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_orchestrator.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_proactive_revision.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ProactiveRevisionTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_proactive_revision.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_proactive_workflow.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "Context",
+        "Toolbox",
+        "ProactiveCoreTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_phase3_acceptance.py",
+        "tests/test_proactive_workflow.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_publication_execution_adapter.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_case",
+        "_execute",
+        "_load_payload",
+        "_all_strings",
+        "_assert_no_absolute_paths",
+        "test_approved_publish_calls_decide_and_publisher_and_saves_record",
+        "test_pending_publish_is_blocked_by_formal_publisher_with_trace",
+        "test_rejected_publish_is_blocked_without_artifact",
+        "test_superseded_publish_is_blocked_and_v2_is_untouched",
+        "test_hash_mismatch_publish_is_blocked_without_artifact",
+        "test_adapter_failure_is_failed_not_pending_or_synthetic",
+        "test_adapter_ignores_arbitrary_destination_and_uses_temp_approved_root"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_publication_execution_adapter.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_real_data_contract.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "RealDataContractTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_real_data_contract.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_redteam_suite.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_redteam_has_hard_safety_pass_rate"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_redteam_suite.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_regression_gate.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_gate_rejects_hard_safety_failure"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_regression_gate.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_replan_value_grader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_duplicate_replan_fixture_is_scored_as_low_value"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_replan_value_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_replanner_semantic_integration.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ReplannerSemanticIntegrationTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_replanner_semantic_integration.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_router.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "RouterTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_router.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_runtime_instrumentation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_disabled_recorder_does_not_change_runtime",
+        "test_enabled_recorder_parent_child_store"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_runtime_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_semantic_catalog.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "SemanticCatalogTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_semantic_catalog.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_semantic_instrumentation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_semantic_resolution_emits_span_when_trace_active"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_semantic_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_semantic_runtime_integration.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "SemanticRuntimeIntegrationTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_semantic_runtime_integration.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_semantic_validation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "SemanticValidationTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_semantic_validation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_status_apis.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "StatusApiHelperTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_status_apis.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_strict_regression_gate.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "_write_run",
+        "test_strict_gate_accepts_exact_thresholds_and_expected_rejections",
+        "test_strict_gate_rejects_each_hard_threshold"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_strict_regression_gate.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_task_profile.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "TaskProfileTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_task_profile.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_task_requirement_coverage_acceptance.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ScriptedPlannerLLM",
+        "_answer",
+        "TaskRequirementCoverageAcceptanceTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_task_requirement_coverage_acceptance.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_tool_registry.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ToolRegistryTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_tool_registry.py",
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_tool_registry_semantics.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "ToolRegistrySemanticsTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_tool_registry_semantics.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_trace_completeness_grader.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_execution_backed_assistant_requires_agent_span",
+        "_projected_case",
+        "_trace",
+        "test_assistant_policy_requires_stateful_runtime_and_answer_spans",
+        "test_writer_validation_span_is_required_when_writer_validation_expected",
+        "test_adapter_specific_trace_policies",
+        "test_policy_rejection_still_requires_trace_except_fastmcp_lookup"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trace_completeness_grader.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_trace_context.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_context_nests_and_restores"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trace_context.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_trace_normalization.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_normalized_trajectory_excludes_ids_and_timing"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trace_normalization.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_trace_redaction.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_default_capture_hashes_and_redacts_sensitive_values"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trace_redaction.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_trace_store.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_sqlite_trace_store_request_lookup_pagination_and_unicode"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trace_store.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_trajectory_graders.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_forbidden_tool_fails_deterministically"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_trajectory_graders.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_writer_instrumentation.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "test_writer_validation_trace_is_safe"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_writer_instrumentation.py"
+      ]
+    },
+    {
+      "callee": "目前程式中未確認主要 callee",
+      "caller": "目前程式中未確認主要 caller",
+      "path": "tests/test_writer_validator.py",
+      "purpose": "針對特定功能或安全邊界的 regression / acceptance test。",
+      "symbols": [
+        "WriterValidatorTest"
+      ],
+      "sync": "依修改範圍同步 focused tests。",
+      "tests": [
+        "tests/test_writer_validator.py"
+      ]
+    }
+  ]
+}

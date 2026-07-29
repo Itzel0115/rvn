@@ -82,6 +82,8 @@ class PlanValidator:
         ):
             violations.append("entity_metric_lookup_tool_missing")
 
+        violations.extend(_validate_requirement_coverage(canonical, tools))
+
         return _result(violations)
 
 
@@ -109,7 +111,7 @@ def _canonical_view(profile: Any) -> dict[str, Any]:
     time_scope = dict(getattr(profile, "time_scope", {}) or {})
     target_entity = dict(getattr(profile, "target_entity", {}) or {})
     parent_entity = dict(getattr(profile, "parent_entity", {}) or {})
-    metrics = list(getattr(profile, "metrics", []) or [])
+    metrics = list(getattr(profile, "metrics", []) or getattr(profile, "resolved_metric_ids", []) or [])
     metric = getattr(profile, "metric", None) or (metrics[0] if metrics else None)
     return {
         "task_family": str(getattr(profile, "task_family", "") or ""),
@@ -117,7 +119,9 @@ def _canonical_view(profile: Any) -> dict[str, Any]:
         "target_entity": target_entity,
         "parent_entity": parent_entity,
         "metric": _canonical_metric(metric),
+        "metrics": [_canonical_metric(item) for item in metrics if _canonical_metric(item)],
         "chart_type": getattr(profile, "chart_type", None),
+        "task_requirements": dict(getattr(profile, "task_requirements", {}) or {}),
     }
 
 
@@ -133,6 +137,66 @@ def _allowed_tools_from_answer_plan(answer_plan: Any | None) -> set[str]:
 def _base_tool_name(name: str) -> str:
     return str(name).split("(", 1)[0]
 
+
+
+def _validate_requirement_coverage(canonical: dict[str, Any], tools: list[Any]) -> list[str]:
+    requirements = canonical.get("task_requirements") or {}
+    requested_metrics = [str(item) for item in (requirements.get("requested_metrics") or []) if item]
+    requested_operations = {str(item) for item in (requirements.get("requested_operations") or []) if item}
+    if not requested_metrics and not requested_operations:
+        return []
+
+    calls = [(str(getattr(call, "tool_name", "") or ""), dict(getattr(call, "args", {}) or {})) for call in tools]
+    violations: list[str] = []
+    for metric in requested_metrics:
+        if metric in {"risk_score", "health_score"}:
+            if not any(name in {"get_entity_performance_snapshot", "get_anomalies"} for name, _ in calls):
+                violations.append(f"missing_required_metric:{metric}")
+            continue
+        if not any(_call_covers_metric(name, args, metric, canonical) for name, args in calls):
+            violations.append(f"missing_required_metric:{metric}")
+
+    if "anomaly" in requested_operations and not any(name in {"get_anomalies", "get_entity_performance_snapshot"} for name, _ in calls):
+        violations.append("missing_required_operation:anomaly")
+    if "proxy" in requested_operations and not any(name == "get_inventory_turnover_proxy" for name, _ in calls):
+        violations.append("missing_required_operation:proxy")
+    if "counter_evidence" in requested_operations and "inventory_qty" in requested_metrics and not any(_call_covers_metric(name, args, "inventory_qty", canonical) for name, args in calls):
+        violations.append("missing_required_operation:counter_evidence")
+    if "cross_check" in requested_operations:
+        covered = {metric for metric in requested_metrics if any(_call_covers_metric(name, args, metric, canonical) for name, args in calls)}
+        if len(covered) < min(2, len(set(requested_metrics))):
+            violations.append("missing_required_operation:cross_check")
+    if "trend" in requested_operations and canonical.get("task_family") in {"entity_trend_comparison", "metric_relationship_analysis", "risk_scan"}:
+        trend_metrics = {str(args.get("metric")) for name, args in calls if name == "get_entity_trend_comparison" and args.get("metric")}
+        required_trends = [metric for metric in requested_metrics if metric in {"revenue_amount", "inventory_amount", "inventory_qty"}]
+        missing_trends = [metric for metric in required_trends if metric not in trend_metrics and not _metric_covered_by_relationship(metric, calls)]
+        if missing_trends:
+            violations.extend(f"missing_required_trend_metric:{metric}" for metric in missing_trends)
+    if canonical.get("task_family") == "entity_period_pair_table_lookup" and len(set(requested_metrics)) > 1:
+        table_metrics = {str(args.get("metric")) for name, args in calls if name == "get_entity_period_pair_table"}
+        for metric in requested_metrics:
+            if metric in {"revenue_amount", "inventory_amount", "inventory_qty"} and metric not in table_metrics:
+                violations.append(f"missing_required_period_pair_metric:{metric}")
+    return violations
+
+
+def _call_covers_metric(tool_name: str, args: dict[str, Any], metric: str, canonical: dict[str, Any]) -> bool:
+    actual = _canonical_metric(args.get("metric"))
+    if tool_name in {"get_entity_trend_comparison", "get_entity_period_pair_table", "get_entity_month_table", "get_entity_metric_ranking", "get_entity_period_pair_value"}:
+        return actual == metric
+    if tool_name == "get_revenue_inventory_relationship":
+        return metric in {"revenue_amount", "inventory_amount", "revenue_inventory_amount_ratio"}
+    if tool_name == "get_entity_performance_snapshot":
+        return metric in {"revenue_amount", "inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio", "health_score", "risk_score"}
+    if tool_name == "get_inventory_turnover_proxy":
+        return metric in {"inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio"}
+    if tool_name == "get_anomalies":
+        return metric in {"risk_score"}
+    return actual == metric if actual else metric == canonical.get("metric")
+
+
+def _metric_covered_by_relationship(metric: str, calls: list[tuple[str, dict[str, Any]]]) -> bool:
+    return metric in {"revenue_amount", "inventory_amount", "revenue_inventory_amount_ratio"} and any(name == "get_revenue_inventory_relationship" for name, _ in calls)
 
 def _validate_time(canonical: dict[str, Any], tool_name: str, args: dict[str, Any]) -> list[str]:
     violations: list[str] = []
@@ -195,13 +259,18 @@ def _validate_entity(canonical: dict[str, Any], tool_name: str, args: dict[str, 
 
 def _validate_metric(canonical: dict[str, Any], tool_name: str, args: dict[str, Any]) -> list[str]:
     expected = canonical["metric"]
-    if expected is None:
+    expected_metrics = set(canonical.get("metrics") or ([expected] if expected else []))
+    if not expected_metrics:
         return []
     contract = TOOL_REGISTRY.get(tool_name)
     allowed_args = set(getattr(contract, "allowed_args", ()) if contract else ())
     if "metric" not in allowed_args and "metric" not in args:
         return []
     actual = _canonical_metric(args.get("metric"))
+    if canonical.get("task_family") == "metric_relationship_analysis":
+        return [] if actual in expected_metrics else ["metric_mismatch"]
+    if len(expected_metrics) > 1 and actual in expected_metrics:
+        return []
     if actual != expected:
         return ["metric_mismatch"]
     return []

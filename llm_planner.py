@@ -202,6 +202,7 @@ TOOL_SUBSET_PRESETS: dict[str, tuple[str, ...]] = {
     "data_quality": ("get_data_coverage", "get_mapping_summary", "get_tool_capability_matrix"),
     "overview": (
         "get_yoy_mom_breakdown",
+
         "get_contribution_analysis",
         "get_inventory_turnover_proxy",
         "get_root_cause_candidates",

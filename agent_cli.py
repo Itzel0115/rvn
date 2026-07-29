@@ -1,3 +1,5 @@
+"""Agent CLI 入口，與 Web API 共用同一個 PipelineContext 與 Agent。"""
+
 from __future__ import annotations
 
 import argparse
@@ -19,6 +21,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """建立 context、接收問題或 project summary，並輸出既有 CLI 結果。"""
     args = parse_args()
     request_id = configure_logging(OUTPUT_DIR / "logs", debug=args.debug)
     logger = get_logger("agent_cli", request_id)

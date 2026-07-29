@@ -1,0 +1,679 @@
+{
+  "run_id": "20260728T094945Z",
+  "api_url": "http://10.8.35.35:3000/api/ask",
+  "stats": {
+    "total": 2,
+    "pass": 0,
+    "partial": 2,
+    "fail": 0,
+    "llm_plan_direct_valid_rate": 1.0,
+    "validated_repair_rate": 0.0,
+    "replan_success_rate": 0.0,
+    "capability_gap_correctness": 0.0,
+    "paraphrase_stability": 1.0,
+    "average_latency_seconds": 18.642,
+    "p95_latency_seconds": 16.712
+  },
+  "results": [
+    {
+      "case_id": "D7",
+      "variant_of": null,
+      "canonical_task_family": "cross_section_compare",
+      "task_family": "proxy_boundary",
+      "question": "請評估各事業群的庫存週轉狀況。若沒有銷貨成本與平均庫存，請不要稱為正式庫存週轉率；改用現有資料建立 proxy，列出公式、分子、分母、單位與限制，並排除不可比較的資料列。",
+      "request_id": "req-fb05138c",
+      "elapsed_seconds": 20.573,
+      "http_status": 200,
+      "expected_manifest": {
+        "metrics": [
+          "revenue_inventory_amount_ratio"
+        ],
+        "operations": [
+          "proxy",
+          "exclude",
+          "limitations"
+        ],
+        "dimension": "business_group",
+        "proxy_allowed": true
+      },
+      "task_requirement_manifest": {
+        "requested_metrics": [
+          "revenue_inventory_amount_ratio",
+          "inventory_amount"
+        ],
+        "requested_dimensions": [
+          "business_group"
+        ],
+        "time_scope": {
+          "mode": "latest_month",
+          "month": null,
+          "single_month": null,
+          "period_a": null,
+          "period_b": null,
+          "start_month": null,
+          "end_month": null,
+          "recent_n": null,
+          "yoy": false
+        },
+        "top_n": null,
+        "requested_operations": [
+          "compare",
+          "exclude",
+          "proxy",
+          "limitations"
+        ]
+      },
+      "planner_called": true,
+      "planner_valid": true,
+      "planner_fallback_reason": null,
+      "planning_source": "llm_planner",
+      "initial_plan_steps": [
+        {
+          "step_id": "p1-s1",
+          "plan_version": 1,
+          "sequence": 1,
+          "tool_name": "get_inventory_turnover_proxy",
+          "tool_args": {
+            "entity_dimension": "business_group"
+          },
+          "purpose": "supporting evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-28T09:50:05.901124Z",
+          "finished_at": "2026-07-28T09:50:05.915265Z",
+          "result_summary": {
+            "kind": "list",
+            "row_count": 5
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-1"
+          ]
+        }
+      ],
+      "repaired_or_replanned_steps": [],
+      "executed_tools": [
+        "get_inventory_turnover_proxy"
+      ],
+      "step_status": [
+        {
+          "step_id": "p1-s1",
+          "tool": "get_inventory_turnover_proxy",
+          "status": "succeeded",
+          "args": {
+            "entity_dimension": "business_group"
+          }
+        }
+      ],
+      "replan_count": 0,
+      "stop_reason": "completed",
+      "evidence_contracts": [
+        {
+          "role": "primary",
+          "evidence_type": "inventory_turnover_proxy",
+          "source_tool": "get_inventory_turnover_proxy",
+          "summary": "None / None revenue/inventory proxy N/A",
+          "details": {
+            "source_tool": "get_inventory_turnover_proxy",
+            "rows": [
+              {
+                "month": "2026-02",
+                "platform": "4筆電+盈嘉",
+                "group_code": "4筆電+盈嘉",
+                "business_group": "4筆電+盈嘉",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "4筆電+盈嘉",
+                "revenue": 465244030,
+                "inventory_amount": 5519624061.464,
+                "inventory_qty": 13982389,
+                "revenue_inventory_amount_ratio": 0.08428907925961189,
+                "revenue_inventory_qty_ratio": 33.2735722057225,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "2技宸",
+                "group_code": "2技宸",
+                "business_group": "2技宸",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "2技宸",
+                "revenue": 148747685,
+                "inventory_amount": 588729858.76,
+                "inventory_qty": 851291,
+                "revenue_inventory_amount_ratio": 0.2526586392497515,
+                "revenue_inventory_qty_ratio": 174.73188956537777,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "3通路方案",
+                "group_code": "3通路方案",
+                "business_group": "3通路方案",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "3通路方案",
+                "revenue": 7539188847,
+                "inventory_amount": 22830454184.740997,
+                "inventory_qty": 4562626351,
+                "revenue_inventory_amount_ratio": 0.3302250925887802,
+                "revenue_inventory_qty_ratio": 1.6523791928189826,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "1網通+技鋼",
+                "group_code": "1網通+技鋼",
+                "business_group": "1網通+技鋼",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "1網通+技鋼",
+                "revenue": 24670343477,
+                "inventory_amount": 73298408408.75099,
+                "inventory_qty": 1022096976,
+                "revenue_inventory_amount_ratio": 0.3371866817194096,
+                "revenue_inventory_qty_ratio": 43.361454647329616,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "5百事益",
+                "group_code": "5百事益",
+                "business_group": "5百事益",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "5百事益",
+                "revenue": 27649703,
+                "inventory_amount": 19238846.944,
+                "inventory_qty": 7540,
+                "revenue_inventory_amount_ratio": 1.437180880979101,
+                "revenue_inventory_qty_ratio": 3667.0693633952255,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "high",
+                "risk_label": "healthy_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              }
+            ],
+            "evidence_type": "inventory_turnover_proxy"
+          },
+          "display_priority": 5,
+          "reason": "same-month platform revenue/inventory comparison evidence",
+          "domain": "financial"
+        }
+      ],
+      "evidence_coverage_checklist": {
+        "requested_metrics": {
+          "revenue_inventory_amount_ratio": true,
+          "inventory_amount": true
+        },
+        "requested_operations": {
+          "compare": false,
+          "exclude": true,
+          "proxy": true,
+          "limitations": true
+        },
+        "evidence_count": 1
+      },
+      "entity_sets": [
+        {
+          "source_tool": "get_inventory_turnover_proxy",
+          "metric": null,
+          "entity_dimension": null,
+          "count": 5,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸",
+            "3通路方案",
+            "4筆電+盈嘉",
+            "5百事益"
+          ]
+        }
+      ],
+      "final_answer": "Request ID: req-fb05138c\n\n結論：目前庫存風險需以營收/庫存關係、庫存 proxy 與異常訊號交叉判斷；4筆電+盈嘉 是優先檢查對象。\n\n重點觀測：proxy 公式：revenue / inventory_amount；分子=revenue，分母=inventory_amount，單位=ratio。\n\n限制說明：此為營收與庫存資料推導的 proxy，非正式周轉指標。 營收/庫存 proxy 是描述性替代指標；負營收或非正分母列為 non-comparable，不納入正常效率排名。\n\nEvidence:\n- financial: evidence item captured\n\nTools used:\n- get_inventory_turnover_proxy\n\nData scope:\n- latest_month=2026-02\n\nLimitations:\n- 此為營收與庫存資料推導的 proxy，非正式周轉指標。\n\nSuggested follow-ups:\n- 要不要比較其他事業群或產品線？\n- 要不要查看近三個月的趨勢？\n- 要不要產生對應圖表？",
+      "automatic_acceptance_checks": [
+        {
+          "name": "http_200",
+          "ok": true,
+          "detail": "200"
+        },
+        {
+          "name": "no_internal_error_code",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "completed_requires_evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no_wrong_na_for_named_entity",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:revenue_inventory_amount_ratio",
+          "ok": true,
+          "detail": "['revenue_inventory_amount_ratio', 'inventory_amount']"
+        },
+        {
+          "name": "evidence_metric:revenue_inventory_amount_ratio",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_operation:proxy",
+          "ok": true,
+          "detail": "['compare', 'exclude', 'proxy', 'limitations']"
+        },
+        {
+          "name": "manifest_operation:exclude",
+          "ok": true,
+          "detail": "['compare', 'exclude', 'proxy', 'limitations']"
+        },
+        {
+          "name": "manifest_operation:limitations",
+          "ok": true,
+          "detail": "['compare', 'exclude', 'proxy', 'limitations']"
+        },
+        {
+          "name": "manifest_dimension",
+          "ok": true,
+          "detail": "['business_group']"
+        },
+        {
+          "name": "evidence_dimension",
+          "ok": false,
+          "detail": "business_group"
+        },
+        {
+          "name": "proxy_tool_used",
+          "ok": true,
+          "detail": "['get_inventory_turnover_proxy']"
+        },
+        {
+          "name": "complex_has_planning_or_repair",
+          "ok": true,
+          "detail": "llm_planner"
+        }
+      ],
+      "verdict": "PARTIAL",
+      "failure_reason": "evidence_dimension=business_group",
+      "response_error": null
+    },
+    {
+      "case_id": "D7-P1",
+      "variant_of": "D7",
+      "canonical_task_family": "cross_section_compare",
+      "task_family": "proxy_boundary",
+      "question": "請看各事業群庫存週轉表現；若缺 COGS 與平均庫存，不要叫正式週轉率，請用現有欄位做 proxy，並列清楚公式、分子分母、單位、不可比較列與限制。",
+      "request_id": "req-ac2fb30f",
+      "elapsed_seconds": 16.712,
+      "http_status": 200,
+      "expected_manifest": {
+        "metrics": [
+          "revenue_inventory_amount_ratio"
+        ],
+        "operations": [
+          "proxy",
+          "exclude",
+          "limitations"
+        ],
+        "dimension": "business_group",
+        "proxy_allowed": true
+      },
+      "task_requirement_manifest": {
+        "requested_metrics": [
+          "revenue_inventory_amount_ratio",
+          "inventory_amount"
+        ],
+        "requested_dimensions": [
+          "business_group"
+        ],
+        "time_scope": {
+          "mode": "latest_month",
+          "month": null,
+          "single_month": null,
+          "period_a": null,
+          "period_b": null,
+          "start_month": null,
+          "end_month": null,
+          "recent_n": null,
+          "yoy": false
+        },
+        "top_n": null,
+        "requested_operations": [
+          "compare",
+          "exclude",
+          "proxy",
+          "limitations"
+        ]
+      },
+      "planner_called": true,
+      "planner_valid": true,
+      "planner_fallback_reason": null,
+      "planning_source": "llm_planner",
+      "initial_plan_steps": [
+        {
+          "step_id": "p1-s1",
+          "plan_version": 1,
+          "sequence": 1,
+          "tool_name": "get_inventory_turnover_proxy",
+          "tool_args": {
+            "entity_dimension": "business_group"
+          },
+          "purpose": "supporting evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-28T09:50:22.617075Z",
+          "finished_at": "2026-07-28T09:50:22.628930Z",
+          "result_summary": {
+            "kind": "list",
+            "row_count": 5
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-1"
+          ]
+        }
+      ],
+      "repaired_or_replanned_steps": [],
+      "executed_tools": [
+        "get_inventory_turnover_proxy"
+      ],
+      "step_status": [
+        {
+          "step_id": "p1-s1",
+          "tool": "get_inventory_turnover_proxy",
+          "status": "succeeded",
+          "args": {
+            "entity_dimension": "business_group"
+          }
+        }
+      ],
+      "replan_count": 0,
+      "stop_reason": "completed",
+      "evidence_contracts": [
+        {
+          "role": "primary",
+          "evidence_type": "inventory_turnover_proxy",
+          "source_tool": "get_inventory_turnover_proxy",
+          "summary": "None / None revenue/inventory proxy N/A",
+          "details": {
+            "source_tool": "get_inventory_turnover_proxy",
+            "rows": [
+              {
+                "month": "2026-02",
+                "platform": "4筆電+盈嘉",
+                "group_code": "4筆電+盈嘉",
+                "business_group": "4筆電+盈嘉",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "4筆電+盈嘉",
+                "revenue": 465244030,
+                "inventory_amount": 5519624061.464,
+                "inventory_qty": 13982389,
+                "revenue_inventory_amount_ratio": 0.08428907925961189,
+                "revenue_inventory_qty_ratio": 33.2735722057225,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "2技宸",
+                "group_code": "2技宸",
+                "business_group": "2技宸",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "2技宸",
+                "revenue": 148747685,
+                "inventory_amount": 588729858.76,
+                "inventory_qty": 851291,
+                "revenue_inventory_amount_ratio": 0.2526586392497515,
+                "revenue_inventory_qty_ratio": 174.73188956537777,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "3通路方案",
+                "group_code": "3通路方案",
+                "business_group": "3通路方案",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "3通路方案",
+                "revenue": 7539188847,
+                "inventory_amount": 22830454184.740997,
+                "inventory_qty": 4562626351,
+                "revenue_inventory_amount_ratio": 0.3302250925887802,
+                "revenue_inventory_qty_ratio": 1.6523791928189826,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "1網通+技鋼",
+                "group_code": "1網通+技鋼",
+                "business_group": "1網通+技鋼",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "1網通+技鋼",
+                "revenue": 24670343477,
+                "inventory_amount": 73298408408.75099,
+                "inventory_qty": 1022096976,
+                "revenue_inventory_amount_ratio": 0.3371866817194096,
+                "revenue_inventory_qty_ratio": 43.361454647329616,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "low",
+                "risk_label": "low_efficiency_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              },
+              {
+                "month": "2026-02",
+                "platform": "5百事益",
+                "group_code": "5百事益",
+                "business_group": "5百事益",
+                "product_line_5": null,
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "5百事益",
+                "revenue": 27649703,
+                "inventory_amount": 19238846.944,
+                "inventory_qty": 7540,
+                "revenue_inventory_amount_ratio": 1.437180880979101,
+                "revenue_inventory_qty_ratio": 3667.0693633952255,
+                "proxy_formula": "revenue / inventory_amount",
+                "proxy_numerator": "revenue",
+                "proxy_denominator": "inventory_amount",
+                "proxy_unit": "ratio",
+                "is_comparable": true,
+                "non_comparable_reason": null,
+                "efficiency_level": "high",
+                "risk_label": "healthy_proxy",
+                "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。"
+              }
+            ],
+            "evidence_type": "inventory_turnover_proxy"
+          },
+          "display_priority": 5,
+          "reason": "same-month platform revenue/inventory comparison evidence",
+          "domain": "financial"
+        }
+      ],
+      "evidence_coverage_checklist": {
+        "requested_metrics": {
+          "revenue_inventory_amount_ratio": true,
+          "inventory_amount": true
+        },
+        "requested_operations": {
+          "compare": false,
+          "exclude": true,
+          "proxy": true,
+          "limitations": true
+        },
+        "evidence_count": 1
+      },
+      "entity_sets": [
+        {
+          "source_tool": "get_inventory_turnover_proxy",
+          "metric": null,
+          "entity_dimension": null,
+          "count": 5,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸",
+            "3通路方案",
+            "4筆電+盈嘉",
+            "5百事益"
+          ]
+        }
+      ],
+      "final_answer": "Request ID: req-ac2fb30f\n\n結論：目前庫存風險需以營收/庫存關係、庫存 proxy 與異常訊號交叉判斷；4筆電+盈嘉 是優先檢查對象。\n\n重點觀測：proxy 公式：revenue / inventory_amount；分子=revenue，分母=inventory_amount，單位=ratio。\n\n限制說明：此為營收與庫存資料推導的 proxy，非正式周轉指標。 營收/庫存 proxy 是描述性替代指標；負營收或非正分母列為 non-comparable，不納入正常效率排名。\n\nEvidence:\n- financial: evidence item captured\n\nTools used:\n- get_inventory_turnover_proxy\n\nData scope:\n- latest_month=2026-02\n\nLimitations:\n- 此為營收與庫存資料推導的 proxy，非正式周轉指標。\n\nSuggested follow-ups:\n- 要不要比較其他事業群或產品線？\n- 要不要查看近三個月的趨勢？\n- 要不要產生對應圖表？",
+      "automatic_acceptance_checks": [
+        {
+          "name": "http_200",
+          "ok": true,
+          "detail": "200"
+        },
+        {
+          "name": "no_internal_error_code",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "completed_requires_evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no_wrong_na_for_named_entity",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:revenue_inventory_amount_ratio",
+          "ok": true,
+          "detail": "['revenue_inventory_amount_ratio', 'inventory_amount']"
+        },
+        {
+          "name": "evidence_metric:revenue_inventory_amount_ratio",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_operation:proxy",
+          "ok": true,
+          "detail": "['compare', 'exclude', 'proxy', 'limitations']"
+        },
+        {
+          "name": "manifest_operation:exclude",
+          "ok": true,
+          "detail": "['compare', 'exclude', 'proxy', 'limitations']"
+        },
+        {
+          "name": "manifest_operation:limitations",
+          "ok": true,
+          "detail": "['compare', 'exclude', 'proxy', 'limitations']"
+        },
+        {
+          "name": "manifest_dimension",
+          "ok": true,
+          "detail": "['business_group']"
+        },
+        {
+          "name": "evidence_dimension",
+          "ok": false,
+          "detail": "business_group"
+        },
+        {
+          "name": "proxy_tool_used",
+          "ok": true,
+          "detail": "['get_inventory_turnover_proxy']"
+        },
+        {
+          "name": "complex_has_planning_or_repair",
+          "ok": true,
+          "detail": "llm_planner"
+        }
+      ],
+      "verdict": "PARTIAL",
+      "failure_reason": "evidence_dimension=business_group",
+      "response_error": null
+    }
+  ]
+}

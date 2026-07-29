@@ -32,6 +32,25 @@ class DeterministicReplanner:
             failed_primary = any(step.tool_name in requirement.allowed_primary_tools and step.status.value in {"empty", "failed"} for step in state.steps)
             candidates = list(requirement.allowed_primary_tools if failed_primary else requirement.allowed_supporting_tools)
         steps: list[PlanStep] = []
+        for missing in missing_requirements:
+            repair = _repair_for_missing_requirement(str(missing), state.canonical_task)
+            if repair is None:
+                continue
+            tool_name, args = repair
+            if tool_name not in TOOL_REGISTRY or (tool_name, _args_key(args)) in previous:
+                continue
+            sequence = len(state.steps) + len(steps) + 1
+            steps.append(PlanStep(
+                step_id=f"p{state.current_plan_version + 1}-s{sequence}",
+                plan_version=state.current_plan_version + 1,
+                sequence=sequence,
+                tool_name=tool_name,
+                tool_args=args,
+                purpose=f"replan evidence repair: {missing}",
+            ))
+        if steps:
+            reason = "missing_multimetric_trend_evidence" if any(str(item).startswith("trend_metric:") for item in missing_requirements) else "missing_evidence"
+            return ReplanProposal(steps=steps, reason=reason)
         for raw_name in candidates:
             tool_name = str(raw_name).split("(", 1)[0]
             if tool_name not in TOOL_REGISTRY:
@@ -50,6 +69,48 @@ class DeterministicReplanner:
             ))
         return ReplanProposal(steps=steps, reason="missing_evidence" if steps else "no_legal_non_duplicate_repair")
 
+
+
+def _repair_for_missing_requirement(missing: str, canonical: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
+    task_family = str(canonical.get("task_family") or "")
+    if missing.startswith("trend_metric:"):
+        metric = missing.split(":", 1)[1]
+        return _metric_repair_tool(task_family, metric, canonical, prefer_trend=True)
+    if missing.startswith("metric:"):
+        metric = missing.split(":", 1)[1]
+        return _metric_repair_tool(task_family, metric, canonical, prefer_trend=False)
+    if missing.startswith("operation:anomaly"):
+        return "get_anomalies", _args_for_tool("get_anomalies", canonical)
+    if missing.startswith("operation:proxy"):
+        return "get_inventory_turnover_proxy", _args_for_tool("get_inventory_turnover_proxy", canonical)
+    if missing.startswith("operation:counter_evidence") and "inventory_qty" in (canonical.get("task_requirements") or {}).get("requested_metrics", []):
+        return _metric_repair_tool(task_family, "inventory_qty", canonical, prefer_trend=True)
+    return None
+
+
+def _metric_repair_tool(task_family: str, metric: str, canonical: dict[str, Any], *, prefer_trend: bool) -> tuple[str, dict[str, Any]] | None:
+    if metric in {"risk_score"}:
+        return "get_anomalies", _args_for_tool("get_anomalies", canonical)
+    if metric in {"health_score"}:
+        return "get_entity_performance_snapshot", _args_for_tool("get_entity_performance_snapshot", canonical)
+    if task_family == "entity_period_pair_table_lookup":
+        tool_name = "get_entity_period_pair_table"
+    elif task_family == "period_pair_compare":
+        tool_name = "get_period_pair_metric_comparison"
+    elif task_family == "overall_trend_analysis":
+        tool_name = "get_overall_time_series"
+    elif prefer_trend or task_family in {"entity_trend_comparison", "metric_relationship_analysis", "risk_scan"}:
+        tool_name = "get_entity_trend_comparison"
+    elif task_family in {"risk_scan", "performance_assessment"} and metric in {"inventory_amount", "inventory_qty", "revenue_inventory_amount_ratio"}:
+        tool_name = "get_inventory_turnover_proxy"
+    else:
+        tool_name = "get_entity_trend_comparison"
+    if tool_name not in TOOL_REGISTRY:
+        return None
+    args = _args_for_tool(tool_name, canonical)
+    if "metric" in TOOL_REGISTRY[tool_name].allowed_args:
+        args["metric"] = "revenue" if tool_name in {"get_entity_period_pair_comparison", "get_period_pair_metric_comparison"} and metric == "revenue_amount" else metric
+    return tool_name, args
 
 def _args_key(args: dict[str, Any]) -> str:
     return repr(sorted(args.items()))
@@ -77,6 +138,9 @@ def _args_for_tool(tool_name: str, canonical: dict[str, Any]) -> dict[str, Any]:
     for key in ("month", "period_a", "period_b", "start_month", "end_month", "recent_n"):
         if key in allowed and time_scope.get(key) is not None:
             args[key] = time_scope[key]
+    requirements = canonical.get("task_requirements") or {}
+    if "top_n" in allowed and requirements.get("top_n") is not None:
+        args["top_n"] = requirements.get("top_n")
     if "parent_filter" in allowed and parent.get("value"):
         args["parent_filter"] = {str(parent.get("dimension") or "business_group"): parent["value"]}
     return args

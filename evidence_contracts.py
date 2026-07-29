@@ -126,6 +126,8 @@ class EvidenceContractBuilder:
             return self._normalize_entity_metric_ranking(output_tool, output, canonical_task_profile, evidence_index)
         if output_tool == "get_entity_time_series":
             return self._normalize_entity_time_series(output_tool, output, canonical_task_profile, evidence_index)
+        if output_tool == "get_entity_trend_comparison":
+            return self._normalize_entity_trend_comparison(output_tool, output, canonical_task_profile, evidence_index)
         if output_tool == "get_overall_time_series":
             return self._normalize_overall_time_series(output_tool, output, canonical_task_profile, evidence_index)
         if output_tool in PERIOD_PAIR_TOOLS:
@@ -138,6 +140,10 @@ class EvidenceContractBuilder:
             return self._normalize_relationship_analysis(output_tool, output, canonical_task_profile, evidence_index)
         if output_tool == "get_entity_contribution_analysis":
             return self._normalize_contribution_analysis(output_tool, output, canonical_task_profile, evidence_index)
+        if output_tool == "get_inventory_turnover_proxy":
+            return self._normalize_inventory_turnover_proxy(output_tool, output, canonical_task_profile, evidence_index)
+        if output_tool == "get_anomalies":
+            return self._normalize_anomaly(output_tool, output, canonical_task_profile, evidence_index)
         if output_tool in DATA_QUALITY_TOOLS:
             return self._normalize_data_quality(output_tool, output, canonical_task_profile, evidence_index)
         return self._unsupported_tool_output(output_tool, output, canonical_task_profile, evidence_index)
@@ -168,6 +174,9 @@ class EvidenceContractBuilder:
     def _normalize_entity_time_series(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
         return self._contract("entity_time_series", tool_name, output, profile, index)
 
+    def _normalize_entity_trend_comparison(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
+        return self._contract("entity_trend_comparison", tool_name, output, profile, index)
+
     def _normalize_overall_time_series(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
         return self._contract("overall_time_series", tool_name, output, profile, index)
 
@@ -191,6 +200,12 @@ class EvidenceContractBuilder:
 
     def _normalize_contribution_analysis(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
         return self._contract("contribution_analysis", tool_name, output, profile, index)
+
+    def _normalize_inventory_turnover_proxy(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
+        return self._contract("inventory_turnover_proxy", tool_name, output, profile, index, metric="revenue_inventory_amount_ratio")
+
+    def _normalize_anomaly(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
+        return self._contract("anomaly", tool_name, output, profile, index, metric="risk_score")
 
     def _normalize_chart_payload(self, tool_name: str, output: Any, profile: Any, index: int) -> EvidenceContract:
         rows = _rows(output)
@@ -238,7 +253,9 @@ class EvidenceContractBuilder:
         limitations: list[str] | None = None,
         metric: str | None | object = ...,
     ) -> EvidenceContract:
+        normalized_rows = list(rows if rows is not None else _rows(output))
         output_dict = output if isinstance(output, dict) else {}
+        output_dict = _augment_scope_from_rows(output_dict, normalized_rows)
         resolved_metric = _metric(output_dict, profile) if metric is ... else metric
         metric_label = _metric_label(output_dict, resolved_metric)
         return EvidenceContract(
@@ -250,7 +267,7 @@ class EvidenceContractBuilder:
             entity_scope=_entity_scope(output_dict, profile),
             metric=resolved_metric,
             metric_label=metric_label,
-            rows=list(rows if rows is not None else _rows(output)),
+            rows=normalized_rows,
             summary=dict(summary if summary is not None else _summary(output)),
             limitations=list(dict.fromkeys([*(limitations or []), *_limitations(output)])),
             data_quality_flags=_data_quality_flags(output),
@@ -326,6 +343,19 @@ def _time_scope(output: dict[str, Any], profile: Any) -> dict[str, Any]:
     }
 
 
+def _augment_scope_from_rows(output: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return output
+    scoped = dict(output)
+    first = next((row for row in rows if isinstance(row, dict)), None)
+    if not first:
+        return scoped
+    for key in ("entity_dimension", "entity_label", "entity_value", "month", "latest_month"):
+        if scoped.get(key) is None and first.get(key) is not None:
+            scoped[key] = first.get(key)
+    return scoped
+
+
 def _entity_scope(output: dict[str, Any], profile: Any) -> dict[str, Any]:
     target = dict(_get(profile, "target_entity") or {})
     parent = dict(_get(profile, "parent_entity") or {})
@@ -345,13 +375,15 @@ def _entity_scope(output: dict[str, Any], profile: Any) -> dict[str, Any]:
 
 
 def _metric(output: dict[str, Any], profile: Any) -> str | None:
-    canonical = _get(profile, "metric")
-    if canonical:
-        return str(canonical)
     metric = output.get("metric")
     if metric == "revenue":
         return "revenue_amount"
-    return str(metric) if metric is not None else None
+    if metric is not None:
+        return str(metric)
+    canonical = _get(profile, "metric")
+    if canonical:
+        return str(canonical)
+    return None
 
 
 def _metric_label(output: dict[str, Any], metric: str | None) -> str | None:
@@ -360,10 +392,25 @@ def _metric_label(output: dict[str, Any], metric: str | None) -> str | None:
 
 def _rows(output: Any) -> list[dict[str, Any]]:
     if isinstance(output, list):
-        return [dict(item) for item in output if isinstance(item, dict)]
+        return [_normalize_row_schema(dict(item)) for item in output if isinstance(item, dict)]
     if isinstance(output, dict) and isinstance(output.get("rows"), list):
-        return [dict(item) for item in output.get("rows") or [] if isinstance(item, dict)]
+        return [_normalize_row_schema(dict(item)) for item in output.get("rows") or [] if isinstance(item, dict)]
     return []
+
+
+def _normalize_row_schema(row: dict[str, Any]) -> dict[str, Any]:
+    entity_value = row.get("entity_value") or row.get("business_group") or row.get("platform") or row.get("entity") or row.get("group_code")
+    if entity_value is not None and row.get("entity_value") is None:
+        row["entity_value"] = entity_value
+    month = row.get("month") or row.get("latest_month") or row.get("月份")
+    if month is not None:
+        row.setdefault("month", month)
+        row.setdefault("latest_month", month)
+    if row.get("inventory_amount_change") is None and row.get("inventory_change") is not None:
+        row["inventory_amount_change"] = row.get("inventory_change")
+    if row.get("revenue_amount_change") is None and row.get("revenue_change") is not None:
+        row["revenue_amount_change"] = row.get("revenue_change")
+    return row
 
 
 def _summary(output: Any) -> dict[str, Any]:

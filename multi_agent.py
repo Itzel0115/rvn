@@ -1,4 +1,12 @@
-﻿from __future__ import annotations
+﻿"""負責 planning、deterministic tools、evidence 與回答組裝的 Agent orchestration layer.
+
+Backend 或 CLI 提供問題後，本模組負責 routing、選擇 domain agent、執行
+deterministic tools，並在設定允許時使用 LLM 做 planning 或文字整理。
+Tool results 會累積為 evidence，再交由 validator/answer contract 限制回答範圍；
+這裡不直接讀 Excel，也不修改來源資料。
+"""
+
+from __future__ import annotations
 
 import json
 import os
@@ -59,6 +67,7 @@ class RoutingDecision:
     kpi_lenses: list[str] = field(default_factory=list)
     answer_strategy: str | None = None
     planned_tools: list[str] = field(default_factory=list)
+    planned_tool_calls: list[dict[str, Any]] = field(default_factory=list)
     planning_source: str | None = None
     requires_limitations: bool = False
     parent_filter: dict[str, Any] = field(default_factory=dict)
@@ -91,6 +100,7 @@ class BaseDomainAgent:
         self.logger = get_logger(self.__class__.__name__, request_id, domain=self.domain_name)
 
     def handle(self, question: str, routing: RoutingDecision) -> DomainResult:
+        """依 routing 決定 deterministic 或 LLM tool selection，再回傳 domain result。"""
         self.logger.info("Domain agent started task=%s", routing.question)
         if self._use_deterministic_tools(routing):
             selected_tools = self._deterministic_selected_tools(routing)
@@ -1593,6 +1603,7 @@ class AssociationAgent(BaseDomainAgent):
             used_tools=selected_tools,
         )
 class MultiAgentAssistant:
+    """協調 planner、domain agents、tools、evidence validation 與最終回答。"""
     # -------------------------------------------------------------------------
     # Orchestrator Setup
     # -------------------------------------------------------------------------
@@ -2012,6 +2023,7 @@ class MultiAgentAssistant:
     #   6. Logging
     # -------------------------------------------------------------------------
     def answer(self, question: str) -> dict[str, Any]:
+        """處理單一問題，保留既有 answer contract 與 evidence-friendly output schema。"""
         self.logger.info("Received question: %s", question)
         direct_listing_response = self._maybe_answer_year_entity_listing(question)
         if direct_listing_response is not None:
@@ -2122,12 +2134,21 @@ class MultiAgentAssistant:
     ) -> RoutingDecision:
         deterministic_tool_count = len(list(answer_plan.primary_tools or []) + list(answer_plan.supporting_tools or []))
         if not self.use_llm_planner:
+            complex_requirements = canonical_task_profile.task_requirements or {}
+            requires_validated_repair = bool(
+                complex_requirements.get("requires_named_selection")
+                or complex_requirements.get("requires_counter_evidence")
+                or complex_requirements.get("requires_recommendation")
+                or len(complex_requirements.get("requested_metrics") or []) >= 3
+            )
+            fallback_reason = "disabled_complex_validated_repair" if requires_validated_repair else "disabled"
             self.logger.info(
-                "llm_planner.trace canonical_task_family=%s planner_called=false planner_valid=false planner_fallback_reason=disabled planner_tool_count=0 deterministic_tool_count=%s",
+                "llm_planner.trace canonical_task_family=%s planner_called=false planner_valid=false planner_fallback_reason=%s planner_tool_count=0 deterministic_tool_count=%s",
                 canonical_task_profile.task_family,
+                fallback_reason,
                 deterministic_tool_count,
             )
-            routing.planning_source = "deterministic"
+            routing.planning_source = "validated_deterministic_repair" if requires_validated_repair else "deterministic"
             return routing
 
         allowed_tools = build_allowed_tool_names_for_task_family(canonical_task_profile.task_family)
@@ -2170,7 +2191,6 @@ class MultiAgentAssistant:
             planning.error,
         )
         routing.planning_source = "rejected_llm_then_deterministic"
-        routing.warnings = list(dict.fromkeys([*routing.warnings, f"llm_plan_rejected:{fallback_reason}"]))
         return routing
 
     def _try_llm_tool_plan(
@@ -2257,6 +2277,7 @@ class MultiAgentAssistant:
             kpi_lenses=list(fallback_routing.kpi_lenses),
             answer_strategy=fallback_routing.answer_strategy,
             planned_tools=self.llm_planner.materialize_tools(plan),
+            planned_tool_calls=[asdict(call) for call in plan.tools],
             planning_source="llm_planner",
             requires_limitations=fallback_routing.requires_limitations or plan.requires_limitations,
             parent_filter=dict(getattr(fallback_routing, "parent_filter", {}) or {}),

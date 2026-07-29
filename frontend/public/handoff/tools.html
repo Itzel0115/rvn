@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tool 工具箱｜Revenue Intelligence POC</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="assets/js/app.js"></script>
+</head>
+<body data-page="tools.html">
+  <header class="topbar">
+    <a class="brand" href="./"><span>Revenue Intelligence POC</span><small>Handoff</small></a>
+    <button class="nav-toggle" type="button" aria-label="開關全站導覽">☰</button>
+    <nav class="main-nav" aria-label="全站導覽"><a class="" href="./">首頁</a>
+<a class="" href="overview.html">系統總覽</a>
+<a class="" href="question-journey.html">一題怎麼跑</a>
+<a class="active" href="tools.html">Tool 工具箱</a>
+<a class="" href="architecture.html">架構與程式地圖</a>
+<a class="" href="operations.html">展示與操作</a>
+<a class="" href="maintenance.html">新增與修改</a>
+<a class="" href="appendix.html">附錄</a></nav>
+    <button class="theme-toggle" type="button" aria-label="切換日間或夜間模式" data-theme-toggle>日間</button>
+  </header>
+  <main class="page-shell">
+    <section class="page-hero">
+      <p class="eyebrow">新人可直接閱讀的交接網站</p>
+      <h1>Tool 工具箱</h1>
+      <p>完整盤點目前正式註冊工具、參數、evidence、MCP exposure 與測試。</p>
+    </section>
+    <div class="content-layout" data-toc-layout>
+      <aside class="page-toc" aria-label="本頁導覽" data-page-toc>
+        <div class="page-toc-header">
+          <strong>本頁導覽</strong>
+          <button class="toc-collapse-button" type="button" aria-label="收起本頁導覽" aria-expanded="true" data-toc-collapse>收起導覽 ◀</button>
+        </div>
+        <nav class="page-toc-links" aria-label="本頁章節"><a class="page-toc-link" href="#definition">白話定義</a><a class="page-toc-link" href="#stats">統計</a><a class="page-toc-link" href="#catalog">完整清單</a><a class="page-toc-link" href="#contract">ToolContract</a><a class="page-toc-link" href="#call">Tool Call</a><a class="page-toc-link" href="#mcp">MCP</a><a class="page-toc-link" href="#add">新增七步</a></nav>
+      </aside>
+      <button class="toc-expand-button" type="button" aria-label="展開本頁導覽" aria-expanded="false" data-toc-expand>▶</button>
+      <button class="toc-mobile-button" type="button" aria-label="開啟本頁導覽" aria-expanded="false" data-toc-mobile-open>本頁導覽</button>
+      <div class="toc-backdrop" data-toc-backdrop hidden></div>
+      <article class="content">
+        
+<section id="definition"><h2>Tool 的白話定義</h2>
+  <div class="term-grid"><div><strong>Agent</strong><p>決定現在該做什麼。</p></div><div><strong>Tool</strong><p>執行一次明確、受控的查詢或計算。</p></div><div><strong>Tool Registry</strong><p>規定 Tool 可以接受什麼、輸出什麼，以及能否對外開放。</p></div></div>
+</section>
+<section id="stats"><h2>Tool 統計</h2>
+<div class="stats-grid"><div class="stat"><strong>30</strong><span>正式註冊 Tool 總數</span><p>來自 TOOL_REGISTRY</p></div><div class="stat"><strong>24</strong><span>內部 Tool 數</span><p>mcp_exposable=false</p></div><div class="stat"><strong>6</strong><span>MCP 可用 Tool 數</span><p>registry 標示可公開</p></div><div class="stat"><strong>30</strong><span>read-only Tool 數</span><p>目前全部 read-only</p></div><div class="stat"><strong>6</strong><span>MCP server registered</span><p>server.py 實際包裝</p></div></div>
+</section>
+<section id="catalog"><h2>完整工具清單</h2>
+  <div class="filters">
+    <input id="toolSearch" type="search" placeholder="搜尋 Tool 名稱、用途、限制">
+    <select id="familyFilter"><option value="">全部 task family</option><option value="chart_request">圖表產生 (2)</option><option value="contribution_analysis">貢獻分析 (1)</option><option value="cross_section_compare">同月橫向比較 (5)</option><option value="data_quality">資料品質 (3)</option><option value="diagnosis">診斷候選 (7)</option><option value="entity_month_table_lookup">單月實體表格 (1)</option><option value="entity_multi_month_table_lookup">多月實體表格 (1)</option><option value="entity_period_pair_metric_lookup">單一實體兩期間數值 (1)</option><option value="entity_period_pair_table_lookup">兩期間實體表格 (2)</option><option value="entity_ranking">排序排名 (4)</option><option value="entity_time_series">單一實體時間序列 (1)</option><option value="entity_trend_comparison">實體趨勢比較 (3)</option><option value="forecast_unsupported">預測不支援 (3)</option><option value="latest_month_entity_summary">最新月份實體摘要 (2)</option><option value="metric_lookup">單一數值查詢 (2)</option><option value="metric_relationship_analysis">營收與庫存關係 (5)</option><option value="overall_trend_analysis">整體趨勢 (1)</option><option value="parent_child_drilldown">事業群到產品線鑽取 (1)</option><option value="performance_assessment">表現評估 (6)</option><option value="period_pair_compare">兩期間比較 (2)</option><option value="risk_scan">風險訊號掃描 (6)</option><option value="time_compare">時間比較 (1)</option><option value="trend_analysis">trend_analysis (2)</option></select>
+    <select id="metricFilter"><option value="">全部 metric</option><option value="anomalies">anomalies (1)</option><option value="health_score">health_score (1)</option><option value="inventory">inventory (1)</option><option value="inventory_amount">inventory_amount (16)</option><option value="inventory_amount_trend">inventory_amount_trend (1)</option><option value="inventory_qty">inventory_qty (16)</option><option value="inventory_qty_trend">inventory_qty_trend (1)</option><option value="platform_monthly">platform_monthly (1)</option><option value="revenue">revenue (7)</option><option value="revenue_amount">revenue_amount (10)</option><option value="revenue_inventory_amount_ratio">revenue_inventory_amount_ratio (7)</option><option value="revenue_trend">revenue_trend (1)</option><option value="risk_score">risk_score (1)</option><option value="未限制">未限制 (11)</option></select>
+    <select id="evidenceFilter"><option value="">全部 evidence type</option><option value="anomaly">anomaly (1)</option><option value="chart_payload">chart_payload (1)</option><option value="chart_table">chart_table (1)</option><option value="contribution_analysis">contribution_analysis (1)</option><option value="data_coverage">data_coverage (1)</option><option value="entity_contribution_analysis">entity_contribution_analysis (1)</option><option value="entity_cross_section_comparison">entity_cross_section_comparison (1)</option><option value="entity_metric_lookup">entity_metric_lookup (1)</option><option value="entity_metric_ranking">entity_metric_ranking (1)</option><option value="entity_month_table">entity_month_table (1)</option><option value="entity_multi_month_table">entity_multi_month_table (1)</option><option value="entity_performance_snapshot">entity_performance_snapshot (1)</option><option value="entity_period_pair_comparison">entity_period_pair_comparison (1)</option><option value="entity_period_pair_table">entity_period_pair_table (1)</option><option value="entity_period_pair_value">entity_period_pair_value (1)</option><option value="entity_time_series">entity_time_series (1)</option><option value="entity_trend_comparison">entity_trend_comparison (1)</option><option value="group_ranking">group_ranking (1)</option><option value="inventory_turnover_proxy">inventory_turnover_proxy (1)</option><option value="mapping_summary">mapping_summary (1)</option><option value="metric_relationship">metric_relationship (1)</option><option value="metric_table">metric_table (1)</option><option value="overall_time_series">overall_time_series (1)</option><option value="period_pair_metric_comparison">period_pair_metric_comparison (1)</option><option value="platform_performance_snapshot">platform_performance_snapshot (1)</option><option value="platform_ranking">platform_ranking (1)</option><option value="platform_ratio">platform_ratio (1)</option><option value="root_cause_candidate">root_cause_candidate (1)</option><option value="tool_capability_matrix">tool_capability_matrix (1)</option><option value="yoy_mom_breakdown">yoy_mom_breakdown (1)</option></select>
+    <label><input id="mcpOnly" type="checkbox"> 只顯示 MCP Tool</label>
+    <label><input id="internalOnly" type="checkbox"> 只顯示內部 Tool</label>
+  </div>
+  <div id="toolCount" class="muted"></div>
+  <div class="tool-list">
+<article class="tool-card" data-family="entity_month_table_lookup cross_section_compare" data-metric="revenue_amount inventory_amount inventory_qty" data-evidence="entity_month_table" data-mcp="yes" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_month_table</code></h3><p>列出某個月份中各事業群或產品線的一個 KPI 數值。</p></div>
+    <div><span class="badge ok">MCP</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">month</span><span class="chip">dimension</span><span class="chip">parent_filter</span><span class="chip">include_qty</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">month</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">單月實體表格</span><span class="chip">同月橫向比較</span></span></div>
+    <div><span>evidence type</span><code>entity_month_table</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>True</code>，server registered</div>
+    <div><span>實作</span><code>analysis_tools.py:985</code><br><code>AnalysisToolbox.get_entity_month_table(entity_dimension, metric, month, parent_filter, include_qty)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：單月實體表格、同月橫向比較；KPI：revenue_amount、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_agent_runtime.py</span><span class="chip">tests/test_evidence_contracts.py</span><span class="chip">tests/test_evidence_validator.py</span><span class="chip">tests/test_llm_planner_canonical.py</span><span class="chip">tests/test_llm_planner_registry.py</span><span class="chip">tests/test_mcp_execution_adapter.py</span><span class="chip">tests/test_mcp_security.py</span><span class="chip">tests/test_mcp_server_integration.py</span><span class="chip">tests/test_mcp_tools.py</span><span class="chip">tests/test_phase10e_single_month_entity_table.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="metric_lookup" data-metric="revenue_amount inventory_amount inventory_qty revenue_inventory_amount_ratio" data-evidence="entity_metric_lookup" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_metric_value</code></h3><p>查單一事業群或產品線在某月份的一個 KPI。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">month</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">month</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">單一數值查詢</span></span></div>
+    <div><span>evidence type</span><code>entity_metric_lookup</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:922</code><br><code>AnalysisToolbox.get_entity_metric_value(entity_dimension, entity_value, metric, month)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：單一數值查詢；KPI：revenue_amount、inventory_amount、inventory_qty、revenue_inventory_amount_ratio。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_agent_runtime_models.py</span><span class="chip">tests/test_llm_planner_canonical.py</span><span class="chip">tests/test_phase10d_entity_ui_chart.py</span><span class="chip">tests/test_phase1_acceptance_runtime.py</span><span class="chip">evaluation/datasets/core.v1.jsonl</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="entity_period_pair_table_lookup" data-metric="revenue_amount inventory_amount inventory_qty" data-evidence="entity_period_pair_table" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_period_pair_table</code></h3><p>列出兩個指定月份中各實體的 KPI 對照表。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span><span class="chip">parent_filter</span><span class="chip">include_change</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">兩期間實體表格</span></span></div>
+    <div><span>evidence type</span><code>entity_period_pair_table</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1077</code><br><code>AnalysisToolbox.get_entity_period_pair_table(entity_dimension, metric, period_a, period_b, parent_filter, include_change)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：兩期間實體表格；KPI：revenue_amount、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_evidence_projector.py</span><span class="chip">tests/test_plan_validator.py</span><span class="chip">tests/test_task_requirement_coverage_acceptance.py</span><span class="chip">tests/test_writer_validator.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="entity_multi_month_table_lookup" data-metric="revenue_amount inventory_amount inventory_qty" data-evidence="entity_multi_month_table" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_multi_month_table</code></h3><p>列出一段月份區間內各實體的 KPI 表格。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">start_month</span><span class="chip">end_month</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">start_month</span><span class="chip">end_month</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">多月實體表格</span></span></div>
+    <div><span>evidence type</span><code>entity_multi_month_table</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1186</code><br><code>AnalysisToolbox.get_entity_multi_month_table(entity_dimension, metric, start_month, end_month, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：多月實體表格；KPI：revenue_amount、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_plan_validator.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="entity_period_pair_metric_lookup" data-metric="revenue_amount inventory_amount inventory_qty revenue_inventory_amount_ratio" data-evidence="entity_period_pair_value" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_period_pair_value</code></h3><p>查單一實體在兩個指定月份的 KPI 差異。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">單一實體兩期間數值</span></span></div>
+    <div><span>evidence type</span><code>entity_period_pair_value</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1265</code><br><code>AnalysisToolbox.get_entity_period_pair_value(entity_dimension, entity_value, metric, period_a, period_b, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：單一實體兩期間數值；KPI：revenue_amount、inventory_amount、inventory_qty、revenue_inventory_amount_ratio。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="entity_ranking" data-metric="revenue_amount inventory_amount inventory_qty revenue_inventory_amount_ratio health_score risk_score" data-evidence="entity_metric_ranking" data-mcp="yes" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_metric_ranking</code></h3><p>依指定 KPI 排出事業群或產品線名次。</p></div>
+    <div><span class="badge ok">MCP</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">dimension</span><span class="chip">month</span><span class="chip">top_n</span><span class="chip">parent_filter</span><span class="chip">sort_direction</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span><span class="chip">health_score</span><span class="chip">risk_score</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">排序排名</span></span></div>
+    <div><span>evidence type</span><code>entity_metric_ranking</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>True</code>，server registered</div>
+    <div><span>實作</span><code>analysis_tools.py:1314</code><br><code>AnalysisToolbox.get_entity_metric_ranking(entity_dimension, metric, month, top_n, parent_filter, sort_direction)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：排序排名；KPI：revenue_amount、inventory_amount、inventory_qty、revenue_inventory_amount_ratio。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_mcp_tools.py</span><span class="chip">tests/test_phase2_acceptance.py</span><span class="chip">evaluation/datasets/core.v1.jsonl</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="latest_month_entity_summary cross_section_compare performance_assessment parent_child_drilldown metric_relationship_analysis entity_period_pair_table_lookup entity_trend_comparison risk_scan" data-metric="" data-evidence="entity_performance_snapshot" data-mcp="yes" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_performance_snapshot</code></h3><p>產生實體表現快照，包含營收、庫存與 proxy 分數。</p></div>
+    <div><span class="badge ok">MCP</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">dimension</span><span class="chip">month</span><span class="chip">parent_filter</span><span class="chip">top_n</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span></span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">最新月份實體摘要</span><span class="chip">同月橫向比較</span><span class="chip">表現評估</span><span class="chip">事業群到產品線鑽取</span><span class="chip">營收與庫存關係</span><span class="chip">兩期間實體表格</span><span class="chip">實體趨勢比較</span><span class="chip">風險訊號掃描</span></span></div>
+    <div><span>evidence type</span><code>entity_performance_snapshot</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>True</code>，server registered</div>
+    <div><span>實作</span><code>analysis_tools.py:764</code><br><code>AnalysisToolbox.get_entity_performance_snapshot(entity_dimension, month, parent_filter, filters, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：最新月份實體摘要、同月橫向比較、表現評估、事業群到產品線鑽取。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_agent_replanner.py</span><span class="chip">tests/test_agent_runtime.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_complex_relationship_planning.py</span><span class="chip">tests/test_evidence_projector.py</span><span class="chip">tests/test_execution_backed_capability_gap.py</span><span class="chip">tests/test_mcp_tools.py</span><span class="chip">tests/test_phase1_acceptance_runtime.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="cross_section_compare performance_assessment" data-metric="" data-evidence="entity_cross_section_comparison" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_cross_section_comparison</code></h3><p>比較同一月份中多個實體的表現。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">month</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span></span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">同月橫向比較</span><span class="chip">表現評估</span></span></div>
+    <div><span>evidence type</span><code>entity_cross_section_comparison</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:897</code><br><code>AnalysisToolbox.get_entity_cross_section_comparison(entity_dimension, month, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：同月橫向比較、表現評估。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_plan.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="period_pair_compare" data-metric="revenue inventory_amount inventory_qty" data-evidence="entity_period_pair_comparison" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_period_pair_comparison</code></h3><p>比較兩個月份中各實體的變化。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">兩期間比較</span></span></div>
+    <div><span>evidence type</span><code>entity_period_pair_comparison</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1410</code><br><code>AnalysisToolbox.get_entity_period_pair_comparison(entity_dimension, metric, period_a, period_b, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：兩期間比較；KPI：revenue、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_execution_backed_replan_eval.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_llm_planner_canonical.py</span><span class="chip">tests/test_llm_planner_registry.py</span><span class="chip">tests/test_plan_validator.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="period_pair_compare" data-metric="revenue inventory_amount inventory_qty" data-evidence="period_pair_metric_comparison" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_period_pair_metric_comparison</code></h3><p>比較整體或彙總維度在兩個月份的 KPI。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span><span class="chip">dimension</span><span class="chip">top_n</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">兩期間比較</span></span></div>
+    <div><span>evidence type</span><code>period_pair_metric_comparison</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:2350</code><br><code>AnalysisToolbox.get_period_pair_metric_comparison(metric, period_a, period_b, dimension, filters, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：兩期間比較；KPI：revenue、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_execution_backed_replan_eval.py</span><span class="chip">tests/test_llm_planner_canonical.py</span><span class="chip">tests/test_tool_registry.py</span><span class="chip">evaluation/datasets/replanning.v1.jsonl</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="entity_time_series" data-metric="revenue_amount inventory_amount inventory_qty revenue_inventory_amount_ratio" data-evidence="entity_time_series" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_time_series</code></h3><p>查單一實體的月度趨勢。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">recent_n</span><span class="chip">start_month</span><span class="chip">end_month</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">單一實體時間序列</span></span></div>
+    <div><span>evidence type</span><code>entity_time_series</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1464</code><br><code>AnalysisToolbox.get_entity_time_series(entity_dimension, entity_value, metric, recent_n, start_month, end_month, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：單一實體時間序列；KPI：revenue_amount、inventory_amount、inventory_qty、revenue_inventory_amount_ratio。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_candidate_detector_semantics.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_llm_planner_canonical.py</span><span class="chip">tests/test_llm_planner_registry.py</span><span class="chip">tests/test_plan_validator.py</span><span class="chip">tests/test_tool_registry.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="overall_trend_analysis" data-metric="revenue_amount inventory_amount inventory_qty" data-evidence="overall_time_series" data-mcp="yes" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_overall_time_series</code></h3><p>查整體 KPI 的月度趨勢。</p></div>
+    <div><span class="badge ok">MCP</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span><span class="chip">recent_n</span><span class="chip">start_month</span><span class="chip">end_month</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">整體趨勢</span></span></div>
+    <div><span>evidence type</span><code>overall_time_series</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>True</code>，server registered</div>
+    <div><span>實作</span><code>analysis_tools.py:1527</code><br><code>AnalysisToolbox.get_overall_time_series(metric, recent_n, start_month, end_month)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：整體趨勢；KPI：revenue_amount、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_mcp_tools.py</span><span class="chip">tests/test_phase2_acceptance.py</span><span class="chip">tests/test_plan_validator.py</span><span class="chip">tests/test_tool_registry.py</span><span class="chip">evaluation/datasets/core.v1.jsonl</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="entity_trend_comparison metric_relationship_analysis risk_scan" data-metric="revenue_amount inventory_amount inventory_qty revenue_inventory_amount_ratio" data-evidence="entity_trend_comparison" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_trend_comparison</code></h3><p>比較多個實體在一段期間中的趨勢。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">recent_n</span><span class="chip">start_month</span><span class="chip">end_month</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">實體趨勢比較</span><span class="chip">營收與庫存關係</span><span class="chip">風險訊號掃描</span></span></div>
+    <div><span>evidence type</span><code>entity_trend_comparison</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1560</code><br><code>AnalysisToolbox.get_entity_trend_comparison(entity_dimension, metric, recent_n, start_month, end_month, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：實體趨勢比較、營收與庫存關係、風險訊號掃描；KPI：revenue_amount、inventory_amount、inventory_qty、revenue_inventory_amount_ratio。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_complex_relationship_planning.py</span><span class="chip">tests/test_evidence_contracts.py</span><span class="chip">tests/test_task_requirement_coverage_acceptance.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="metric_relationship_analysis risk_scan" data-metric="" data-evidence="metric_relationship" data-mcp="yes" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_revenue_inventory_relationship</code></h3><p>找營收與庫存是否出現同向、背離或壓力訊號。</p></div>
+    <div><span class="badge ok">MCP</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">recent_n</span><span class="chip">month</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span></span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">營收與庫存關係</span><span class="chip">風險訊號掃描</span></span></div>
+    <div><span>evidence type</span><code>metric_relationship</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>True</code>，server registered</div>
+    <div><span>實作</span><code>analysis_tools.py:1643</code><br><code>AnalysisToolbox.get_revenue_inventory_relationship(entity_dimension, recent_n, month, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：營收與庫存關係、風險訊號掃描。</p>
+    <p><strong>常見錯誤或限制：</strong>只描述歷史資料關係，不可寫成因果或預測。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_agent_replanner.py</span><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_candidate_detector_semantics.py</span><span class="chip">tests/test_complex_relationship_planning.py</span><span class="chip">tests/test_execution_backed_capability_gap.py</span><span class="chip">tests/test_mcp_tools.py</span><span class="chip">tests/test_phase1_acceptance_runtime.py</span><span class="chip">tests/test_phase2_acceptance.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="contribution_analysis" data-metric="revenue_amount inventory_amount inventory_qty revenue_inventory_amount_ratio" data-evidence="entity_contribution_analysis" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_entity_contribution_analysis</code></h3><p>分析兩期間變化主要由哪些實體貢獻。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">entity_dimension</span><span class="chip">metric</span><span class="chip">period_a</span><span class="chip">period_b</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_amount</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span><span class="chip">revenue_inventory_amount_ratio</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">貢獻分析</span></span></div>
+    <div><span>evidence type</span><code>entity_contribution_analysis</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1716</code><br><code>AnalysisToolbox.get_entity_contribution_analysis(entity_dimension, metric, period_a, period_b, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：貢獻分析；KPI：revenue_amount、inventory_amount、inventory_qty、revenue_inventory_amount_ratio。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_rubrics.py</span><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_contract.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_evidence_projector.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="chart_request" data-metric="" data-evidence="chart_payload" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_chart_payload</code></h3><p>產生前端可畫圖的 chart payload。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">chart_key</span><span class="chip">chart_type</span><span class="chip">month</span><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">圖表產生</span></span></div>
+    <div><span>evidence type</span><code>chart_payload</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:3014</code><br><code>AnalysisToolbox.get_chart_payload(chart_key, filters, top_n, chart_type_override, include_table)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：圖表產生。</p>
+    <p><strong>常見錯誤或限制：</strong>供前端渲染使用，不是回答充分性的 primary evidence。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_mcp_security.py</span><span class="chip">tests/test_plan_validator.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="chart_request" data-metric="" data-evidence="chart_table" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_chart_table</code></h3><p>產生與圖表對齊的資料表。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">chart_key</span><span class="chip">chart_type</span><span class="chip">month</span><span class="chip">entity_dimension</span><span class="chip">entity_value</span><span class="chip">metric</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">圖表產生</span></span></div>
+    <div><span>evidence type</span><code>chart_table</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:3109</code><br><code>AnalysisToolbox.get_chart_table(chart_key, filters, top_n, chart_type_override)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：圖表產生。</p>
+    <p><strong>常見錯誤或限制：</strong>與圖表資料對齊，不取代正式分析工具。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_llm_planner.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="data_quality forecast_unsupported" data-metric="" data-evidence="data_coverage" data-mcp="yes" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_data_coverage</code></h3><p>回報可用月份、資料列數與支援 domain。</p></div>
+    <div><span class="badge ok">MCP</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chip">未限制</span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">資料品質</span><span class="chip">預測不支援</span></span></div>
+    <div><span>evidence type</span><code>data_coverage</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>True</code>，server registered</div>
+    <div><span>實作</span><code>analysis_tools.py:467</code><br><code>AnalysisToolbox.get_data_coverage()</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：資料品質、預測不支援。</p>
+    <p><strong>常見錯誤或限制：</strong>只回報 coverage，不代表資料品質完整通過。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_execution_fidelity_grader.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_mcp_execution_adapter.py</span><span class="chip">tests/test_mcp_server_integration.py</span><span class="chip">tests/test_mcp_tools.py</span><span class="chip">tests/test_phase2_acceptance.py</span><span class="chip">evaluation/datasets/mcp.v1.jsonl</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="data_quality forecast_unsupported" data-metric="" data-evidence="mapping_summary" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_mapping_summary</code></h3><p>回報資料來源對齊與實體 mapping 摘要。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chip">未限制</span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">資料品質</span><span class="chip">預測不支援</span></span></div>
+    <div><span>evidence type</span><code>mapping_summary</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:2887</code><br><code>AnalysisToolbox.get_mapping_summary()</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：資料品質、預測不支援。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_llm_planner.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="data_quality forecast_unsupported" data-metric="" data-evidence="tool_capability_matrix" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_tool_capability_matrix</code></h3><p>回報目前工具與資料可用狀態。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chip">未限制</span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">資料品質</span><span class="chip">預測不支援</span></span></div>
+    <div><span>evidence type</span><code>tool_capability_matrix</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:486</code><br><code>AnalysisToolbox.get_tool_capability_matrix()</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：資料品質、預測不支援。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_llm_planner.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="risk_scan diagnosis cross_section_compare entity_trend_comparison performance_assessment metric_relationship_analysis" data-metric="" data-evidence="anomaly" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_anomalies</code></h3><p>列出 deterministic anomaly records。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">month</span><span class="chip">top_n</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">風險訊號掃描</span><span class="chip">診斷候選</span><span class="chip">同月橫向比較</span><span class="chip">實體趨勢比較</span><span class="chip">表現評估</span><span class="chip">營收與庫存關係</span></span></div>
+    <div><span>evidence type</span><code>anomaly</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:2865</code><br><code>AnalysisToolbox.get_anomalies(top_n, filters)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：風險訊號掃描、診斷候選、同月橫向比較、實體趨勢比較。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_task_requirement_coverage_acceptance.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="trend_analysis diagnosis" data-metric="revenue inventory_amount inventory_qty" data-evidence="yoy_mom_breakdown" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_yoy_mom_breakdown</code></h3><p>列出月增與年增變化。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span><span class="chip">dimension</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">trend_analysis</span><span class="chip">診斷候選</span></span></div>
+    <div><span>evidence type</span><code>yoy_mom_breakdown</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1913</code><br><code>AnalysisToolbox.get_yoy_mom_breakdown(filters, metric, dimension, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：trend_analysis、診斷候選；KPI：revenue、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_llm_planner_eval.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="time_compare diagnosis" data-metric="revenue inventory_amount inventory_qty" data-evidence="contribution_analysis" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_contribution_analysis</code></h3><p>列出目前與前期的貢獻拆解。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span><span class="chip">dimension</span></span></div>
+    <div><span>required arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">時間比較</span><span class="chip">診斷候選</span></span></div>
+    <div><span>evidence type</span><code>contribution_analysis</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1979</code><br><code>AnalysisToolbox.get_contribution_analysis(filters, metric, dimension, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：時間比較、診斷候選；KPI：revenue、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_llm_rewriter.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="performance_assessment risk_scan diagnosis entity_ranking cross_section_compare metric_relationship_analysis" data-metric="revenue_inventory_amount_ratio inventory_amount inventory_qty" data-evidence="inventory_turnover_proxy" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_inventory_turnover_proxy</code></h3><p>列出營收相對庫存效率 proxy。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">month</span><span class="chip">top_n</span><span class="chip">entity_dimension</span><span class="chip">parent_filter</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_inventory_amount_ratio</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">表現評估</span><span class="chip">風險訊號掃描</span><span class="chip">診斷候選</span><span class="chip">排序排名</span><span class="chip">同月橫向比較</span><span class="chip">營收與庫存關係</span></span></div>
+    <div><span>evidence type</span><code>inventory_turnover_proxy</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:2065</code><br><code>AnalysisToolbox.get_inventory_turnover_proxy(filters, top_n, entity_dimension, parent_filter)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：表現評估、風險訊號掃描、診斷候選、排序排名；KPI：revenue_inventory_amount_ratio、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>proxy 不是正式庫存週轉率，缺少 COGS 與平均庫存。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_evidence_contracts.py</span><span class="chip">tests/test_task_requirement_coverage_acceptance.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="diagnosis" data-metric="revenue" data-evidence="root_cause_candidate" data-mcp="no" data-legacy="no">
+  <div class="tool-card-head">
+    <div><h3><code>get_root_cause_candidates</code></h3><p>列出可能觀察方向，但不宣稱根本原因。</p></div>
+    <div><span class="badge muted">Internal</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">診斷候選</span></span></div>
+    <div><span>evidence type</span><code>root_cause_candidate</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:2636</code><br><code>AnalysisToolbox.get_root_cause_candidates(filters, metric, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：診斷候選；KPI：revenue。</p>
+    <p><strong>常見錯誤或限制：</strong>只能當候選觀察，不可當作已確認根因。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_llm_live_smoke.py</span><span class="chip">tests/test_llm_planner.py</span><span class="chip">tests/test_llm_planner_eval.py</span><span class="chip">tests/test_llm_rewriter.py</span></span></p>
+    
+  </details>
+</article>
+<article class="tool-card" data-family="risk_scan diagnosis performance_assessment" data-metric="" data-evidence="platform_ratio" data-mcp="no" data-legacy="yes">
+  <div class="tool-card-head">
+    <div><h3><code>get_platform_ratios</code></h3><p>舊版平台 proxy ratio wrapper。</p></div>
+    <div><span class="badge muted">Internal</span><span class="badge warn">Legacy</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chip">未限制</span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">風險訊號掃描</span><span class="chip">診斷候選</span><span class="chip">表現評估</span></span></div>
+    <div><span>evidence type</span><code>platform_ratio</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1849</code><br><code>AnalysisToolbox.get_platform_ratios(filters, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：風險訊號掃描、診斷候選、表現評估。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_llm_planner_registry.py</span><span class="chip">tests/test_tool_registry.py</span></span></p>
+    <p><strong>Replacement：</strong><code>get_revenue_inventory_relationship or get_entity_performance_snapshot</code></p>
+  </details>
+</article>
+<article class="tool-card" data-family="entity_ranking" data-metric="revenue inventory_amount inventory_qty" data-evidence="platform_ranking" data-mcp="no" data-legacy="yes">
+  <div class="tool-card-head">
+    <div><h3><code>get_platform_ranking</code></h3><p>舊版平台排名 wrapper。</p></div>
+    <div><span class="badge muted">Internal</span><span class="badge warn">Legacy</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span><span class="chip">inventory_amount</span><span class="chip">inventory_qty</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">排序排名</span></span></div>
+    <div><span>evidence type</span><code>platform_ranking</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:1802</code><br><code>AnalysisToolbox.get_platform_ranking(metric, top_n, filters)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：排序排名；KPI：revenue、inventory_amount、inventory_qty。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_answer_plan.py</span><span class="chip">tests/test_phase9a3_frontend_chart.py</span></span></p>
+    <p><strong>Replacement：</strong><code>get_entity_metric_ranking</code></p>
+  </details>
+</article>
+<article class="tool-card" data-family="performance_assessment latest_month_entity_summary" data-metric="" data-evidence="platform_performance_snapshot" data-mcp="no" data-legacy="yes">
+  <div class="tool-card-head">
+    <div><h3><code>get_platform_performance_snapshot</code></h3><p>舊版平台表現快照 wrapper。</p></div>
+    <div><span class="badge muted">Internal</span><span class="badge warn">Legacy</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chip">未限制</span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chip">未限制</span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">表現評估</span><span class="chip">最新月份實體摘要</span></span></div>
+    <div><span>evidence type</span><code>platform_performance_snapshot</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:2175</code><br><code>AnalysisToolbox.get_platform_performance_snapshot(filters, month, top_n)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：表現評估、最新月份實體摘要。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_analysis_tools.py</span></span></p>
+    <p><strong>Replacement：</strong><code>get_entity_performance_snapshot</code></p>
+  </details>
+</article>
+<article class="tool-card" data-family="entity_ranking" data-metric="revenue inventory" data-evidence="group_ranking" data-mcp="no" data-legacy="yes">
+  <div class="tool-card-head">
+    <div><h3><code>get_top_groups</code></h3><p>舊版事業群排行 helper。</p></div>
+    <div><span class="badge muted">Internal</span><span class="badge warn">Legacy</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue</span><span class="chip">inventory</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">排序排名</span></span></div>
+    <div><span>evidence type</span><code>group_ranking</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:726</code><br><code>AnalysisToolbox.get_top_groups(metric, top_n, filters)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：排序排名；KPI：revenue、inventory。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_llm_live_smoke.py</span></span></p>
+    <p><strong>Replacement：</strong><code>get_entity_metric_ranking</code></p>
+  </details>
+</article>
+<article class="tool-card" data-family="metric_lookup trend_analysis diagnosis" data-metric="revenue_trend inventory_amount_trend inventory_qty_trend platform_monthly anomalies" data-evidence="metric_table" data-mcp="no" data-legacy="yes">
+  <div class="tool-card-head">
+    <div><h3><code>get_metric_table</code></h3><p>舊版原始 metric table helper。</p></div>
+    <div><span class="badge muted">Internal</span><span class="badge warn">Legacy</span></div>
+  </div>
+  <div class="tool-meta">
+    <div><span>allowed arguments</span><span class="chips"><span class="chip">metric</span></span></div>
+    <div><span>required arguments</span><span class="chip">未限制</span></div>
+    <div><span>supported metrics</span><span class="chips"><span class="chip">revenue_trend</span><span class="chip">inventory_amount_trend</span><span class="chip">inventory_qty_trend</span><span class="chip">platform_monthly</span><span class="chip">anomalies</span></span></div>
+    <div><span>task families</span><span class="chips"><span class="chip">單一數值查詢</span><span class="chip">trend_analysis</span><span class="chip">診斷候選</span></span></div>
+    <div><span>evidence type</span><code>metric_table</code></div>
+    <div><span>read-only／risk</span><code>True / low</code></div>
+    <div><span>MCP exposure</span><code>False</code></div>
+    <div><span>實作</span><code>analysis_tools.py:685</code><br><code>AnalysisToolbox.get_metric_table(metric, filters)</code></div>
+  </div>
+  <details><summary>適合回答的問題、限制與測試</summary>
+    <p>適合：單一數值查詢、trend_analysis、診斷候選；KPI：revenue_trend、inventory_amount_trend、inventory_qty_trend、platform_monthly。</p>
+    <p><strong>常見錯誤或限制：</strong>依資料可用月份、實體 mapping 與 ToolContract 參數限制。</p>
+    <p><strong>對應測試：</strong><span class="chips"><span class="chip">tests/test_llm_planner_eval.py</span></span></p>
+    <p><strong>Replacement：</strong><code>task-specific entity or time-series tools</code></p>
+  </details>
+</article></div>
+</section>
+<section id="contract"><h2>實際 ToolContract 程式碼</h2>
+  <div class="split"><div><div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-python">    &quot;get_entity_month_table&quot;: ToolContract(
+        tool_name=&quot;get_entity_month_table&quot;,
+        description=&quot;List all entities for one explicit month and metric.&quot;,
+        allowed_task_families=(&quot;entity_month_table_lookup&quot;, &quot;cross_section_compare&quot;),
+        required_args=(&quot;entity_dimension&quot;, &quot;metric&quot;, &quot;month&quot;),
+        optional_args=(&quot;dimension&quot;, &quot;parent_filter&quot;, &quot;include_qty&quot;),
+        supported_entity_dimensions=COMMON_ENTITY_DIMENSIONS,
+        supported_metrics=(&quot;revenue_amount&quot;, &quot;inventory_amount&quot;, &quot;inventory_qty&quot;),
+        supports_month=True,
+        supports_parent_filter=True,
+        output_evidence_type=&quot;entity_month_table&quot;,
+        mcp_exposable=True, mcp_name=&quot;get_entity_month_table&quot;, evidence_roles=(&quot;primary&quot;,),
+    ),</code></pre></div></div><div class="explain"><p><strong>description</strong> 是給 planner 的用途描述。</p><p><strong>required_args / optional_args</strong> 會合併成 allowed arguments。</p><p><strong>supported_metrics</strong> 與 <strong>allowed_task_families</strong> 決定這個工具能回答哪些問題。</p><p><strong>output_evidence_type</strong> 是 Evidence Validator 判斷證據的核心欄位。</p><p><strong>read_only / risk_level / mcp_exposable</strong> 決定是否能被 MCP 對外公開。</p></div></div>
+</section>
+<section id="call"><h2>一次 Tool Call 實例</h2>
+  <div class="code-wrap"><button class="copy-btn" type="button">複製</button><pre><code class="language-json">{
+  &quot;plan_validator&quot;: &quot;確認 get_entity_month_table 屬於 entity_month_table_lookup，args 只含 allowed_args，metric/month/entity_dimension 合法。&quot;,
+  &quot;tool_call&quot;: {
+    &quot;tool_name&quot;: &quot;get_entity_month_table&quot;,
+    &quot;args&quot;: {
+      &quot;entity_dimension&quot;: &quot;business_group&quot;,
+      &quot;metric&quot;: &quot;revenue_amount&quot;,
+      &quot;month&quot;: &quot;2025-03&quot;
+    }
+  },
+  &quot;tool_result&quot;: {
+    &quot;source_tool&quot;: &quot;get_entity_month_table&quot;,
+    &quot;evidence_type&quot;: &quot;entity_month_table&quot;,
+    &quot;metric&quot;: &quot;revenue_amount&quot;,
+    &quot;month&quot;: &quot;2025-03&quot;,
+    &quot;rows&quot;: [
+      {
+        &quot;entity_value&quot;: &quot;教學事業群 A&quot;,
+        &quot;value&quot;: 12345
+      }
+    ],
+    &quot;row_count&quot;: 1
+  },
+  &quot;evidence_validator&quot;: &quot;檢查 primary evidence type、metric、month 與 rows。&quot;
+}</code></pre></div>
+</section>
+<section id="mcp"><h2>MCP Tool 子集合</h2>
+  <ul><li><code>get_entity_month_table</code>：列出某個月份中各事業群或產品線的一個 KPI 數值。</li><li><code>get_entity_metric_ranking</code>：依指定 KPI 排出事業群或產品線名次。</li><li><code>get_entity_performance_snapshot</code>：產生實體表現快照，包含營收、庫存與 proxy 分數。</li><li><code>get_overall_time_series</code>：查整體 KPI 的月度趨勢。</li><li><code>get_revenue_inventory_relationship</code>：找營收與庫存是否出現同向、背離或壓力訊號。</li><li><code>get_data_coverage</code>：回報可用月份、資料列數與支援 domain。</li></ul>
+  <p>MCP 只公開 registry 中 <code>mcp_exposable=true</code>、<code>read_only=true</code>、<code>risk_level=low</code> 的工具。<code>mcp_server/security.py</code> 會拒絕 hidden tool、未知參數、缺少 required args、不合法月份、不合法 dimension/metric、<code>top_n</code> 超過 row cap、以及像檔案路徑的 unsafe argument。MCP 是外部 Agent 的受控入口，不是一般 Dashboard 問答的必經路徑。</p>
+</section>
+<section id="add"><h2>新增 Tool 的七步摘要</h2>
+  <ol class="steps"><li>實作分析函式</li><li>登記 Tool Contract</li><li>定義 evidence type</li><li>設定 task family 與 metric</li><li>決定是否對 MCP 開放</li><li>新增 focused tests</li><li>執行 validation 與 evaluation gate</li></ol>
+  <p><a class="button" href="maintenance.html">前往新增與修改配方</a></p>
+</section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="footer">本網站由 repository source code、設定、測試與 evaluation datasets 產生；不包含真實營收或庫存數字。</footer>
+</body>
+</html>

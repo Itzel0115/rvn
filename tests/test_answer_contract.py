@@ -130,6 +130,25 @@ class AnswerContractTest(unittest.TestCase):
         self.assertIn("2025-03", contract["display_blocks"]["headline"])
         self.assertTrue(contract["display_blocks"]["table"]["rows"])
 
+    def test_management_risk_answer_selects_two_entities_with_counter_and_next_action(self) -> None:
+        response = self.assistant.answer("請找出最近月份最需要管理層關注的兩個事業群。請先比較所有事業群，並同時考慮營收趨勢、庫存金額、庫存數量與異常訊號，再說明選出這兩個事業群的支持證據、可能反證、資料限制，以及建議管理層下一步優先確認什麼。")
+        contract = response["answer_contract"]
+        blocks = contract["display_blocks"]
+
+        self.assertEqual(response["task_profile"]["task_requirements"]["requested_top_n"], 2)
+        self.assertTrue(response["task_profile"]["task_requirements"]["requires_recommendation"])
+        self.assertIn("第一優先事業群", blocks["headline"])
+        self.assertIn("第二優先事業群", blocks["headline"])
+        self.assertEqual(len(blocks["table"]["rows"]), 2)
+        self.assertTrue(all(row.get("entity_value") for row in blocks["table"]["rows"]))
+        answer = contract["answer"]
+        self.assertIn("支持證據", answer)
+        self.assertIn("可能反證", answer)
+        self.assertIn("管理層下一步", answer)
+        self.assertNotIn("已覆蓋指標", answer)
+        self.assertNotIn("風險訊號訊號", answer)
+        self.assertNotIn("health_score 為 deterministic", answer)
+
 
 if __name__ == "__main__":
     unittest.main()

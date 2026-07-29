@@ -1,151 +1,71 @@
-# Phase 9A Real Data Contract
+# Real Data Contract
+
+This is the current contract for the two formal Excel sources. The current runtime does not require or read a mapping workbook.
 
 ## Source Files
 
-- Inventory source path: `data/inventory.xlsx`
-- Revenue source path: `data/revenue.xlsx`
+- Inventory: `data/inventory.xlsx`
+- Revenue: `data/revenue.xlsx`
 
-The loader treats `data/inventory.xlsx` as the inventory source and `data/revenue.xlsx` as the revenue source. If either file does not contain the required columns for its declared role, the pipeline records a data quality error instead of swapping files automatically.
+The loader keeps these roles fixed. It does not swap files when fields do not match.
 
-## Raw Columns
+## Raw Required Fields
 
-Inventory raw columns:
+Inventory:
 
-- `Wn日期`
-- `年`
-- `月`
-- `HQBU`
-- `typename`
-- `金額`
-- `QTY`
-- `Productline_5`
-- `五大產品線`
-- `新事業群`
+- `Wn日期`, `年`, `月`
+- `HQBU`, `typename`
+- `金額`, `QTY`
+- `Productline_5`, `五大產品線`, `新事業群`
 
-Revenue raw columns:
+Revenue:
 
-- `公司類別`
-- `年度`
-- `月份`
-- `合併事業群`
-- `產品類別名稱`
-- `實際營收`
-- `五大產品線`
-- `新事業群`
+- `公司類別`, `年度`, `月份`
+- `合併事業群`, `產品類別名稱`
+- `實際營收`, `五大產品線`, `新事業群`
 
-## Standard Columns
+## Normalized Fields
 
-Inventory standard columns:
+Inventory is normalized to `month_key`, `year`, `month`, `hqbu`, `inventory_type`, `inventory_amount`, `inventory_qty`, `productline_raw`, `product_line_5`, and `business_group`.
 
-- `month_key`
-- `year`
-- `month`
-- `hqbu`
-- `inventory_type`
-- `inventory_amount`
-- `inventory_qty`
-- `productline_raw`
-- `product_line_5`
-- `business_group`
+Revenue is normalized to `month_key`, `year`, `month`, `company_type`, `merged_business_group`, `product_category_name`, `revenue_amount`, `product_line_5`, and `business_group`.
 
-Revenue standard columns:
+## Date Normalization
 
-- `month_key`
-- `year`
-- `month`
-- `company_type`
-- `merged_business_group`
-- `product_category_name`
-- `revenue_amount`
-- `product_line_5`
-- `business_group`
+`month_key` is normalized to `YYYY-MM`. Accepted inputs include `Wn日期` values such as `202501`, separate year/month fields, and numeric or string year/month values. Invalid or missing dates become null and are reported in data quality output.
 
-## Join Key And Grain
-
-Join key:
-
-- `month_key`
-- `business_group`
-- `product_line_5`
-
-Analysis grain:
-
-- `month_key + business_group + product_line_5`
-
-`business_group` is the primary entity dimension. `product_line_5` is the drill-down entity dimension under a business group.
-
-## Month Key Normalization
-
-`month_key` must be normalized to `YYYY-MM`.
-
-Accepted source forms include:
-
-- `Wn日期` such as `202501`
-- separate year/month columns such as `年度` + `月份`
-- numeric or string year/month values
-
-Invalid or missing dates are kept as null and counted in data quality output.
-
-## Required Fields
-
-Inventory required fields:
-
-- `month_key`
-- `business_group`
-- `product_line_5`
-- `inventory_amount`
-- `inventory_qty`
-
-Revenue required fields:
-
-- `month_key`
-- `business_group`
-- `product_line_5`
-- `revenue_amount`
-
-## Numeric Fields
-
-Inventory numeric fields:
-
-- `inventory_amount`
-- `inventory_qty`
-
-Revenue numeric fields:
-
-- `revenue_amount`
-
-Numeric parse failures must be counted in `numeric_parse_errors`.
-
-## Entity Dimensions
+## Business Group and Product Line
 
 - `business_group` = `新事業群`
 - `product_line_5` = `五大產品線`
+- `business_group` is the primary entity dimension.
+- `product_line_5` is the drill-down dimension under a business group.
 
-For backward compatibility only, legacy `platform` wording and fields may wrap `business_group`. Core analysis must not depend on platform codes.
+## Entity/Month Alignment
 
-## Disallowed Joins
+## Do not join
 
-Do not join revenue and inventory by:
+Do not join revenue and inventory by `HQBU`, by `product_line_5` alone, or by legacy platform codes.
 
-- `HQBU`, because revenue does not contain `HQBU`
-- `product_line_5` alone, because different business groups may contain same-named product lines
-- legacy platform codes such as `GG-01` / `GG-02`, unless those values exist in real data
 
-## Ratio Rules
+The canonical alignment grain is:
 
-`revenue_inventory_amount_ratio` and `revenue_inventory_qty_ratio` are proxy metrics. They are calculated only when:
+```text
+month_key + business_group + product_line_5
+```
 
-- `data_presence_flag = both`
-- numerator and denominator are present
-- denominator is not zero
+Revenue and inventory are outer-aligned at this grain. Rows are classified as both, revenue-only, or inventory-only. `HQBU` cannot be used as a cross-source join key because revenue has no corresponding HQBU field. Product line alone is also insufficient because names may repeat across business groups.
 
-Rows flagged `revenue_only` or `inventory_only` must not be used for ratio calculation.
+## Numeric and Proxy Rules
 
-These proxy ratios must not be described as formal inventory turnover.
+Numeric fields are `inventory_amount`, `inventory_qty`, and `revenue_amount`. Parse failures are recorded in data-quality results. Revenue/inventory ratios are proxy metrics only and require both sides, present numerator/denominator, and a non-zero denominator. They are not formal inventory-turnover metrics.
 
-## Known Limitations
+## Validation Failure
 
-- The available data supports descriptive comparison and proxy efficiency signals, not causal root-cause claims.
-- Forecasting is not supported in Phase 9A.
-- Missing business group, missing product line, numeric parse errors, unmatched months, and one-sided rows must be surfaced as data quality limitations.
-- Any legacy `/api/ask` response fields must remain backward compatible; new entity-aware fields may be added.
+If either formal source is missing, unreadable, missing required raw fields, or produces no usable normalized rows, `build_pipeline_context()` raises a real-data validation error. The error identifies the inventory source status, revenue source status, missing fields or read errors, and normalization details. The runtime does not fall back to another workbook or legacy report path.
+
+Data-quality output also surfaces missing business groups, missing product lines, numeric parse errors, invalid dates, unmatched months, and one-sided rows.
+
+## Compatibility Note
+
+`ParsedMapping` and related group/entity metadata are internal compatibility structures derived from the normalized inventory/revenue data. They are not a third source file.

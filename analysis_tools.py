@@ -1,3 +1,11 @@
+"""共用 deterministic analysis tools。
+
+`AnalysisToolbox` 只使用 PipelineContext 內已正規化的 inventory/revenue，
+避免各 Tool 重複讀檔或產生不同口徑。公開結果以 records、限制與 evidence
+欄位為主，供 Agent validator、API 與 frontend 使用；Tool 名稱和 output
+schema 需與 registry 保持相容。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -457,6 +465,7 @@ class AnalysisToolbox:
         self.request_id = request_id
 
     def get_data_coverage(self) -> dict[str, Any]:
+        """回傳來源、月份、列數與品質狀態，供 health/summary 使用。"""
         logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
         logger.info("Running tool get_data_coverage")
 
@@ -2073,6 +2082,8 @@ class AnalysisToolbox:
             )
             rows = []
             for row in snapshot.get("rows", []):
+                comparable, reason = self._inventory_proxy_comparability(row.get("revenue"), row.get("inventory_amount"))
+                efficiency_level = self._efficiency_level(row.get("revenue_inventory_amount_ratio"), is_comparable=comparable)
                 rows.append(
                     {
                         "month": row.get("month"),
@@ -2088,9 +2099,15 @@ class AnalysisToolbox:
                         "inventory_qty": row.get("inventory_qty"),
                         "revenue_inventory_amount_ratio": row.get("revenue_inventory_amount_ratio"),
                         "revenue_inventory_qty_ratio": row.get("revenue_inventory_qty_ratio"),
-                        "efficiency_level": self._efficiency_level(row.get("revenue_inventory_amount_ratio")),
-                        "risk_label": self._inventory_proxy_risk_label(self._efficiency_level(row.get("revenue_inventory_amount_ratio"))),
-                        "limitation": "此為營收相對庫存 proxy，非正式周轉指標。",
+                        "proxy_formula": "revenue / inventory_amount",
+                        "proxy_numerator": "revenue",
+                        "proxy_denominator": "inventory_amount",
+                        "proxy_unit": "ratio",
+                        "is_comparable": comparable,
+                        "non_comparable_reason": reason,
+                        "efficiency_level": efficiency_level,
+                        "risk_label": self._inventory_proxy_risk_label(efficiency_level),
+                        "limitation": "此為營收相對庫存 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。",
                     }
                 )
             rows = sorted(
@@ -2120,7 +2137,8 @@ class AnalysisToolbox:
         for _, row in df.iterrows():
             amount_ratio = row.get(COL_REVENUE_INV_AMOUNT_RATIO)
             qty_ratio = row.get(COL_REVENUE_INV_QTY_RATIO)
-            efficiency_level = self._efficiency_level(amount_ratio)
+            comparable, reason = self._inventory_proxy_comparability(row.get(COL_REVENUE), row.get(COL_INV_AMOUNT))
+            efficiency_level = self._efficiency_level(amount_ratio, is_comparable=comparable)
             results.append(
                 {
                     "month": row.get(COL_MONTH),
@@ -2131,9 +2149,15 @@ class AnalysisToolbox:
                     "inventory_qty": self._normalize_number(row.get(COL_INV_QTY)),
                     "revenue_inventory_amount_ratio": self._normalize_number(amount_ratio),
                     "revenue_inventory_qty_ratio": self._normalize_number(qty_ratio),
+                    "proxy_formula": "revenue / inventory_amount",
+                    "proxy_numerator": "revenue",
+                    "proxy_denominator": "inventory_amount",
+                    "proxy_unit": "ratio",
+                    "is_comparable": comparable,
+                    "non_comparable_reason": reason,
                     "efficiency_level": efficiency_level,
                     "risk_label": self._inventory_proxy_risk_label(efficiency_level),
-                    "limitation": "此為營收與庫存資料推導的 proxy，非正式周轉指標。",
+                    "limitation": "此為營收與庫存資料推導的 proxy，非正式周轉指標；revenue<=0 或 inventory_amount<=0 時不列入正常效率排名。",
                 }
             )
 
@@ -2861,6 +2885,11 @@ class AnalysisToolbox:
         return results
 
     def get_mapping_summary(self) -> dict[str, Any]:
+        """回傳 data-source/entity alignment metadata。
+
+        名稱因既有 API/Agent compatibility 保留；本方法不讀取 mapping.xlsx，
+        內容來自 inventory/revenue 衍生的 normalized entity metadata。
+        """
         logger = get_logger("analysis_tools", self.request_id, domain="toolbox")
         logger.info("Running tool get_mapping_summary")
         mapping = self.context.parsed_mapping
@@ -4289,10 +4318,14 @@ class AnalysisToolbox:
         return f"{year:04d}-{month_value:02d}"
 
     @staticmethod
-    def _efficiency_level(ratio: Any) -> str:
+    def _efficiency_level(ratio: Any, *, is_comparable: bool = True) -> str:
+        if not is_comparable:
+            return "invalid_non_comparable"
         if ratio is None or pd.isna(ratio):
             return "unknown"
         ratio_value = float(ratio)
+        if ratio_value < 0:
+            return "invalid_non_comparable"
         if ratio_value >= 1.2:
             return "high"
         if ratio_value >= 0.8:
@@ -4300,13 +4333,29 @@ class AnalysisToolbox:
         return "low"
 
     @staticmethod
+    def _inventory_proxy_comparability(revenue: Any, inventory_amount: Any) -> tuple[bool, str | None]:
+        try:
+            revenue_value = None if revenue is None or pd.isna(revenue) else float(revenue)
+            inventory_value = None if inventory_amount is None or pd.isna(inventory_amount) else float(inventory_amount)
+        except (TypeError, ValueError):
+            return False, "non_numeric_proxy_component"
+        if revenue_value is None or inventory_value is None:
+            return False, "missing_revenue_or_inventory_amount"
+        if revenue_value <= 0:
+            return False, "non_positive_revenue_numerator"
+        if inventory_value <= 0:
+            return False, "non_positive_inventory_denominator"
+        return True, None
+
+    @staticmethod
     def _efficiency_sort_order(level: Any) -> int:
         return {
             "low": 0,
-            "unknown": 1,
-            "medium": 2,
-            "high": 3,
-        }.get(str(level), 4)
+            "medium": 1,
+            "high": 2,
+            "unknown": 3,
+            "invalid_non_comparable": 4,
+        }.get(str(level), 5)
 
     @staticmethod
     def _inventory_proxy_risk_label(level: str) -> str:
@@ -4315,6 +4364,7 @@ class AnalysisToolbox:
             "medium": "monitor_proxy",
             "low": "low_efficiency_proxy",
             "unknown": "insufficient_proxy_data",
+            "invalid_non_comparable": "non_comparable_proxy",
         }.get(level, "insufficient_proxy_data")
 
     def _build_month_observation_table(self, request: ObservationRequest) -> dict[str, Any]:

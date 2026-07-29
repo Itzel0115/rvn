@@ -77,6 +77,65 @@ class EvidenceContractsTest(unittest.TestCase):
         self.assertTrue(contract.rows)
         self.assertIn("month", contract.rows[0])
 
+    def test_entity_trend_comparison_output_can_be_converted(self) -> None:
+        routing = classify_business_question("比較最近三個月各事業群營收趨勢")
+        task_profile = build_task_profile("比較最近三個月各事業群營收趨勢", routing)
+        canonical = CanonicalTaskProfile.from_task_profile(task_profile, routing)
+        contract = self.builder.normalize_tool_output(
+            "get_entity_trend_comparison",
+            {
+                "source_tool": "get_entity_trend_comparison",
+                "metric": "revenue_amount",
+                "entity_dimension": "business_group",
+                "recent_n": 3,
+                "rows": [
+                    {"entity_value": "A", "month": "2026-01", "value": 3},
+                    {"entity_value": "A", "month": "2026-02", "value": 2},
+                ],
+                "summary": {"row_count": 2},
+            },
+            canonical,
+            evidence_index=1,
+        )
+
+        self.assertEqual(contract.evidence_type, "entity_trend_comparison")
+        self.assertEqual(contract.source_tool, "get_entity_trend_comparison")
+        self.assertEqual(contract.metric, "revenue_amount")
+        self.assertTrue(contract.validate_basic()[0])
+
+    def test_inventory_turnover_proxy_list_infers_entity_dimension_from_rows(self) -> None:
+        routing = classify_business_question("請評估各事業群的庫存週轉狀況，使用 proxy 並列出限制")
+        task_profile = build_task_profile("請評估各事業群的庫存週轉狀況，使用 proxy 並列出限制", routing)
+        canonical = CanonicalTaskProfile.from_task_profile(task_profile, routing)
+        contract = self.builder.normalize_tool_output(
+            "get_inventory_turnover_proxy",
+            [
+                {
+                    "entity_dimension": "business_group",
+                    "entity_label": "事業群",
+                    "entity_value": "1網通+技鋼",
+                    "month": "2026-02",
+                    "revenue": 10,
+                    "inventory_amount": 5,
+                    "revenue_inventory_amount_ratio": 2,
+                    "proxy_formula": "revenue / inventory_amount",
+                    "proxy_numerator": "revenue",
+                    "proxy_denominator": "inventory_amount",
+                    "proxy_unit": "ratio",
+                    "is_comparable": True,
+                }
+            ],
+            canonical,
+            evidence_index=1,
+        )
+
+        self.assertEqual(contract.evidence_type, "inventory_turnover_proxy")
+        self.assertEqual(contract.entity_scope["dimension"], "business_group")
+        self.assertEqual(contract.entity_scope["label"], "事業群")
+        self.assertEqual(contract.time_scope["month"], "2026-02")
+        self.assertEqual(contract.metric, "revenue_inventory_amount_ratio")
+        self.assertTrue(contract.validate_basic()[0])
+
     def test_period_pair_comparison_output_can_be_converted(self) -> None:
         contract = self._first_contract("比較 2025 年 12 月與 2026 年 1 月營收差別", "period_pair_comparison")
 

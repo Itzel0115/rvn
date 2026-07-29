@@ -1,0 +1,3760 @@
+{
+  "run_id": "20260729T082953Z",
+  "api_url": "http://10.8.35.35:3000/api/ask",
+  "stats": {
+    "total": 2,
+    "pass": 2,
+    "partial": 0,
+    "fail": 0,
+    "llm_plan_direct_valid_rate": 0.0,
+    "validated_repair_rate": 1.0,
+    "replan_success_rate": 0.0,
+    "capability_gap_correctness": 0.0,
+    "paraphrase_stability": 0.0,
+    "average_latency_seconds": 20.287,
+    "p95_latency_seconds": 18.455
+  },
+  "results": [
+    {
+      "case_id": "C5",
+      "variant_of": null,
+      "canonical_task_family": "entity_trend_comparison",
+      "task_family": "management_judgement",
+      "question": "找出最近月份最需要管理層關注的兩個事業群，必須同時考慮營收趨勢、庫存金額、庫存數量與異常訊號，說明為何選它們，以及有哪些證據可能降低其風險判斷。",
+      "request_id": "req-e0a1507f",
+      "elapsed_seconds": 18.455,
+      "http_status": 200,
+      "expected_manifest": {
+        "top_n": 2,
+        "metrics": [
+          "revenue_amount",
+          "inventory_amount",
+          "inventory_qty",
+          "risk_score"
+        ],
+        "operations": [
+          "trend",
+          "cross_check",
+          "rank",
+          "anomaly",
+          "counter_evidence"
+        ],
+        "dimension": "business_group",
+        "requires_named_selection": true,
+        "requires_counter_evidence": true
+      },
+      "task_requirement_manifest": {
+        "requested_metrics": [
+          "risk_score",
+          "revenue_amount",
+          "inventory_qty",
+          "inventory_amount",
+          "revenue_inventory_amount_ratio"
+        ],
+        "requested_dimensions": [
+          "business_group"
+        ],
+        "time_scope": {
+          "mode": "multi_month_series",
+          "month": null,
+          "single_month": null,
+          "period_a": null,
+          "period_b": null,
+          "start_month": null,
+          "end_month": null,
+          "recent_n": null,
+          "yoy": false
+        },
+        "top_n": 2,
+        "requested_top_n": 2,
+        "requested_operations": [
+          "trend",
+          "filter",
+          "cross_check",
+          "rank",
+          "counter_evidence",
+          "anomaly",
+          "select"
+        ],
+        "requires_counter_evidence": true,
+        "requires_recommendation": false,
+        "requires_named_selection": true,
+        "required_selected_entity_count": 2
+      },
+      "planner_called": true,
+      "planner_valid": false,
+      "planner_fallback_reason": "planner_or_evidence_repair",
+      "planning_source": "rejected_llm_then_deterministic",
+      "initial_plan_steps": [
+        {
+          "step_id": "p1-s1",
+          "plan_version": 1,
+          "sequence": 1,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "revenue_amount",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:11.746954Z",
+          "finished_at": "2026-07-29T08:30:11.758581Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-1"
+          ]
+        },
+        {
+          "step_id": "p1-s2",
+          "plan_version": 1,
+          "sequence": 2,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "inventory_qty",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:11.765761Z",
+          "finished_at": "2026-07-29T08:30:11.777879Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-2"
+          ]
+        },
+        {
+          "step_id": "p1-s3",
+          "plan_version": 1,
+          "sequence": 3,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "inventory_amount",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:11.785571Z",
+          "finished_at": "2026-07-29T08:30:11.797503Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-3"
+          ]
+        },
+        {
+          "step_id": "p1-s4",
+          "plan_version": 1,
+          "sequence": 4,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "revenue_inventory_amount_ratio",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:11.810124Z",
+          "finished_at": "2026-07-29T08:30:11.835675Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-4"
+          ]
+        },
+        {
+          "step_id": "p1-s5",
+          "plan_version": 1,
+          "sequence": 5,
+          "tool_name": "get_anomalies",
+          "tool_args": {
+            "top_n": 10
+          },
+          "purpose": "supporting evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:11.850164Z",
+          "finished_at": "2026-07-29T08:30:11.864705Z",
+          "result_summary": {
+            "kind": "list",
+            "row_count": 5
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-5"
+          ]
+        },
+        {
+          "step_id": "p1-s6",
+          "plan_version": 1,
+          "sequence": 6,
+          "tool_name": "get_entity_performance_snapshot",
+          "tool_args": {
+            "entity_dimension": "business_group",
+            "top_n": 2
+          },
+          "purpose": "supporting evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:11.872211Z",
+          "finished_at": "2026-07-29T08:30:11.884601Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "dimension",
+              "entity_dimension",
+              "entity_label",
+              "evidence_type",
+              "limitations",
+              "month",
+              "parent_filter",
+              "rows",
+              "rubric",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 2
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-6"
+          ]
+        }
+      ],
+      "repaired_or_replanned_steps": [],
+      "executed_tools": [
+        "get_entity_trend_comparison",
+        "get_entity_trend_comparison",
+        "get_entity_trend_comparison",
+        "get_entity_trend_comparison",
+        "get_anomalies",
+        "get_entity_performance_snapshot"
+      ],
+      "step_status": [
+        {
+          "step_id": "p1-s1",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "revenue_amount",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s2",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "inventory_qty",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s3",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "inventory_amount",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s4",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "revenue_inventory_amount_ratio",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s5",
+          "tool": "get_anomalies",
+          "status": "succeeded",
+          "args": {
+            "top_n": 10
+          }
+        },
+        {
+          "step_id": "p1-s6",
+          "tool": "get_entity_performance_snapshot",
+          "status": "succeeded",
+          "args": {
+            "entity_dimension": "business_group",
+            "top_n": 2
+          }
+        }
+      ],
+      "replan_count": 0,
+      "stop_reason": "completed",
+      "evidence_contracts": [
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "revenue_amount",
+            "metric_label": "營收",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 12894915854,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 12817925330,
+                "mom_change": -76990524,
+                "mom_change_pct": -0.005970610810625612
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 9611125752,
+                "mom_change": -3206799578,
+                "mom_change_pct": -0.2501808596508652
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 15998043612,
+                "mom_change": 6386917860,
+                "mom_change_pct": 0.6645337939388559
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 35463744571,
+                "mom_change": 19465700959,
+                "mom_change_pct": 1.2167550877532887
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 16498525412,
+                "mom_change": -18965219159,
+                "mom_change_pct": -0.5347776831922186
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 17978735661,
+                "mom_change": 1480210249,
+                "mom_change_pct": 0.08971773004170344
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 13600236413,
+                "mom_change": -4378499248,
+                "mom_change_pct": -0.2435376619668517
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 15516477599,
+                "mom_change": 1916241186,
+                "mom_change_pct": 0.14089763793872956
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 16116051621,
+                "mom_change": 599574022,
+                "mom_change_pct": 0.03864111672088781
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 18024901766,
+                "mom_change": 1908850145,
+                "mom_change_pct": 0.11844403268804844
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 21373517441,
+                "mom_change": 3348615675,
+                "mom_change_pct": 0.18577719415461252
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 19701321795,
+                "mom_change": -1672195646,
+                "mom_change_pct": -0.07823680171576677
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 24670343477,
+                "mom_change": 4969021682,
+                "mom_change_pct": 0.2522176803010795
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 150105446,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 135981118,
+                "mom_change": -14124328,
+                "mom_change_pct": -0.0940960396600134
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 178586468,
+                "mom_change": 42605350,
+                "mom_change_pct": 0.3133181328895972
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 133921723,
+                "mom_change": -44664745,
+                "mom_change_pct": -0.2501015082508939
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 129160100,
+                "mom_change": -4761623,
+                "mom_change_pct": -0.035555269849686745
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 143414901,
+                "mom_change": 14254801,
+                "mom_change_pct": 0.11036536050994077
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 24670343477,
+                "overall_change": 11775427623,
+                "overall_change_pct": 0.9131837505823867,
+                "direction": "up"
+              },
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 7539188847,
+                "overall_change": 149121837,
+                "overall_change_pct": 0.020178685362150728,
+                "direction": "up"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 465244030,
+                "overall_change": -66541712,
+                "overall_change_pct": -0.12512880046340166,
+                "direction": "down"
+              },
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": -17370101,
+                "overall_change": -41820908,
+                "overall_change_pct": -1.7104101308394444,
+                "direction": "down"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": 44159472,
+                "overall_change": -24667938,
+                "overall_change_pct": -0.358402822363939,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 27649703,
+                "overall_change": -3759152,
+                "overall_change_pct": -0.11968446477912041,
+                "direction": "down"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 148747685,
+                "overall_change": -1357761,
+                "overall_change_pct": -0.009045381338129464,
+                "direction": "down"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": null,
+                "overall_change_pct": null,
+                "direction": null
+              }
+            ],
+            "summary": {
+              "top_growth_entity": "1網通+技鋼",
+              "top_growth_pct": 0.9131837505823867,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "inventory_qty",
+            "metric_label": "庫存數量",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 598199025,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 639122209,
+                "mom_change": 40923184,
+                "mom_change_pct": 0.06841064978332254
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 650747512,
+                "mom_change": 11625303,
+                "mom_change_pct": 0.018189483695441416
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 731588848,
+                "mom_change": 80841336,
+                "mom_change_pct": 0.12422842117604592
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 868230636,
+                "mom_change": 136641788,
+                "mom_change_pct": 0.18677401709108613
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 919164001,
+                "mom_change": 50933365,
+                "mom_change_pct": 0.05866340450119754
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 1240545361,
+                "mom_change": 321381360,
+                "mom_change_pct": 0.34964528598852296
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 1149781340,
+                "mom_change": -90764021,
+                "mom_change_pct": -0.07316461280128878
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 1100719666,
+                "mom_change": -49061674,
+                "mom_change_pct": -0.04267043853747009
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 1062447418,
+                "mom_change": -38272248,
+                "mom_change_pct": -0.034770204605393144
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 1123959874,
+                "mom_change": 61512456,
+                "mom_change_pct": 0.057896941493625995
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 1332696031,
+                "mom_change": 208736157,
+                "mom_change_pct": 0.18571495462479473
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 1052314925,
+                "mom_change": -280381106,
+                "mom_change_pct": -0.2103863893026031
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 1022096976,
+                "mom_change": -30217949,
+                "mom_change_pct": -0.028715689839712195
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 5259,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 8811,
+                "mom_change": 3552,
+                "mom_change_pct": 0.6754135767256132
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 11072,
+                "mom_change": 2261,
+                "mom_change_pct": 0.25661105436386333
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 8469,
+                "mom_change": -2603,
+                "mom_change_pct": -0.23509754335260116
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 9277,
+                "mom_change": 808,
+                "mom_change_pct": 0.09540677765970008
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 19037,
+                "mom_change": 9760,
+                "mom_change_pct": 1.0520642449067588
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 4562626351,
+                "overall_change": 515813072,
+                "overall_change_pct": 0.1274615447855458,
+                "direction": "up"
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 1022096976,
+                "overall_change": 423897951,
+                "overall_change_pct": 0.708623607335368,
+                "direction": "up"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 13982389,
+                "overall_change": -23332008,
+                "overall_change_pct": -0.6252816573720862,
+                "direction": "down"
+              },
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": 12563695,
+                "overall_change": -13865681,
+                "overall_change_pct": -0.5246314177073269,
+                "direction": "down"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 851291,
+                "overall_change": 846032,
+                "overall_change_pct": 160.87316980414528,
+                "direction": "up"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": 11641404,
+                "overall_change": -295752,
+                "overall_change_pct": -0.02477575060592322,
+                "direction": "down"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": -5310,
+                "overall_change_pct": -1,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 7540,
+                "overall_change": 413,
+                "overall_change_pct": 0.057948645994106915,
+                "direction": "up"
+              }
+            ],
+            "summary": {
+              "top_growth_entity": "3通路方案",
+              "top_growth_pct": 0.1274615447855458,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "inventory_amount",
+            "metric_label": "庫存金額",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 36017305046.757,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 32520639882.211002,
+                "mom_change": -3496665164.55,
+                "mom_change_pct": -0.09708292055751239
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 39102720442.729004,
+                "mom_change": 6582080560.52,
+                "mom_change_pct": 0.20239701876593272
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 47951296996.229,
+                "mom_change": 8848576553.5,
+                "mom_change_pct": 0.22629056120174262
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 41115249602.226,
+                "mom_change": -6836047394,
+                "mom_change_pct": -0.14256230430091604
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 35602745276.993004,
+                "mom_change": -5512504325.23,
+                "mom_change_pct": -0.13407444630791077
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 40524091225.543,
+                "mom_change": 4921345948.55,
+                "mom_change_pct": 0.13822939524077216
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 38750737570.149,
+                "mom_change": -1773353655.39,
+                "mom_change_pct": -0.04376047930403005
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 34544738199.301,
+                "mom_change": -4205999370.85,
+                "mom_change_pct": -0.10853985329275442
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 53755647328.231,
+                "mom_change": 19210909128.93,
+                "mom_change_pct": 0.5561167960832519
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 43519120378.574,
+                "mom_change": -10236526949.66,
+                "mom_change_pct": -0.19042700550429525
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 36939966864.01,
+                "mom_change": -6579153514.56,
+                "mom_change_pct": -0.15117845805080082
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 72768934766.53801,
+                "mom_change": 35828967902.53,
+                "mom_change_pct": 0.9699242025427361
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 73298408408.75099,
+                "mom_change": 529473642.21,
+                "mom_change_pct": 0.00727609444756463
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 13483854.541,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 12662800.783,
+                "mom_change": -821053.76,
+                "mom_change_pct": -0.06089162097554847
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 16044749.835,
+                "mom_change": 3381949.05,
+                "mom_change_pct": 0.26707749003998527
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 22175687.551,
+                "mom_change": 6130937.72,
+                "mom_change_pct": 0.3821148838747226
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 23549140.971,
+                "mom_change": 1373453.42,
+                "mom_change_pct": 0.061935099727632344
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 56904870.059,
+                "mom_change": 33355729.09,
+                "mom_change_pct": 1.4164308214501962
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 73298408408.75099,
+                "overall_change": 37281103361.99,
+                "overall_change_pct": 1.0350886417957244,
+                "direction": "up"
+              },
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 22830454184.741,
+                "overall_change": 5848731469.25,
+                "overall_change_pct": 0.34441331820334525,
+                "direction": "up"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 5519624061.464,
+                "overall_change": 3178171501.08,
+                "overall_change_pct": 1.3573503708114196,
+                "direction": "up"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 588729858.76,
+                "overall_change": 575246004.22,
+                "overall_change_pct": 42.661836974795655,
+                "direction": "up"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": 11419428.974,
+                "overall_change": -35612590.93,
+                "overall_change_pct": -0.7571988403527701,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 19238846.944,
+                "overall_change": 4838963.5,
+                "overall_change_pct": 0.336041851876528,
+                "direction": "up"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": -4417260.41,
+                "overall_change_pct": -1.0000000004527694,
+                "direction": "down"
+              },
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": 3337333.42,
+                "overall_change": -2808847.84,
+                "overall_change_pct": -0.4570069968198421,
+                "direction": "down"
+              }
+            ],
+            "summary": {
+              "top_growth_entity": "1網通+技鋼",
+              "top_growth_pct": 1.0350886417957244,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "revenue_inventory_amount_ratio",
+            "metric_label": "營收相對庫存效率",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 0.3653460120416985,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 0.40125791274245426,
+                "mom_change": 0.04,
+                "mom_change_pct": 0.1094852514646708
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 0.2484597600886376,
+                "mom_change": -0.15,
+                "mom_change_pct": -0.3738244037975567
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 0.3352314176899671,
+                "mom_change": 0.09,
+                "mom_change_pct": 0.3622316948543001
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 0.8667294496188394,
+                "mom_change": 0.53,
+                "mom_change_pct": 1.5809974006975718
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 0.46579302653662835,
+                "mom_change": -0.4,
+                "mom_change_pct": -0.4615050292521012
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 0.4455034142055498,
+                "mom_change": -0.02,
+                "mom_change_pct": -0.042937525597385194
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 0.35232187432925216,
+                "mom_change": -0.09,
+                "mom_change_pct": -0.20201865379751074
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 0.4508645354580912,
+                "mom_change": 0.1,
+                "mom_change_pct": 0.2838313692284343
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 0.30043864437407397,
+                "mom_change": -0.15,
+                "mom_change_pct": -0.33269416466211016
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 0.4152971050971618,
+                "mom_change": 0.11,
+                "mom_change_pct": 0.3661313285085916
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 205.04507935463278,
+                "mom_change": 204.63,
+                "mom_change_pct": 492.7315829763016
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 0.27111708227511955,
+                "mom_change": -204.77,
+                "mom_change_pct": -0.9986584444967002
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 0.3371866817194096,
+                "mom_change": 0.07,
+                "mom_change_pct": 0.2581910347093755
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 11.132235633629712,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 12.22822853227401,
+                "mom_change": 1.1,
+                "mom_change_pct": 0.09881213766954199
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 11.130523681362215,
+                "mom_change": -1.1,
+                "mom_change_pct": -0.08995579344111586
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": -0.252749592864247,
+                "mom_change": -11.38,
+                "mom_change_pct": -1.0224137089843786
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 5.4847053724403985,
+                "mom_change": 5.74,
+                "mom_change_pct": -22.710224514913392
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 2.5202570685304235,
+                "mom_change": -2.96,
+                "mom_change_pct": -0.5396825898567746
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": -5.204784423367564,
+                "overall_change": -17.13,
+                "overall_change_pct": -1.4359876401413567,
+                "direction": "down"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": -15.58,
+                "overall_change_pct": -0.9999056648599737,
+                "direction": "down"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 0.2526586392497515,
+                "overall_change": -10.88,
+                "overall_change_pct": -0.9773418707678335,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 1.437180880979101,
+                "overall_change": -0.74,
+                "overall_change_pct": -0.33926463572263305,
+                "direction": "down"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 0.08428907925961189,
+                "overall_change": -0.15,
+                "overall_change_pct": -0.6519076225968088,
+                "direction": "down"
+              },
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 0.3302250925887802,
+                "overall_change": -0.14,
+                "overall_change_pct": -0.2957420189980084,
+                "direction": "down"
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 0.3371866817194096,
+                "overall_change": -0.03,
+                "overall_change_pct": -0.08211393859850309,
+                "direction": "down"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": null,
+                "overall_change_pct": null,
+                "direction": null
+              }
+            ],
+            "summary": {
+              "top_growth_entity": null,
+              "top_growth_pct": null,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。",
+              "營收相對庫存效率為 proxy，非正式庫存週轉率。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "background",
+          "evidence_type": "anomaly",
+          "source_tool": "get_anomalies",
+          "summary": "N/A / N/A anomaly N/A",
+          "details": {
+            "source_tool": "get_anomalies",
+            "rows": [
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "7製造",
+                "平台": "7製造",
+                "訊號": -5.204784423367564,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "4筆電+盈嘉",
+                "平台": "4筆電+盈嘉",
+                "訊號": 0.08428907925961189,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "3通路方案",
+                "平台": "3通路方案",
+                "訊號": 0.15722245888804046,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "3通路方案",
+                "平台": "3通路方案",
+                "訊號": 0.1720064069306859,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "3通路方案",
+                "平台": "3通路方案",
+                "訊號": 0.22562530717085952,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              }
+            ],
+            "evidence_type": "anomaly"
+          },
+          "display_priority": 80,
+          "reason": "background only for entity trend comparison",
+          "domain": "financial"
+        },
+        {
+          "role": "background",
+          "evidence_type": "entity_performance_snapshot",
+          "source_tool": "get_entity_performance_snapshot",
+          "summary": "事業群 scorecard best=1網通+技鋼 weakest=3通路方案",
+          "details": {
+            "source_tool": "get_entity_performance_snapshot",
+            "evidence_type": "entity_performance_snapshot",
+            "month": "2026-02",
+            "dimension": "business_group",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "parent_filter": {},
+            "rows": [
+              {
+                "month": "2026-02",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "1網通+技鋼",
+                "name": "1網通+技鋼",
+                "business_group": "1網通+技鋼",
+                "product_line_5": null,
+                "platform": "1網通+技鋼",
+                "group_code": "1網通+技鋼",
+                "revenue": 24670343477,
+                "revenue_amount": 24670343477,
+                "inventory_amount": 73298408408.75099,
+                "inventory_qty": 1022096976,
+                "revenue_inventory_amount_ratio": 0.3371866817194096,
+                "revenue_inventory_qty_ratio": 43.361454647329616,
+                "anomaly_count": 0,
+                "data_presence_counts": {
+                  "inventory_only": 1,
+                  "both": 1,
+                  "revenue_only": 0
+                },
+                "both_row_share": 0.5,
+                "row_count": 2,
+                "limitation": null,
+                "previous_revenue": 19701321795,
+                "revenue_mom_change": 0.2522176803010795,
+                "revenue_rank": 1,
+                "inventory_rank": 1,
+                "efficiency_rank": 2,
+                "health_score": 0.867,
+                "risk_score": 0.133,
+                "performance_label": "healthy_candidate",
+                "primary_strength": "綜合分數來自營收、庫存 proxy 與資料完整性。",
+                "primary_risk": "存在 revenue_only 或 inventory_only grain",
+                "revenue_scale_score": 1,
+                "revenue_momentum_score": 1,
+                "inventory_efficiency_score": 0.8344,
+                "data_completeness_score": 0.5
+              },
+              {
+                "month": "2026-02",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "3通路方案",
+                "name": "3通路方案",
+                "business_group": "3通路方案",
+                "product_line_5": null,
+                "platform": "3通路方案",
+                "group_code": "3通路方案",
+                "revenue": 7539188847,
+                "revenue_amount": 7539188847,
+                "inventory_amount": 22830454184.740997,
+                "inventory_qty": 4562626351,
+                "revenue_inventory_amount_ratio": 0.3302250925887802,
+                "revenue_inventory_qty_ratio": 1.6523791928189826,
+                "anomaly_count": 0,
+                "data_presence_counts": {
+                  "both": 5,
+                  "revenue_only": 0,
+                  "inventory_only": 0
+                },
+                "both_row_share": 1,
+                "row_count": 5,
+                "limitation": null,
+                "previous_revenue": 12556895968,
+                "revenue_mom_change": -0.3995977297086101,
+                "revenue_rank": 2,
+                "inventory_rank": 2,
+                "efficiency_rank": 3,
+                "health_score": 0.6901,
+                "risk_score": 0.3099,
+                "performance_label": "stable_watch",
+                "primary_strength": "資料對齊完整度較高",
+                "primary_risk": "事業群營收較前期下降",
+                "revenue_scale_score": 0.3061,
+                "revenue_momentum_score": 0.7831,
+                "inventory_efficiency_score": 0.8333,
+                "data_completeness_score": 1
+              }
+            ],
+            "summary": {
+              "best_entity": "1網通+技鋼",
+              "weakest_entity": "3通路方案",
+              "top_revenue_entity": "1網通+技鋼",
+              "top_inventory_entity": "1網通+技鋼",
+              "highest_efficiency_entity": "1網通+技鋼",
+              "lowest_efficiency_entity": "3通路方案",
+              "unmapped_entity_count": 0,
+              "best_platform": "1網通+技鋼",
+              "weakest_platform": "3通路方案",
+              "top_revenue_platform": "1網通+技鋼",
+              "top_inventory_platform": "1網通+技鋼"
+            },
+            "rubric": {
+              "revenue_scale_weight": 0.3,
+              "revenue_momentum_weight": 0.2,
+              "inventory_efficiency_weight": 0.35,
+              "data_completeness_weight": 0.15
+            },
+            "limitations": [
+              "這是 deterministic 事業群 performance scorecard，使用營收規模、營收動能、營收/庫存 proxy 與資料完整性評分。",
+              "營收/庫存為 proxy 指標，非正式周轉指標。",
+              "只在 revenue 與 inventory 同時存在且分母合法時才計算 ratio。"
+            ],
+            "entity_value": "1網通+技鋼"
+          },
+          "display_priority": 80,
+          "reason": "background only for entity trend comparison",
+          "domain": "financial"
+        }
+      ],
+      "evidence_coverage_checklist": {
+        "requested_metrics": {
+          "risk_score": true,
+          "revenue_amount": true,
+          "inventory_qty": true,
+          "inventory_amount": true,
+          "revenue_inventory_amount_ratio": true
+        },
+        "requested_operations": {
+          "trend": true,
+          "filter": false,
+          "cross_check": true,
+          "rank": true,
+          "counter_evidence": true,
+          "anomaly": true,
+          "select": false
+        },
+        "evidence_count": 6
+      },
+      "entity_sets": [
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "revenue_amount",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "inventory_qty",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "inventory_amount",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "revenue_inventory_amount_ratio",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_performance_snapshot",
+          "metric": null,
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "3通路方案"
+          ]
+        }
+      ],
+      "final_answer": "Request ID: req-e0a1507f\n\n結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\n\n重點觀測：第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。 第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。 第一優先事業群 7製造：管理層下一步：先核對 7製造 最新訂單、出貨與價格變動，判斷營收下降是否延續。 第二優先事業群 2技宸：支持證據：營收趨勢下降 -0.9%; 庫存金額上升 4266.2%; 庫存數量上升 16087.3%; 營收/庫存效率 proxy 走弱 -97.7%。 第二優先事業群 2技宸：可能反證：目前未列入主要異常訊號清單。 第二優先事業群 2技宸：管理層下一步：先核對 2技宸 的庫齡、在途/呆滯庫存與近期出貨節奏，確認庫存累積是否可消化。 排序方法：先比較完整事業群集合，再以營收趨勢、庫存金額、庫存數量與異常訊號形成綜合風險分數；本次選出 2 個具名事業群。\n\n限制說明：這類問題目前只能用營收與庫存的風險訊號回答，不能直接判定根本原因。 這是根據目前營收與庫存資料偵測出的風險訊號，尚不能直接代表根本原因。 多指標管理風險排序為歷史資料 proxy，不代表因果或預測。 異常訊號只能指出需追蹤的觀察點，不能直接證明產品賣不出去或庫存增加原因。\n\nEvidence:\n- financial: evidence item captured\n- financial: evidence item captured\n- financial: evidence item captured\n- financial: evidence item captured\n- financial: evidence item captured\n\nTools used:\n- get_entity_trend_comparison, get_anomalies, get_entity_performance_snapshot\n\nData scope:\n- latest_month=2026-02\n\nLimitations:\n- 這類問題目前只能用營收與庫存的風險訊號回答，不能直接判定根本原因。\n- 這是根據目前營收與庫存資料偵測出的風險訊號，尚不能直接代表根本原因。\n- 多指標管理風險排序為歷史資料 proxy，不代表因果或預測。\n\nSuggested follow-ups:\n- 要不要比較其他事業群或產品線？\n- 要不要查看近三個月的趨勢？\n- 要不要產生對應圖表？",
+      "automatic_acceptance_checks": [
+        {
+          "name": "http_200",
+          "ok": true,
+          "detail": "200"
+        },
+        {
+          "name": "no_internal_error_code",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "completed_requires_evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no_wrong_na_for_named_entity",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:revenue_amount",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:revenue_amount",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:inventory_amount",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:inventory_amount",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:inventory_qty",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:inventory_qty",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:risk_score",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:risk_score",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_operation:trend",
+          "ok": true,
+          "detail": "['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select']"
+        },
+        {
+          "name": "manifest_operation:cross_check",
+          "ok": true,
+          "detail": "['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select']"
+        },
+        {
+          "name": "manifest_operation:rank",
+          "ok": true,
+          "detail": "['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select']"
+        },
+        {
+          "name": "manifest_operation:anomaly",
+          "ok": true,
+          "detail": "['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select']"
+        },
+        {
+          "name": "manifest_operation:counter_evidence",
+          "ok": true,
+          "detail": "['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select']"
+        },
+        {
+          "name": "manifest_dimension",
+          "ok": true,
+          "detail": "['business_group']"
+        },
+        {
+          "name": "evidence_dimension",
+          "ok": true,
+          "detail": "business_group"
+        },
+        {
+          "name": "top_n",
+          "ok": true,
+          "detail": "2"
+        },
+        {
+          "name": "requested_top_n",
+          "ok": true,
+          "detail": "2"
+        },
+        {
+          "name": "answer_named_selection_count",
+          "ok": true,
+          "detail": "['7製造', '2技宸']"
+        },
+        {
+          "name": "answer_has_ranking",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 "
+        },
+        {
+          "name": "manifest_requires_named_selection",
+          "ok": true,
+          "detail": "{'requested_metrics': ['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio'], 'requested_dimensions': ['business_group'], 'time_scope': {'mode': 'multi_month_series', 'month': None, 'single_month': None, 'period_a': None, 'period_b': None, 'start_month': None, 'end_month': None, 'recent_n': None, 'yoy': False}, 'top_n': 2, 'requested_top_n': 2, 'requested_operations': ['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select'], 'requires_counter_evidence': True, 'requires_recommendation': False, 'requires_named_selection': True, 'required_selected_entity_count': 2}"
+        },
+        {
+          "name": "has_counter_or_risk_context",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 "
+        },
+        {
+          "name": "answer_has_counter_evidence",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 "
+        },
+        {
+          "name": "manifest_requires_counter_evidence",
+          "ok": true,
+          "detail": "{'requested_metrics': ['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio'], 'requested_dimensions': ['business_group'], 'time_scope': {'mode': 'multi_month_series', 'month': None, 'single_month': None, 'period_a': None, 'period_b': None, 'start_month': None, 'end_month': None, 'recent_n': None, 'yoy': False}, 'top_n': 2, 'requested_top_n': 2, 'requested_operations': ['trend', 'filter', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'select'], 'requires_counter_evidence': True, 'requires_recommendation': False, 'requires_named_selection': True, 'required_selected_entity_count': 2}"
+        },
+        {
+          "name": "not_generic_multimetric_headline",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 最新訂單、出貨與價格變動，判斷營收下降是否延續。\", \"第二優先事業群 2技宸：支持證據：營收趨勢下降 -0.9%; 庫"
+        },
+        {
+          "name": "complex_has_planning_or_repair",
+          "ok": true,
+          "detail": "rejected_llm_then_deterministic"
+        }
+      ],
+      "verdict": "PASS",
+      "failure_reason": "",
+      "response_error": null
+    },
+    {
+      "case_id": "C5A",
+      "variant_of": null,
+      "canonical_task_family": "entity_trend_comparison",
+      "task_family": "management_judgement",
+      "question": "請找出最近月份最需要管理層關注的兩個事業群。請先比較所有事業群，並同時考慮營收趨勢、庫存金額、庫存數量與異常訊號，再說明選出這兩個事業群的支持證據、可能反證、資料限制，以及建議管理層下一步優先確認什麼。",
+      "request_id": "req-bc560cdc",
+      "elapsed_seconds": 22.119,
+      "http_status": 200,
+      "expected_manifest": {
+        "top_n": 2,
+        "metrics": [
+          "revenue_amount",
+          "inventory_amount",
+          "inventory_qty",
+          "risk_score"
+        ],
+        "operations": [
+          "trend",
+          "cross_check",
+          "rank",
+          "anomaly",
+          "counter_evidence",
+          "next_action",
+          "select"
+        ],
+        "dimension": "business_group",
+        "requires_named_selection": true,
+        "requires_counter_evidence": true,
+        "requires_recommendation": true
+      },
+      "task_requirement_manifest": {
+        "requested_metrics": [
+          "risk_score",
+          "revenue_amount",
+          "inventory_qty",
+          "inventory_amount",
+          "revenue_inventory_amount_ratio"
+        ],
+        "requested_dimensions": [
+          "business_group"
+        ],
+        "time_scope": {
+          "mode": "multi_month_series",
+          "month": null,
+          "single_month": null,
+          "period_a": null,
+          "period_b": null,
+          "start_month": null,
+          "end_month": null,
+          "recent_n": null,
+          "yoy": false
+        },
+        "top_n": 2,
+        "requested_top_n": 2,
+        "requested_operations": [
+          "compare",
+          "trend",
+          "filter",
+          "select",
+          "cross_check",
+          "rank",
+          "counter_evidence",
+          "anomaly",
+          "limitations",
+          "next_action"
+        ],
+        "requires_counter_evidence": true,
+        "requires_recommendation": true,
+        "requires_named_selection": true,
+        "required_selected_entity_count": 2
+      },
+      "planner_called": true,
+      "planner_valid": false,
+      "planner_fallback_reason": "planner_or_evidence_repair",
+      "planning_source": "rejected_llm_then_deterministic",
+      "initial_plan_steps": [
+        {
+          "step_id": "p1-s1",
+          "plan_version": 1,
+          "sequence": 1,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "revenue_amount",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:33.829136Z",
+          "finished_at": "2026-07-29T08:30:33.849633Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-1"
+          ]
+        },
+        {
+          "step_id": "p1-s2",
+          "plan_version": 1,
+          "sequence": 2,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "inventory_qty",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:33.858714Z",
+          "finished_at": "2026-07-29T08:30:33.878727Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-2"
+          ]
+        },
+        {
+          "step_id": "p1-s3",
+          "plan_version": 1,
+          "sequence": 3,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "inventory_amount",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:33.887832Z",
+          "finished_at": "2026-07-29T08:30:33.911563Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-3"
+          ]
+        },
+        {
+          "step_id": "p1-s4",
+          "plan_version": 1,
+          "sequence": 4,
+          "tool_name": "get_entity_trend_comparison",
+          "tool_args": {
+            "metric": "revenue_inventory_amount_ratio",
+            "entity_dimension": "business_group"
+          },
+          "purpose": "primary evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:33.923521Z",
+          "finished_at": "2026-07-29T08:30:33.972593Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "entity_dimension",
+              "entity_label",
+              "entity_summaries",
+              "evidence_type",
+              "limitations",
+              "metric",
+              "metric_label",
+              "parent_filter",
+              "rows",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 20
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-4"
+          ]
+        },
+        {
+          "step_id": "p1-s5",
+          "plan_version": 1,
+          "sequence": 5,
+          "tool_name": "get_anomalies",
+          "tool_args": {
+            "top_n": 10
+          },
+          "purpose": "supporting evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:33.983852Z",
+          "finished_at": "2026-07-29T08:30:33.993210Z",
+          "result_summary": {
+            "kind": "list",
+            "row_count": 5
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-5"
+          ]
+        },
+        {
+          "step_id": "p1-s6",
+          "plan_version": 1,
+          "sequence": 6,
+          "tool_name": "get_entity_performance_snapshot",
+          "tool_args": {
+            "entity_dimension": "business_group",
+            "top_n": 2
+          },
+          "purpose": "supporting evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "started_at": "2026-07-29T08:30:33.999572Z",
+          "finished_at": "2026-07-29T08:30:34.013208Z",
+          "result_summary": {
+            "kind": "dict",
+            "keys": [
+              "dimension",
+              "entity_dimension",
+              "entity_label",
+              "evidence_type",
+              "limitations",
+              "month",
+              "parent_filter",
+              "rows",
+              "rubric",
+              "source_tool",
+              "summary"
+            ],
+            "row_count": 2
+          },
+          "error_type": null,
+          "error_message": null,
+          "evidence_ids": [
+            "ev-6"
+          ]
+        }
+      ],
+      "repaired_or_replanned_steps": [],
+      "executed_tools": [
+        "get_entity_trend_comparison",
+        "get_entity_trend_comparison",
+        "get_entity_trend_comparison",
+        "get_entity_trend_comparison",
+        "get_anomalies",
+        "get_entity_performance_snapshot"
+      ],
+      "step_status": [
+        {
+          "step_id": "p1-s1",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "revenue_amount",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s2",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "inventory_qty",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s3",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "inventory_amount",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s4",
+          "tool": "get_entity_trend_comparison",
+          "status": "succeeded",
+          "args": {
+            "metric": "revenue_inventory_amount_ratio",
+            "entity_dimension": "business_group"
+          }
+        },
+        {
+          "step_id": "p1-s5",
+          "tool": "get_anomalies",
+          "status": "succeeded",
+          "args": {
+            "top_n": 10
+          }
+        },
+        {
+          "step_id": "p1-s6",
+          "tool": "get_entity_performance_snapshot",
+          "status": "succeeded",
+          "args": {
+            "entity_dimension": "business_group",
+            "top_n": 2
+          }
+        }
+      ],
+      "replan_count": 0,
+      "stop_reason": "completed",
+      "evidence_contracts": [
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "revenue_amount",
+            "metric_label": "營收",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 12894915854,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 12817925330,
+                "mom_change": -76990524,
+                "mom_change_pct": -0.005970610810625612
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 9611125752,
+                "mom_change": -3206799578,
+                "mom_change_pct": -0.2501808596508652
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 15998043612,
+                "mom_change": 6386917860,
+                "mom_change_pct": 0.6645337939388559
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 35463744571,
+                "mom_change": 19465700959,
+                "mom_change_pct": 1.2167550877532887
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 16498525412,
+                "mom_change": -18965219159,
+                "mom_change_pct": -0.5347776831922186
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 17978735661,
+                "mom_change": 1480210249,
+                "mom_change_pct": 0.08971773004170344
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 13600236413,
+                "mom_change": -4378499248,
+                "mom_change_pct": -0.2435376619668517
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 15516477599,
+                "mom_change": 1916241186,
+                "mom_change_pct": 0.14089763793872956
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 16116051621,
+                "mom_change": 599574022,
+                "mom_change_pct": 0.03864111672088781
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 18024901766,
+                "mom_change": 1908850145,
+                "mom_change_pct": 0.11844403268804844
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 21373517441,
+                "mom_change": 3348615675,
+                "mom_change_pct": 0.18577719415461252
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 19701321795,
+                "mom_change": -1672195646,
+                "mom_change_pct": -0.07823680171576677
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 24670343477,
+                "mom_change": 4969021682,
+                "mom_change_pct": 0.2522176803010795
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 150105446,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 135981118,
+                "mom_change": -14124328,
+                "mom_change_pct": -0.0940960396600134
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 178586468,
+                "mom_change": 42605350,
+                "mom_change_pct": 0.3133181328895972
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 133921723,
+                "mom_change": -44664745,
+                "mom_change_pct": -0.2501015082508939
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 129160100,
+                "mom_change": -4761623,
+                "mom_change_pct": -0.035555269849686745
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 143414901,
+                "mom_change": 14254801,
+                "mom_change_pct": 0.11036536050994077
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 24670343477,
+                "overall_change": 11775427623,
+                "overall_change_pct": 0.9131837505823867,
+                "direction": "up"
+              },
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 7539188847,
+                "overall_change": 149121837,
+                "overall_change_pct": 0.020178685362150728,
+                "direction": "up"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 465244030,
+                "overall_change": -66541712,
+                "overall_change_pct": -0.12512880046340166,
+                "direction": "down"
+              },
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": -17370101,
+                "overall_change": -41820908,
+                "overall_change_pct": -1.7104101308394444,
+                "direction": "down"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": 44159472,
+                "overall_change": -24667938,
+                "overall_change_pct": -0.358402822363939,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 27649703,
+                "overall_change": -3759152,
+                "overall_change_pct": -0.11968446477912041,
+                "direction": "down"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 148747685,
+                "overall_change": -1357761,
+                "overall_change_pct": -0.009045381338129464,
+                "direction": "down"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": null,
+                "overall_change_pct": null,
+                "direction": null
+              }
+            ],
+            "summary": {
+              "top_growth_entity": "1網通+技鋼",
+              "top_growth_pct": 0.9131837505823867,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "inventory_qty",
+            "metric_label": "庫存數量",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 598199025,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 639122209,
+                "mom_change": 40923184,
+                "mom_change_pct": 0.06841064978332254
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 650747512,
+                "mom_change": 11625303,
+                "mom_change_pct": 0.018189483695441416
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 731588848,
+                "mom_change": 80841336,
+                "mom_change_pct": 0.12422842117604592
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 868230636,
+                "mom_change": 136641788,
+                "mom_change_pct": 0.18677401709108613
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 919164001,
+                "mom_change": 50933365,
+                "mom_change_pct": 0.05866340450119754
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 1240545361,
+                "mom_change": 321381360,
+                "mom_change_pct": 0.34964528598852296
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 1149781340,
+                "mom_change": -90764021,
+                "mom_change_pct": -0.07316461280128878
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 1100719666,
+                "mom_change": -49061674,
+                "mom_change_pct": -0.04267043853747009
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 1062447418,
+                "mom_change": -38272248,
+                "mom_change_pct": -0.034770204605393144
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 1123959874,
+                "mom_change": 61512456,
+                "mom_change_pct": 0.057896941493625995
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 1332696031,
+                "mom_change": 208736157,
+                "mom_change_pct": 0.18571495462479473
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 1052314925,
+                "mom_change": -280381106,
+                "mom_change_pct": -0.2103863893026031
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 1022096976,
+                "mom_change": -30217949,
+                "mom_change_pct": -0.028715689839712195
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 5259,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 8811,
+                "mom_change": 3552,
+                "mom_change_pct": 0.6754135767256132
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 11072,
+                "mom_change": 2261,
+                "mom_change_pct": 0.25661105436386333
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 8469,
+                "mom_change": -2603,
+                "mom_change_pct": -0.23509754335260116
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 9277,
+                "mom_change": 808,
+                "mom_change_pct": 0.09540677765970008
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 19037,
+                "mom_change": 9760,
+                "mom_change_pct": 1.0520642449067588
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 4562626351,
+                "overall_change": 515813072,
+                "overall_change_pct": 0.1274615447855458,
+                "direction": "up"
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 1022096976,
+                "overall_change": 423897951,
+                "overall_change_pct": 0.708623607335368,
+                "direction": "up"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 13982389,
+                "overall_change": -23332008,
+                "overall_change_pct": -0.6252816573720862,
+                "direction": "down"
+              },
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": 12563695,
+                "overall_change": -13865681,
+                "overall_change_pct": -0.5246314177073269,
+                "direction": "down"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 851291,
+                "overall_change": 846032,
+                "overall_change_pct": 160.87316980414528,
+                "direction": "up"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": 11641404,
+                "overall_change": -295752,
+                "overall_change_pct": -0.02477575060592322,
+                "direction": "down"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": -5310,
+                "overall_change_pct": -1,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 7540,
+                "overall_change": 413,
+                "overall_change_pct": 0.057948645994106915,
+                "direction": "up"
+              }
+            ],
+            "summary": {
+              "top_growth_entity": "3通路方案",
+              "top_growth_pct": 0.1274615447855458,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "inventory_amount",
+            "metric_label": "庫存金額",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 36017305046.757,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 32520639882.211002,
+                "mom_change": -3496665164.55,
+                "mom_change_pct": -0.09708292055751239
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 39102720442.729004,
+                "mom_change": 6582080560.52,
+                "mom_change_pct": 0.20239701876593272
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 47951296996.229,
+                "mom_change": 8848576553.5,
+                "mom_change_pct": 0.22629056120174262
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 41115249602.226,
+                "mom_change": -6836047394,
+                "mom_change_pct": -0.14256230430091604
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 35602745276.993004,
+                "mom_change": -5512504325.23,
+                "mom_change_pct": -0.13407444630791077
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 40524091225.543,
+                "mom_change": 4921345948.55,
+                "mom_change_pct": 0.13822939524077216
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 38750737570.149,
+                "mom_change": -1773353655.39,
+                "mom_change_pct": -0.04376047930403005
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 34544738199.301,
+                "mom_change": -4205999370.85,
+                "mom_change_pct": -0.10853985329275442
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 53755647328.231,
+                "mom_change": 19210909128.93,
+                "mom_change_pct": 0.5561167960832519
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 43519120378.574,
+                "mom_change": -10236526949.66,
+                "mom_change_pct": -0.19042700550429525
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 36939966864.01,
+                "mom_change": -6579153514.56,
+                "mom_change_pct": -0.15117845805080082
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 72768934766.53801,
+                "mom_change": 35828967902.53,
+                "mom_change_pct": 0.9699242025427361
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 73298408408.75099,
+                "mom_change": 529473642.21,
+                "mom_change_pct": 0.00727609444756463
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 13483854.541,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 12662800.783,
+                "mom_change": -821053.76,
+                "mom_change_pct": -0.06089162097554847
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 16044749.835,
+                "mom_change": 3381949.05,
+                "mom_change_pct": 0.26707749003998527
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 22175687.551,
+                "mom_change": 6130937.72,
+                "mom_change_pct": 0.3821148838747226
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 23549140.971,
+                "mom_change": 1373453.42,
+                "mom_change_pct": 0.061935099727632344
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 56904870.059,
+                "mom_change": 33355729.09,
+                "mom_change_pct": 1.4164308214501962
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 73298408408.75099,
+                "overall_change": 37281103361.99,
+                "overall_change_pct": 1.0350886417957244,
+                "direction": "up"
+              },
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 22830454184.741,
+                "overall_change": 5848731469.25,
+                "overall_change_pct": 0.34441331820334525,
+                "direction": "up"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 5519624061.464,
+                "overall_change": 3178171501.08,
+                "overall_change_pct": 1.3573503708114196,
+                "direction": "up"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 588729858.76,
+                "overall_change": 575246004.22,
+                "overall_change_pct": 42.661836974795655,
+                "direction": "up"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": 11419428.974,
+                "overall_change": -35612590.93,
+                "overall_change_pct": -0.7571988403527701,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 19238846.944,
+                "overall_change": 4838963.5,
+                "overall_change_pct": 0.336041851876528,
+                "direction": "up"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": -4417260.41,
+                "overall_change_pct": -1.0000000004527694,
+                "direction": "down"
+              },
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": 3337333.42,
+                "overall_change": -2808847.84,
+                "overall_change_pct": -0.4570069968198421,
+                "direction": "down"
+              }
+            ],
+            "summary": {
+              "top_growth_entity": "1網通+技鋼",
+              "top_growth_pct": 1.0350886417957244,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "primary",
+          "evidence_type": "entity_trend_comparison",
+          "source_tool": "get_entity_trend_comparison",
+          "summary": "事業群 trend comparison",
+          "details": {
+            "source_tool": "get_entity_trend_comparison",
+            "evidence_type": "entity_trend_comparison",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "metric": "revenue_inventory_amount_ratio",
+            "metric_label": "營收相對庫存效率",
+            "rows": [
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 0.3653460120416985,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 0.40125791274245426,
+                "mom_change": 0.04,
+                "mom_change_pct": 0.1094852514646708
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 0.2484597600886376,
+                "mom_change": -0.15,
+                "mom_change_pct": -0.3738244037975567
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": 0.3352314176899671,
+                "mom_change": 0.09,
+                "mom_change_pct": 0.3622316948543001
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 0.8667294496188394,
+                "mom_change": 0.53,
+                "mom_change_pct": 1.5809974006975718
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 0.46579302653662835,
+                "mom_change": -0.4,
+                "mom_change_pct": -0.4615050292521012
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-07",
+                "value": 0.4455034142055498,
+                "mom_change": -0.02,
+                "mom_change_pct": -0.042937525597385194
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-08",
+                "value": 0.35232187432925216,
+                "mom_change": -0.09,
+                "mom_change_pct": -0.20201865379751074
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-09",
+                "value": 0.4508645354580912,
+                "mom_change": 0.1,
+                "mom_change_pct": 0.2838313692284343
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-10",
+                "value": 0.30043864437407397,
+                "mom_change": -0.15,
+                "mom_change_pct": -0.33269416466211016
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-11",
+                "value": 0.4152971050971618,
+                "mom_change": 0.11,
+                "mom_change_pct": 0.3661313285085916
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-12",
+                "value": 205.04507935463278,
+                "mom_change": 204.63,
+                "mom_change_pct": 492.7315829763016
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-01",
+                "value": 0.27111708227511955,
+                "mom_change": -204.77,
+                "mom_change_pct": -0.9986584444967002
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2026-02",
+                "value": 0.3371866817194096,
+                "mom_change": 0.07,
+                "mom_change_pct": 0.2581910347093755
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-01",
+                "value": 11.132235633629712,
+                "mom_change": null,
+                "mom_change_pct": null
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-02",
+                "value": 12.22822853227401,
+                "mom_change": 1.1,
+                "mom_change_pct": 0.09881213766954199
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-03",
+                "value": 11.130523681362215,
+                "mom_change": -1.1,
+                "mom_change_pct": -0.08995579344111586
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-04",
+                "value": -0.252749592864247,
+                "mom_change": -11.38,
+                "mom_change_pct": -1.0224137089843786
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-05",
+                "value": 5.4847053724403985,
+                "mom_change": 5.74,
+                "mom_change_pct": -22.710224514913392
+              },
+              {
+                "entity_value": "2技宸",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "month": "2025-06",
+                "value": 2.5202570685304235,
+                "mom_change": -2.96,
+                "mom_change_pct": -0.5396825898567746
+              }
+            ],
+            "entity_summaries": [
+              {
+                "entity_value": "7製造",
+                "latest_month": "2026-02",
+                "latest_value": -5.204784423367564,
+                "overall_change": -17.13,
+                "overall_change_pct": -1.4359876401413567,
+                "direction": "down"
+              },
+              {
+                "entity_value": "6雲城",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": -15.58,
+                "overall_change_pct": -0.9999056648599737,
+                "direction": "down"
+              },
+              {
+                "entity_value": "2技宸",
+                "latest_month": "2026-02",
+                "latest_value": 0.2526586392497515,
+                "overall_change": -10.88,
+                "overall_change_pct": -0.9773418707678335,
+                "direction": "down"
+              },
+              {
+                "entity_value": "5百事益",
+                "latest_month": "2026-02",
+                "latest_value": 1.437180880979101,
+                "overall_change": -0.74,
+                "overall_change_pct": -0.33926463572263305,
+                "direction": "down"
+              },
+              {
+                "entity_value": "4筆電+盈嘉",
+                "latest_month": "2026-02",
+                "latest_value": 0.08428907925961189,
+                "overall_change": -0.15,
+                "overall_change_pct": -0.6519076225968088,
+                "direction": "down"
+              },
+              {
+                "entity_value": "3通路方案",
+                "latest_month": "2026-02",
+                "latest_value": 0.3302250925887802,
+                "overall_change": -0.14,
+                "overall_change_pct": -0.2957420189980084,
+                "direction": "down"
+              },
+              {
+                "entity_value": "1網通+技鋼",
+                "latest_month": "2026-02",
+                "latest_value": 0.3371866817194096,
+                "overall_change": -0.03,
+                "overall_change_pct": -0.08211393859850309,
+                "direction": "down"
+              },
+              {
+                "entity_value": "未對應",
+                "latest_month": "2026-02",
+                "latest_value": null,
+                "overall_change": null,
+                "overall_change_pct": null,
+                "direction": null
+              }
+            ],
+            "summary": {
+              "top_growth_entity": null,
+              "top_growth_pct": null,
+              "latest_month": "2026-02"
+            },
+            "parent_filter": {},
+            "limitations": [
+              "僅描述歷史資料，不做 forecast 或 root cause 判定。",
+              "營收相對庫存效率為 proxy，非正式庫存週轉率。"
+            ],
+            "entity_value": "1網通+技鋼",
+            "month": "2025-01"
+          },
+          "display_priority": 1,
+          "reason": "multi-entity monthly trend comparison evidence",
+          "domain": "financial"
+        },
+        {
+          "role": "background",
+          "evidence_type": "anomaly",
+          "source_tool": "get_anomalies",
+          "summary": "N/A / N/A anomaly N/A",
+          "details": {
+            "source_tool": "get_anomalies",
+            "rows": [
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "7製造",
+                "平台": "7製造",
+                "訊號": -5.204784423367564,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "4筆電+盈嘉",
+                "平台": "4筆電+盈嘉",
+                "訊號": 0.08428907925961189,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "3通路方案",
+                "平台": "3通路方案",
+                "訊號": 0.15722245888804046,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "3通路方案",
+                "平台": "3通路方案",
+                "訊號": 0.1720064069306859,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              },
+              {
+                "異常類型": "營收/庫存金額 proxy 偏弱",
+                "月份": "2026-02",
+                "新事業群": "3通路方案",
+                "平台": "3通路方案",
+                "訊號": 0.22562530717085952,
+                "原因": "最新共同月份中，營收相對庫存金額 proxy 排名較低，需搭配資料品質與營運脈絡判讀。"
+              }
+            ],
+            "evidence_type": "anomaly"
+          },
+          "display_priority": 80,
+          "reason": "background only for entity trend comparison",
+          "domain": "financial"
+        },
+        {
+          "role": "background",
+          "evidence_type": "entity_performance_snapshot",
+          "source_tool": "get_entity_performance_snapshot",
+          "summary": "事業群 scorecard best=1網通+技鋼 weakest=3通路方案",
+          "details": {
+            "source_tool": "get_entity_performance_snapshot",
+            "evidence_type": "entity_performance_snapshot",
+            "month": "2026-02",
+            "dimension": "business_group",
+            "entity_dimension": "business_group",
+            "entity_label": "事業群",
+            "parent_filter": {},
+            "rows": [
+              {
+                "month": "2026-02",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "1網通+技鋼",
+                "name": "1網通+技鋼",
+                "business_group": "1網通+技鋼",
+                "product_line_5": null,
+                "platform": "1網通+技鋼",
+                "group_code": "1網通+技鋼",
+                "revenue": 24670343477,
+                "revenue_amount": 24670343477,
+                "inventory_amount": 73298408408.75099,
+                "inventory_qty": 1022096976,
+                "revenue_inventory_amount_ratio": 0.3371866817194096,
+                "revenue_inventory_qty_ratio": 43.361454647329616,
+                "anomaly_count": 0,
+                "data_presence_counts": {
+                  "inventory_only": 1,
+                  "both": 1,
+                  "revenue_only": 0
+                },
+                "both_row_share": 0.5,
+                "row_count": 2,
+                "limitation": null,
+                "previous_revenue": 19701321795,
+                "revenue_mom_change": 0.2522176803010795,
+                "revenue_rank": 1,
+                "inventory_rank": 1,
+                "efficiency_rank": 2,
+                "health_score": 0.867,
+                "risk_score": 0.133,
+                "performance_label": "healthy_candidate",
+                "primary_strength": "綜合分數來自營收、庫存 proxy 與資料完整性。",
+                "primary_risk": "存在 revenue_only 或 inventory_only grain",
+                "revenue_scale_score": 1,
+                "revenue_momentum_score": 1,
+                "inventory_efficiency_score": 0.8344,
+                "data_completeness_score": 0.5
+              },
+              {
+                "month": "2026-02",
+                "entity_dimension": "business_group",
+                "entity_label": "事業群",
+                "entity_value": "3通路方案",
+                "name": "3通路方案",
+                "business_group": "3通路方案",
+                "product_line_5": null,
+                "platform": "3通路方案",
+                "group_code": "3通路方案",
+                "revenue": 7539188847,
+                "revenue_amount": 7539188847,
+                "inventory_amount": 22830454184.740997,
+                "inventory_qty": 4562626351,
+                "revenue_inventory_amount_ratio": 0.3302250925887802,
+                "revenue_inventory_qty_ratio": 1.6523791928189826,
+                "anomaly_count": 0,
+                "data_presence_counts": {
+                  "both": 5,
+                  "revenue_only": 0,
+                  "inventory_only": 0
+                },
+                "both_row_share": 1,
+                "row_count": 5,
+                "limitation": null,
+                "previous_revenue": 12556895968,
+                "revenue_mom_change": -0.3995977297086101,
+                "revenue_rank": 2,
+                "inventory_rank": 2,
+                "efficiency_rank": 3,
+                "health_score": 0.6901,
+                "risk_score": 0.3099,
+                "performance_label": "stable_watch",
+                "primary_strength": "資料對齊完整度較高",
+                "primary_risk": "事業群營收較前期下降",
+                "revenue_scale_score": 0.3061,
+                "revenue_momentum_score": 0.7831,
+                "inventory_efficiency_score": 0.8333,
+                "data_completeness_score": 1
+              }
+            ],
+            "summary": {
+              "best_entity": "1網通+技鋼",
+              "weakest_entity": "3通路方案",
+              "top_revenue_entity": "1網通+技鋼",
+              "top_inventory_entity": "1網通+技鋼",
+              "highest_efficiency_entity": "1網通+技鋼",
+              "lowest_efficiency_entity": "3通路方案",
+              "unmapped_entity_count": 0,
+              "best_platform": "1網通+技鋼",
+              "weakest_platform": "3通路方案",
+              "top_revenue_platform": "1網通+技鋼",
+              "top_inventory_platform": "1網通+技鋼"
+            },
+            "rubric": {
+              "revenue_scale_weight": 0.3,
+              "revenue_momentum_weight": 0.2,
+              "inventory_efficiency_weight": 0.35,
+              "data_completeness_weight": 0.15
+            },
+            "limitations": [
+              "這是 deterministic 事業群 performance scorecard，使用營收規模、營收動能、營收/庫存 proxy 與資料完整性評分。",
+              "營收/庫存為 proxy 指標，非正式周轉指標。",
+              "只在 revenue 與 inventory 同時存在且分母合法時才計算 ratio。"
+            ],
+            "entity_value": "1網通+技鋼"
+          },
+          "display_priority": 80,
+          "reason": "background only for entity trend comparison",
+          "domain": "financial"
+        }
+      ],
+      "evidence_coverage_checklist": {
+        "requested_metrics": {
+          "risk_score": true,
+          "revenue_amount": true,
+          "inventory_qty": true,
+          "inventory_amount": true,
+          "revenue_inventory_amount_ratio": true
+        },
+        "requested_operations": {
+          "compare": false,
+          "trend": true,
+          "filter": false,
+          "select": true,
+          "cross_check": true,
+          "rank": true,
+          "counter_evidence": true,
+          "anomaly": true,
+          "limitations": false,
+          "next_action": true
+        },
+        "evidence_count": 6
+      },
+      "entity_sets": [
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "revenue_amount",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "inventory_qty",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "inventory_amount",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_trend_comparison",
+          "metric": "revenue_inventory_amount_ratio",
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "2技宸"
+          ]
+        },
+        {
+          "source_tool": "get_entity_performance_snapshot",
+          "metric": null,
+          "entity_dimension": "business_group",
+          "count": 2,
+          "entities": [
+            "1網通+技鋼",
+            "3通路方案"
+          ]
+        }
+      ],
+      "final_answer": "Request ID: req-bc560cdc\n\n結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\n\n重點觀測：第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。 第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。 第一優先事業群 7製造：管理層下一步：先核對 7製造 最新訂單、出貨與價格變動，判斷營收下降是否延續。 第二優先事業群 2技宸：支持證據：營收趨勢下降 -0.9%; 庫存金額上升 4266.2%; 庫存數量上升 16087.3%; 營收/庫存效率 proxy 走弱 -97.7%。 第二優先事業群 2技宸：可能反證：目前未列入主要異常訊號清單。 第二優先事業群 2技宸：管理層下一步：先核對 2技宸 的庫齡、在途/呆滯庫存與近期出貨節奏，確認庫存累積是否可消化。 排序方法：先比較完整事業群集合，再以營收趨勢、庫存金額、庫存數量與異常訊號形成綜合風險分數；本次選出 2 個具名事業群。\n\n限制說明：這類問題目前只能用營收與庫存的風險訊號回答，不能直接判定根本原因。 這是根據目前營收與庫存資料偵測出的風險訊號，尚不能直接代表根本原因。 多指標管理風險排序為歷史資料 proxy，不代表因果或預測。 異常訊號只能指出需追蹤的觀察點，不能直接證明產品賣不出去或庫存增加原因。\n\nEvidence:\n- financial: evidence item captured\n- financial: evidence item captured\n- financial: evidence item captured\n- financial: evidence item captured\n- financial: evidence item captured\n\nTools used:\n- get_entity_trend_comparison, get_anomalies, get_entity_performance_snapshot\n\nData scope:\n- latest_month=2026-02\n\nLimitations:\n- 這類問題目前只能用營收與庫存的風險訊號回答，不能直接判定根本原因。\n- 這是根據目前營收與庫存資料偵測出的風險訊號，尚不能直接代表根本原因。\n- 多指標管理風險排序為歷史資料 proxy，不代表因果或預測。\n\nSuggested follow-ups:\n- 要不要比較其他事業群或產品線？\n- 要不要查看近三個月的趨勢？\n- 要不要產生對應圖表？",
+      "automatic_acceptance_checks": [
+        {
+          "name": "http_200",
+          "ok": true,
+          "detail": "200"
+        },
+        {
+          "name": "no_internal_error_code",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "completed_requires_evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no_wrong_na_for_named_entity",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:revenue_amount",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:revenue_amount",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:inventory_amount",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:inventory_amount",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:inventory_qty",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:inventory_qty",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_metric:risk_score",
+          "ok": true,
+          "detail": "['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio']"
+        },
+        {
+          "name": "evidence_metric:risk_score",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "manifest_operation:trend",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_operation:cross_check",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_operation:rank",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_operation:anomaly",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_operation:counter_evidence",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_operation:next_action",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_operation:select",
+          "ok": true,
+          "detail": "['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action']"
+        },
+        {
+          "name": "manifest_dimension",
+          "ok": true,
+          "detail": "['business_group']"
+        },
+        {
+          "name": "evidence_dimension",
+          "ok": true,
+          "detail": "business_group"
+        },
+        {
+          "name": "top_n",
+          "ok": true,
+          "detail": "2"
+        },
+        {
+          "name": "requested_top_n",
+          "ok": true,
+          "detail": "2"
+        },
+        {
+          "name": "answer_named_selection_count",
+          "ok": true,
+          "detail": "['7製造', '2技宸']"
+        },
+        {
+          "name": "answer_has_ranking",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 "
+        },
+        {
+          "name": "manifest_requires_named_selection",
+          "ok": true,
+          "detail": "{'requested_metrics': ['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio'], 'requested_dimensions': ['business_group'], 'time_scope': {'mode': 'multi_month_series', 'month': None, 'single_month': None, 'period_a': None, 'period_b': None, 'start_month': None, 'end_month': None, 'recent_n': None, 'yoy': False}, 'top_n': 2, 'requested_top_n': 2, 'requested_operations': ['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action'], 'requires_counter_evidence': True, 'requires_recommendation': True, 'requires_named_selection': True, 'required_selected_entity_count': 2}"
+        },
+        {
+          "name": "has_counter_or_risk_context",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 "
+        },
+        {
+          "name": "answer_has_counter_evidence",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 "
+        },
+        {
+          "name": "manifest_requires_counter_evidence",
+          "ok": true,
+          "detail": "{'requested_metrics': ['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio'], 'requested_dimensions': ['business_group'], 'time_scope': {'mode': 'multi_month_series', 'month': None, 'single_month': None, 'period_a': None, 'period_b': None, 'start_month': None, 'end_month': None, 'recent_n': None, 'yoy': False}, 'top_n': 2, 'requested_top_n': 2, 'requested_operations': ['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action'], 'requires_counter_evidence': True, 'requires_recommendation': True, 'requires_named_selection': True, 'required_selected_entity_count': 2}"
+        },
+        {
+          "name": "answer_has_next_action",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 最新訂單、出貨與價格變動，判斷營收下降是否延續。\", \"第二優先事業群 2技宸：支持證據：營收趨勢下降 -0.9%; 庫"
+        },
+        {
+          "name": "manifest_requires_recommendation",
+          "ok": true,
+          "detail": "{'requested_metrics': ['risk_score', 'revenue_amount', 'inventory_qty', 'inventory_amount', 'revenue_inventory_amount_ratio'], 'requested_dimensions': ['business_group'], 'time_scope': {'mode': 'multi_month_series', 'month': None, 'single_month': None, 'period_a': None, 'period_b': None, 'start_month': None, 'end_month': None, 'recent_n': None, 'yoy': False}, 'top_n': 2, 'requested_top_n': 2, 'requested_operations': ['compare', 'trend', 'filter', 'select', 'cross_check', 'rank', 'counter_evidence', 'anomaly', 'limitations', 'next_action'], 'requires_counter_evidence': True, 'requires_recommendation': True, 'requires_named_selection': True, 'required_selected_entity_count': 2}"
+        },
+        {
+          "name": "not_generic_multimetric_headline",
+          "ok": true,
+          "detail": "{\"headline\": \"結論：第一優先事業群是 7製造；第二優先事業群是 2技宸。\", \"key_observations\": [\"第一優先事業群 7製造：支持證據：營收趨勢下降 -171.0%; 營收/庫存效率 proxy 走弱 -143.6%; 異常訊號 營收/庫存金額 proxy 偏弱，訊號值 -5.20。\", \"第一優先事業群 7製造：可能反證：庫存金額下降 -45.7%; 庫存數量下降 -52.5%。\", \"第一優先事業群 7製造：管理層下一步：先核對 7製造 最新訂單、出貨與價格變動，判斷營收下降是否延續。\", \"第二優先事業群 2技宸：支持證據：營收趨勢下降 -0.9%; 庫"
+        },
+        {
+          "name": "complex_has_planning_or_repair",
+          "ok": true,
+          "detail": "rejected_llm_then_deterministic"
+        }
+      ],
+      "verdict": "PASS",
+      "failure_reason": "",
+      "response_error": null
+    }
+  ]
+}
